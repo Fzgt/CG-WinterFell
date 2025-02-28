@@ -1,0 +1,58 @@
+{
+    "ci": {
+        "collect": {
+            "settings": {
+                "throttling": {
+                    "cpuSlowdownMultiplier": 4,
+                    "rttMs": 150,
+                    "throughputKbps": 1600
+                },
+                "onlyCategories": [
+                    "performance"
+                ],
+                "skipAudits": [
+                    "uses-http2"
+                ],
+                "maxWaitForLoad": 60000
+            },
+            "numberOfRuns": 3
+        },
+        "assert": {
+            "assertions": {
+                "first-contentful-paint": [
+                    "warn",
+                    {
+                        "minScore": 0.8
+                    }
+                ],
+                "largest-contentful-paint": [
+                    "warn",
+                    {
+                        "minScore": 0.8
+                    }
+                ],
+                "cumulative-layout-shift": [
+                    "warn",
+                    {
+                        "minScore": 0.9
+                    }
+                ],
+                "total-blocking-time": [
+                    "warn",
+                    {
+                        "minScore": 0.8
+                    }
+                ],
+                "interactive": [
+                    "warn",
+                    {
+                        "minScore": 0.8
+                    }
+                ]
+            }
+        },
+        "upload": {
+            "target": "temporary-public-storage"
+        }
+    }
+}
