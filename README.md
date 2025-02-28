@@ -8,11 +8,11 @@ liti
 
 ```bash
 
-# Step2: isntall dependencies
-$ yarn
+# Step1: isntall dependencies
+$ npm install
 
-# Step3: start the project
-$ yarn vite
+# Step2: start the project
+$ npm run vite
 
 ```
 
