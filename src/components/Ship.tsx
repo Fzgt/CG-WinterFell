@@ -8,7 +8,8 @@ interface ShipModelRef {
 }
 
 const ShipModel = forwardRef<ShipModelRef>(
-    (props, ref) => {
+
+    (_props, ref) => {
         const group = useRef<THREE.Group>(null)
 
         const { scene, animations } = useGLTF('/models/bull_dog/scene.gltf')
