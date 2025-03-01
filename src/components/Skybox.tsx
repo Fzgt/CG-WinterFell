@@ -12,7 +12,7 @@ const Skybox = () => {
 
     return (
         <>
-            <Stars factor={80} radius={280} saturation={0} count={10000} fade speed={3} />
+            <Stars factor={40} radius={280} saturation={0} count={9000} fade speed={2} />
 
             <mesh>
                 <sphereGeometry args={[800, 32, 32]} />
