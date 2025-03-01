@@ -1,1 +1,2 @@
-export const planeSize = 10;
+export const planeSize = 1000;
+export const planeTextureSize = planeSize / 20;
