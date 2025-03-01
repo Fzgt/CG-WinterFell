@@ -4,6 +4,7 @@ import { useLayoutEffect } from 'react';
 
 
 const Skybox = () => {
+
     const galaxyTexture = useTexture('/textures/galaxy.jpg')
     useLayoutEffect(() => {
         galaxyTexture.wrapS = galaxyTexture.wrapT = THREE.RepeatWrapping;
