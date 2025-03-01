@@ -8,7 +8,7 @@ const App = () => (
     <>
         <Canvas>
             <ambientLight />
-            <OrbitControls />
+            {/* <OrbitControls /> */}
             <Skybox />
 
             <Ground />
