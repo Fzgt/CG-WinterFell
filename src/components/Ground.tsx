@@ -1,8 +1,15 @@
-import { planeSize } from "../constants";
 import { useTexture } from "@react-three/drei";
+import { useLayoutEffect } from "react";
+import * as THREE from 'three';
+import { planeSize, planeTextureSize } from "../constants";
 
 const Ground = () => {
     const texture = useTexture('/textures/grid-pink.png');
+    useLayoutEffect(() => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(planeTextureSize, planeTextureSize);
+        texture.anisotropy = 16;
+    }, [texture])
 
     return (
         <>
