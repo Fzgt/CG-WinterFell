@@ -1,10 +1,11 @@
 import { useTexture } from "@react-three/drei";
 import { useLayoutEffect } from "react";
 import * as THREE from 'three';
+import { usePlane, Triplet } from "@react-three/cannon";
 import { planeSize, planeTextureSize } from "../constants";
 
 interface PlaneProps {
-    position: THREE.Vector3;
+    position: Triplet;
 }
 
 
@@ -17,10 +18,15 @@ const Plane = ({ position }: PlaneProps) => {
         texture.anisotropy = 16;
     }, [texture])
 
+    const [planeRef, _api] = usePlane<THREE.Mesh>(() => ({
+        rotation: [-Math.PI / 2, 0, 0],
+        position,
+        mass: 0,
+    }))
+
     return (
         <mesh
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={position}
+            ref={planeRef}
         >
             <planeGeometry args={[planeSize, planeSize]} />
             <meshStandardMaterial
@@ -38,8 +44,8 @@ const Plane = ({ position }: PlaneProps) => {
 const Ground = () => {
     return (
         <>
-            <Plane position={new THREE.Vector3(0, 0, -planeSize / 2)} />
-            <Plane position={new THREE.Vector3(0, 0, -planeSize - planeSize / 2)} />
+            <Plane position={[0, 0, -planeSize / 2]} />
+            <Plane position={[0, 0, -planeSize - planeSize / 2]} />
         </>
     )
 
