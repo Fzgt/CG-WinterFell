@@ -1,9 +1,11 @@
 import { useAnimations, useGLTF, PerspectiveCamera, } from "@react-three/drei"
-import { Suspense, useRef, useEffect, useImperativeHandle, forwardRef, useState } from "react"
+import { Suspense, useRef, useEffect, useImperativeHandle, forwardRef } from "react"
 import { useBox } from "@react-three/cannon"
 import * as THREE from 'three'
 import { useFrame } from "@react-three/fiber"
 import { useStore } from "../store"
+import useKeyboardControls from "../hooks/useKeyboardControls"
+import gsap from "gsap"
 
 interface ShipModelRef {
     shipModel: React.RefObject<THREE.Group>
@@ -12,42 +14,32 @@ interface ShipModelRef {
 const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
 
     const { shipPosition, moveShip } = useStore();
+    const shipRef = useRef<THREE.Mesh>(null);
     const [groupRef, _api] = useBox<THREE.Group>(() => ({
         position: shipPosition,
         mass: 0,
-        args: [10, 5, 10]
+        args: [10, 10, 10]
     }), useRef(null), [shipPosition]);
 
     const { scene, animations } = useGLTF('/models/bull_dog/scene.gltf')
     const { actions, names } = useAnimations(animations, groupRef)
+
     useEffect(() => {
         actions[names[0]]?.play();
     }, []);
+
+    const { left, right } = useKeyboardControls();
+
+    useEffect(() => {
+        gsap.to(shipRef.current!.rotation, {
+            z: (left || right) ? (left ? -Math.PI : Math.PI) / 4 : 0,
+        })
+    }, [left, right]);
 
     useImperativeHandle(ref, () => ({
         shipModel: groupRef
     }))
 
-    const [left, setLeft] = useState(false);
-    const [right, setRight] = useState(false);
-
-    useEffect(() => {
-        const eventHandler = ({ key }: KeyboardEvent, isDown: boolean) => {
-            (key === 'a' || key === 'ArrowLeft') && setLeft(isDown);
-            (key === 'd' || key === 'ArrowRight') && setRight(isDown);
-        }
-
-        const upEvent = (e: KeyboardEvent) => eventHandler(e, false);
-        const downEvent = (e: KeyboardEvent) => eventHandler(e, true);
-
-        window.addEventListener('keydown', downEvent);
-        window.addEventListener('keyup', upEvent);
-
-        return () => {
-            window.removeEventListener('keyup', upEvent);
-            window.removeEventListener('keydown', downEvent);
-        }
-    }, [])
 
 
     useFrame(() => {
@@ -58,6 +50,7 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
     return (
         <group ref={groupRef} scale={2}>
             <primitive
+                ref={shipRef}
                 object={scene}
                 rotation={[0, Math.PI, 0]}
             />
