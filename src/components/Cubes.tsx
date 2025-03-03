@@ -9,7 +9,7 @@ const Cubes = () => {
 
     const [boxRef] = useBox<THREE.InstancedMesh>(() => ({
         position: [randomInRange(-400, 400), 10, randomInRange(200, 1000)],
-        // mass: 1,
+        mass: 1,
         args: boxSize
     }))
 

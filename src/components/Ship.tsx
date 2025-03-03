@@ -1,5 +1,5 @@
 import { useAnimations, useGLTF, PerspectiveCamera, } from "@react-three/drei"
-import { Suspense, useRef, useEffect, useImperativeHandle, forwardRef } from "react"
+import { Suspense, useRef, useEffect, useImperativeHandle, forwardRef, useState } from "react"
 import { useBox } from "@react-three/cannon"
 import * as THREE from 'three'
 import { useFrame } from "@react-three/fiber"
@@ -15,6 +15,7 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
     const [groupRef, _api] = useBox<THREE.Group>(() => ({
         position: shipPosition,
         mass: 0,
+        args: [10, 5, 10]
     }), useRef(null), [shipPosition]);
 
     const { scene, animations } = useGLTF('/models/bull_dog/scene.gltf')
@@ -27,8 +28,31 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
         shipModel: groupRef
     }))
 
+    const [left, setLeft] = useState(false);
+    const [right, setRight] = useState(false);
+
+    useEffect(() => {
+        const eventHandler = ({ key }: KeyboardEvent, isDown: boolean) => {
+            (key === 'a' || key === 'ArrowLeft') && setLeft(isDown);
+            (key === 'd' || key === 'ArrowRight') && setRight(isDown);
+        }
+
+        const upEvent = (e: KeyboardEvent) => eventHandler(e, false);
+        const downEvent = (e: KeyboardEvent) => eventHandler(e, true);
+
+        window.addEventListener('keydown', downEvent);
+        window.addEventListener('keyup', upEvent);
+
+        return () => {
+            window.removeEventListener('keyup', upEvent);
+            window.removeEventListener('keydown', downEvent);
+        }
+    }, [])
+
+
     useFrame(() => {
-        moveShip();
+        let x = (left || right) ? (left ? -1 : 1) : 0;
+        moveShip([x, 0, 0]);
     })
 
     return (
