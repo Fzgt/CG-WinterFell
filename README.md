@@ -12,7 +12,7 @@ liti
 $ npm install
 
 # Step2: start the project
-$ npm run vite
+$ npm run dev
 
 ```
 
