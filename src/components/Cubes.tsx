@@ -8,8 +8,8 @@ const Cubes = () => {
     const boxSize: Triplet = [cubeSize, cubeSize, cubeSize];
 
     const [boxRef] = useBox<THREE.InstancedMesh>(() => ({
-        position: [randomInRange(-400, 400), 10, randomInRange(200, 1000)],
-        mass: 1,
+        position: [randomInRange(-500, 500), 10, randomInRange(200, 2000)],
+        // mass: 1,
         args: boxSize
     }))
 
