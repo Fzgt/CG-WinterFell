@@ -21,7 +21,8 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
         args: [10, 10, 10]
     }), useRef(null), [shipPosition]);
 
-    const { scene, animations } = useGLTF('/models/bull_dog/scene.gltf')
+    // const { scene, animations } = useGLTF('/models/bull_dog/scene.gltf')
+    const { scene, animations } = useGLTF('/models/jo_on_bike__rigged__animated/scene.gltf')
     const { actions, names } = useAnimations(animations, groupRef)
 
     useEffect(() => {
@@ -32,7 +33,7 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
 
     useEffect(() => {
         gsap.to(shipRef.current!.rotation, {
-            z: (left || right) ? (left ? -Math.PI : Math.PI) / 4 : 0,
+            z: (left || right) ? (left ? -Math.PI : Math.PI) / 6 : 0,
         })
     }, [left, right]);
 
