@@ -46,7 +46,7 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
         let x = (left || right) ? (left ? -1 : 1) : 0;
         moveShip([x, 0, 0]);
         const shipPosition = groupRef.current!.position;
-        // console.log(shipPosition)
+        console.log(shipPosition)
     })
 
     return (
