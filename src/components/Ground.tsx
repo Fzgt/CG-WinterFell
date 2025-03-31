@@ -11,7 +11,7 @@ interface PlaneProps {
 
 const Plane = ({ position }: PlaneProps) => {
 
-    const texture = useTexture('/textures/grid-pink.png');
+    const texture = useTexture('/textures/tile.jpg');
     useLayoutEffect(() => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(planeTextureSize, planeTextureSize);
