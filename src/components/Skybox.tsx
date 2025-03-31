@@ -13,10 +13,12 @@ const Skybox = () => {
 
         if (!skyboxRef.current) return;
 
-        // Ensure skybox is visible
+        // 6 different scenes with diverse positions
         skyboxScene.scale.set(1, 1, 1).multiplyScalar(3.5); // Large enough
-        // skyboxScene.position.set(0, 20, 110);
-        skyboxScene.position.set(0, 30, -360); 
+        skyboxScene.position.set(0, 40, 110);
+        // skyboxScene.position.set(0, 40, 620);
+        // skyboxScene.position.set(0, 40, -450); 
+        
         // Rotate the skybox (in radians)
         skyboxScene.rotation.set(
             0,              // X-axis rotation (tilt up/down)
