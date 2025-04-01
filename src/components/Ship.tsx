@@ -42,7 +42,6 @@ const ShipModel = forwardRef<ShipModelRef>((_props, ref) => {
     }))
 
 
-
     useFrame(() => {
         let x = (left || right) ? (left ? -1 : 1) : 0;
         moveShip([x, 0, 0]);
