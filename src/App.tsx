@@ -5,8 +5,6 @@ import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Ship from './components/Ship';
-import { randomInRange } from './utils';
-import Cubes from './components/Cubes';
 import Monsters from './components/Monsters';
 
 const App = () => (
