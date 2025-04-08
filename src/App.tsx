@@ -29,7 +29,7 @@ const App = () => (
                     _path='/models/monsters/halloween_pumpkin_2.glb'
                     rotation={[0, 0, 0]}
                     scale={0.07}
-                    Yposition={2}
+                    Yposition={1}
                 />
                 <Monsters
                     _path='/models/monsters/halloween_pumpkin.glb'
