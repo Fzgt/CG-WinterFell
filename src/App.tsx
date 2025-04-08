@@ -19,6 +19,14 @@ const App = () => (
                 shadow-mapSize-width={1024}
                 shadow-mapSize-height={1024}
             />
+            {/* Directional light (simulates sun, casts shadows) */}
+            <directionalLight
+                castShadow
+                position={[50, 100, 100]}
+                intensity={1.5}
+                shadow-mapSize-width={1024}
+                shadow-mapSize-height={1024}
+            />
             {/* <OrbitControls /> */}
             <Skybox />
 
