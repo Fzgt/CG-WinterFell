@@ -19,6 +19,14 @@ const App = () => (
                 shadow-mapSize-width={1024}
                 shadow-mapSize-height={1024}
             />
+            {/* Directional light (simulates sun, casts shadows) */}
+            <directionalLight
+                castShadow
+                position={[50, 100, 100]}
+                intensity={1.5}
+                shadow-mapSize-width={1024}
+                shadow-mapSize-height={1024}
+            />
             {/* <OrbitControls /> */}
             <Skybox />
 
@@ -29,7 +37,7 @@ const App = () => (
                     _path='/models/monsters/halloween_pumpkin_2.glb'
                     rotation={[0, 0, 0]}
                     scale={0.07}
-                    Yposition={2}
+                    Yposition={1}
                 />
                 <Monsters
                     _path='/models/monsters/halloween_pumpkin.glb'
