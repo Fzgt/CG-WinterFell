@@ -5,24 +5,28 @@ import { randomInRange } from '../utils';
 import { cubeCount } from '../constants';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../store';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /**
  * @CoreLogic
- * useMemo to initiaze and reuse monsters and stored in instancesRef
+ * useMemo to initialize and reuse monsters and store in instancesRef
  * Reuse monsters once they are behind the ship.
- * Rendering optimization: use THREE.group to contain/traverse all monsters to avoid unnecessary state change
+ * Add animation playback using AnimationMixer.
 */
 
 type GLTFResult = {
     scene: THREE.Group;
     nodes: Record<string, THREE.Object3D>;
     materials: Record<string, THREE.Material>;
+    animations: THREE.AnimationClip[];
 };
 
 type MonsterInstance = {
     position: [number, number, number];
     rotation: [number, number, number];
     scale: number;
+    object: THREE.Object3D;
+    mixer?: THREE.AnimationMixer;
 };
 
 interface Props {
@@ -32,80 +36,100 @@ interface Props {
     scale?: number;
 }
 
+/*TODO: extract monster_count as props
+design boundaries using monster
+design different levels according to time
+fixme: solve monster duplicate position
+fixme: solve kid animation delay and ghost shadow
+*/
+
 const Monsters = ({
     _path,
     Yposition,
     rotation = [0, 0, 0],
     scale = 0.05
 }: Props) => {
-    const { scene } = useGLTF(_path) as unknown as GLTFResult;
+    const { scene, animations } = useGLTF(_path) as unknown as GLTFResult;
     const instancesRef = useRef<MonsterInstance[]>([]);
     const groupRef = useRef<THREE.Group>(null);
     const shipPositionRef = useRef([0, 0, 0]);
 
     // initialize & cache monster instances with useMemo
     const initialInstances = useMemo<MonsterInstance[]>(() => {
-        return Array.from({ length: cubeCount }, (): MonsterInstance => ({
-            position: [
-                randomInRange(-500, 500),
-                Yposition,
-                randomInRange(200, 2000)
-            ] as [number, number, number],
-            rotation,
-            scale
-        }));
-    }, [Yposition, rotation, scale]);
+        return Array.from({ length: cubeCount }, () => {
+            //play animation for animated models
+            const cloned = clone(scene);
+            let mixer: THREE.AnimationMixer | undefined;
 
-    // useEffect to initialize instances
+            if (animations.length > 0) {
+                mixer = new THREE.AnimationMixer(cloned);
+                animations.forEach(clip => {
+                    const action = mixer!.clipAction(clip);
+                    action.play();
+                });
+            }
+
+            return {
+                position: [
+                    randomInRange(-500, 500),
+                    Yposition,
+                    randomInRange(200, 600)
+                ] as [number, number, number],
+                rotation,
+                scale,
+                object: cloned,
+                mixer
+            };
+        });
+    }, [scene, animations, Yposition, rotation, scale]);
+
     useEffect(() => {
         instancesRef.current = initialInstances;
     }, [initialInstances]);
 
-    // subscribe to ship z positon (optimization)
     useFrame(() => {
-        const shipPosition = useStore.getState().shipPosition;
-        shipPositionRef.current = shipPosition;
+        shipPositionRef.current = useStore.getState().shipPosition;
     });
 
-    // main frame loop update
-    useFrame(() => {
-        if (!groupRef.current) return;
-
+    // frame update: move monsters + update animations
+    useFrame((_, delta) => {
         const shipZ = shipPositionRef.current[2];
-        const children = groupRef.current.children;
+        const children = groupRef.current?.children;
+
+        if (!children) return;
 
         for (let i = 0; i < children.length; i++) {
             const monster = instancesRef.current[i];
-            const monsterMesh = children[i];
+            const mesh = children[i];
 
-            // update monster position (directly change three.js object, avoid state update)
-            monsterMesh.position.set(
-                monster.position[0],
-                monster.position[1],
-                monster.position[2]
-            );
+            if (!monster || !mesh) continue;
 
-            // check position relative to the ship to recycle monsters, realizing infinite generation
-            if (monster.position[2] > shipZ + 200) {
+            // update animation
+            monster.mixer?.update(delta);
+
+            // update position
+            mesh.position.set(...monster.position);
+
+            // recycle when out of view
+            if (monster.position[2] > shipZ + 100) {
                 monster.position = [
                     randomInRange(-500, 500),
                     Yposition,
-                    shipZ + randomInRange(1000, 2000)
+                    shipZ + randomInRange(200, 600)
                 ];
-                instancesRef.current = [...instancesRef.current];
             }
         }
     });
 
     return (
         <group ref={groupRef} dispose={null}>
-            {initialInstances.map((props, index) => (
+            {initialInstances.map((monster, index) => (
                 <primitive
                     key={index}
-                    object={scene.clone(true)}
-                    position={props.position}
-                    rotation={props.rotation}
-                    scale={props.scale}
+                    object={monster.object}
+                    position={monster.position}
+                    rotation={monster.rotation}
+                    scale={monster.scale}
                 />
             ))}
         </group>
