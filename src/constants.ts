@@ -19,9 +19,7 @@ export const MODEL_PATHS = [
 
 // textures that need to be preloaded declared here
 export const TEXTURE_PATHS = [
-    '/textures/welcome-background.jpg',
     '/textures/tile.jpg',
-    '/textures/welcome-background-2.jpg'
 ];
 
 export const wallRadius = 40

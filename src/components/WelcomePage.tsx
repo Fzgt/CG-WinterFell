@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProgress } from '@react-three/drei';
 import '../styles/WelcomePage.css';
+import backgroundImage from '../assets/welcome-background.jpg';
 
 interface WelcomePageProps {
     onStart: () => void;
@@ -36,33 +37,17 @@ const Snowflakes = () => {
 
 const WelcomePage = ({ onStart }: WelcomePageProps) => {
     const [isHovered, setIsHovered] = useState(false);
-
-    const [backgroundIndex, setBackgroundIndex] = useState(1);
     const { progress, loaded, total } = useProgress();
     const isLoading = progress < 100;
 
     const handleMouseEnter = () => setIsHovered(true);
     const handleMouseLeave = () => setIsHovered(false);
 
-    const toggleBackground = () => {
-        setBackgroundIndex(backgroundIndex === 1 ? 2 : 1);
-    };
-
     return (
-        <div
+        <div 
             className="welcome-container"
-            style={{
-                backgroundImage: `url('/textures/welcome-background${backgroundIndex === 2 ? '-2' : ''}.jpg')`
-            }}
+            style={{ backgroundImage: `url(${backgroundImage})` }}
         >
-            <button
-                className="toggle-background-btn"
-                onClick={toggleBackground}
-                title="Toggle background"
-            >
-                Change Background
-            </button>
-
             <Snowflakes />
 
             <h1 className="title">WinterFell</h1>
