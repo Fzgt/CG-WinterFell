@@ -13,9 +13,11 @@ for (const texture of TEXTURE_PATHS) {
 // trigger loading Mnager
 export const ResourcePreloader = () => {
   console.log(' ############ Resource Preloader ##############');
-  // ts-ignore
+
   const models = MODEL_PATHS.map(path => useGLTF(path));
   const textures = useTexture(TEXTURE_PATHS);
+
+  console.log(models, textures);
 
   return null;
 };
