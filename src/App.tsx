@@ -1,3 +1,4 @@
+import { useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber'
 // import { OrbitControls, Loader } from '@react-three/drei';
 import { Physics } from '@react-three/cannon';
@@ -7,12 +8,18 @@ import Ground from './components/Ground';
 import Ship from './components/Ship';
 import { useGLTF } from '@react-three/drei';
 import MonsterTerrainGenerator from './components/TerrainGenerator';
+import WelcomePage from './components/WelcomePage';
+import { ResourcePreloader } from './utils/ResourcePreloader';
+import ProgressMonitor from './components/ProgressMonitor';
+import { monsters } from './constants';
+import './styles/layout.css';
 
 /*
 TODO: design different levels according to time
 fixme: solve kid animation delay and ghost shadow
 */
-const App = () => {
+
+const Game = () => {
 
     const { scene: pumpkin_1 } = useGLTF('/models/monsters/halloween_pumpkin_2.glb') as any;
     const { scene: pumpkin_2 } = useGLTF('/models/monsters/halloween_pumpkin.glb') as any;
@@ -76,5 +83,33 @@ const App = () => {
         </>
     )
 }
+
+const App = () => {
+    const [showWelcome, setShowWelcome] = useState(true);
+    const [staticLoaded, setStaticLoaded] = useState(false);
+
+    return (
+        <>
+            <div className="progress-monitor-container">
+                <Canvas>
+                    <Suspense fallback={null}>
+                        <ResourcePreloader />
+                        <ProgressMonitor onProgress={setStaticLoaded} />
+                    </Suspense>
+                </Canvas>
+            </div>
+
+            <div className="app-container">
+                {showWelcome && (
+                    <WelcomePage onStart={() => setShowWelcome(false)} />
+                )}
+
+                <div className={`game-container`}>
+                    {staticLoaded && <Game />}
+                </div>
+            </div>
+        </>
+    );
+};
 
 export default App;
