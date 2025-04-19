@@ -5,60 +5,76 @@ import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Ship from './components/Ship';
-import Monsters from './components/Monsters';
+import { useGLTF } from '@react-three/drei';
+import MonsterTerrainGenerator from './components/TerrainGenerator';
 
-const App = () => (
-    <>
-        <Canvas>
-            <ambientLight />
-            {/* Directional light (simulates sun, casts shadows) */}
-            <directionalLight
-                castShadow
-                position={[50, 100, 100]}
-                intensity={1.5}
-                shadow-mapSize-width={1024}
-                shadow-mapSize-height={1024}
-            />
-            {/* <OrbitControls /> */}
-            <Skybox />
+/*
+TODO: design different levels according to time
+fixme: solve kid animation delay and ghost shadow
+*/
+const App = () => {
 
-            <Physics>
-                <Ground />
-                <Ship />
-                <Monsters
-                    _path='/models/monsters/halloween_pumpkin_2.glb'
-                    rotation={[0, 0, 0]}
-                    scale={0.07}
-                    Yposition={0}
+    const { scene: pumpkin_1 } = useGLTF('/models/monsters/halloween_pumpkin_2.glb') as any;
+    const { scene: pumpkin_2 } = useGLTF('/models/monsters/halloween_pumpkin.glb') as any;
+
+    return (
+        <>
+            <Canvas>
+                <ambientLight />
+                {/* Directional light (simulates sun, casts shadows) */}
+                <directionalLight
+                    castShadow
+                    position={[50, 100, 100]}
+                    intensity={1.5}
+                    shadow-mapSize-width={1024}
+                    shadow-mapSize-height={1024}
                 />
-                <Monsters
-                    _path='/models/monsters/halloween_pumpkin.glb'
-                    rotation={[0, 0, 0]}
-                    scale={10}
-                    Yposition={8}
-                />
-                <Monsters
-                    _path='/models/monsters/emerald_bat.glb'
-                    rotation={[0, 0, 0]}
-                    scale={0.4}
-                    Yposition={28}
-                />
-                <Monsters
-                    _path='/models/monsters/glow_bat.glb'
-                    rotation={[0, 0, 0]}
-                    scale={0.3}
-                    Yposition={33}
-                />
-                <Monsters
-                    _path='/models/monsters/king_boo.glb'
-                    rotation={[0, 0, 0]}
-                    scale={0.03}
-                    Yposition={10}
-                />
-            </Physics>
-        </Canvas>
-        <Loader />
-    </>
-)
+                {/* <OrbitControls /> */}
+                <Skybox />
+
+                <Physics>
+                    <Ground />
+                    <Ship />
+                    <MonsterTerrainGenerator
+                        terrainType="tunnel"
+                        monsterCount={300}
+                        monsterModel={pumpkin_2}
+                        Yposition={9}
+                        tunnelLength={50}
+                        monsterScale={9}
+                        monsterRotation={[0, -Math.PI/2, 0]}
+                    />
+                    <MonsterTerrainGenerator
+                        terrainType="tunnel"
+                        monsterCount={300}
+                        monsterModel={pumpkin_2}
+                        Yposition={9}
+                        tunnelLength={50}
+                        monsterScale={9}
+                        xPosition={450}
+                    />
+                    <MonsterTerrainGenerator
+                        terrainType="diamond"
+                        monsterModel={pumpkin_1}
+                        Yposition={0.5}
+                        tunnelLength={1}
+                        diamondSize={20}
+                        monsterScale={0.1}
+                    />
+                    <MonsterTerrainGenerator
+                        terrainType="wall"
+                        monsterModel={pumpkin_1}
+                        Yposition={0.5}
+                        tunnelLength={10}
+                        diamondSize={20}
+                        monsterScale={0.1}
+                    />
+
+                </Physics>
+            </Canvas>
+            <Loader />
+        </>
+    )
+}
 
 export default App;
