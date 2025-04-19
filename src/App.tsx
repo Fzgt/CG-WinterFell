@@ -11,7 +11,6 @@ import MonsterTerrainGenerator from './components/TerrainGenerator';
 import WelcomePage from './components/WelcomePage';
 import { ResourcePreloader } from './utils/ResourcePreloader';
 import ProgressMonitor from './components/ProgressMonitor';
-import { monsters } from './constants';
 import './styles/layout.css';
 
 /*
@@ -49,7 +48,7 @@ const Game = () => {
                         Yposition={9}
                         tunnelLength={50}
                         monsterScale={9}
-                        monsterRotation={[0, -Math.PI/2, 0]}
+                        monsterRotation={[0, -Math.PI / 2, 0]}
                     />
                     <MonsterTerrainGenerator
                         terrainType="tunnel"
