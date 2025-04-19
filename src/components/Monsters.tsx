@@ -36,13 +36,6 @@ interface Props {
     scale?: number;
 }
 
-/*TODO: extract monster_count as props
-design boundaries using monster
-design different levels according to time
-fixme: solve monster duplicate position
-fixme: solve kid animation delay and ghost shadow
-*/
-
 const Monsters = ({
     _path,
     Yposition,

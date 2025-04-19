@@ -75,7 +75,7 @@ const Ship = () => {
             <PerspectiveCamera
                 ref={camera}
                 makeDefault
-                fov={75}
+                fov={90}
                 near={0.1}
                 far={1200} />
             <Suspense fallback={null}>

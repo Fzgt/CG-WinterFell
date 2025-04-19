@@ -5,3 +5,7 @@ export const shipSpeed = 0.6;
 
 export const cubeSize = 20;
 export const cubeCount = 40;
+
+export const wallRadius = 40
+export const leftBound = (-planeSize / 2) * 0.6
+export const rightBound = (planeSize / 2) * 0.6
