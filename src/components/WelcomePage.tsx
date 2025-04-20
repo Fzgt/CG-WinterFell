@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useProgress } from '@react-three/drei';
 import '../styles/WelcomePage.css';
 import backgroundImage from '../assets/welcome-background.jpg';
-
 interface WelcomePageProps {
     onStart: () => void;
 }
@@ -44,7 +43,7 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
     const handleMouseLeave = () => setIsHovered(false);
 
     return (
-        <div 
+        <div
             className="welcome-container"
             style={{ backgroundImage: `url(${backgroundImage})` }}
         >
