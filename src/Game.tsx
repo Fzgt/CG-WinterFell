@@ -3,7 +3,7 @@ import { Physics } from '@react-three/cannon';
 import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
-import Ship from './components/Ship';
+import Player from './components/Player';
 import MonsterTerrain from './components/MonsterTerrain';
 
 /*
@@ -27,7 +27,7 @@ const Game = () => {
 
                 <Physics>
                     <Ground />
-                    <Ship />
+                    <Player />
                     <MonsterTerrain />
                 </Physics>
             </Canvas>
