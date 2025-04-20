@@ -14,7 +14,8 @@ import { useStore } from "../store";
 
 const Ground = () => {
     // Load tile texture for ground
-    const texture = useTexture('/textures/tile.jpg');
+    // const texture = useTexture('/textures/maple.jpg');
+    const texture = useTexture('/textures/floor.jpg');
 
     // Get current ship position from Zustand store
     const shipPosition = useStore(state => state.playerPosition);
@@ -55,7 +56,6 @@ const Ground = () => {
 
     return (
         <>
-            {/* First ground plane */}
             <mesh
                 ref={ground1Ref}
                 position={[0, 0, -planeSize / 2]}
@@ -72,7 +72,6 @@ const Ground = () => {
                 />
             </mesh>
 
-            {/* Second ground plane */}
             <mesh
                 ref={ground2Ref}
                 position={[0, 0, -planeSize - planeSize / 2]}

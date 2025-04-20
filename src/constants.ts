@@ -20,8 +20,9 @@ export const MODEL_PATHS = [
 // textures that need to be preloaded declared here
 export const TEXTURE_PATHS = [
     '/textures/tile.jpg',
+    '/textures/maple.jpg',
 ];
 
 export const wallRadius = 40
-export const leftBound = (-planeSize / 2) * 0.6
-export const rightBound = (planeSize / 2) * 0.6
+export const leftBound = (-planeSize / 2)
+export const rightBound = (planeSize / 2)

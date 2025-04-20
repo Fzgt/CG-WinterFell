@@ -16,14 +16,12 @@ const Player = () => {
     
     const { actions, names } = useAnimations(animations, playerGroupRef);
     
-    // Play animation on load
     useEffect(() => {
         if (names.length > 0) {
             actions[names[0]]?.play();
         }
     }, [actions, names]);
     
-    // Handle all player movement logic in a custom hook
     usePlayerMovement({ physicsRef, playerGroupRef, cameraRef });
 
     return (
