@@ -14,6 +14,7 @@ export interface PlayerRefs {
 
 export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: PlayerRefs) => {
   const setPlayerPosition = useStore(state => state.setPlayerPosition);
+  const gameOver = useStore(state => state.gameOver);
   const { left, right } = useKeyboardControls();
   
   const xPosition = useRef(new MotionController(0, 0.2));
@@ -21,6 +22,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
   const rotationZ = useRef(new MotionController(0, 0.2));
   
   useFrame((_, delta) => {
+    if (gameOver) return;
     if (!physicsRef.current || !playerGroupRef.current) return;
     
     const moveSpeed = shipSpeed * 60 * delta;

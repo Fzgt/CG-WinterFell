@@ -32,4 +32,4 @@ export const useStore = create<GameStore>((set) => ({
 
     playerPosition: [0, 1, -20], // player initial position
     setPlayerPosition: (position) => set({ playerPosition: position })
-}))
+}));

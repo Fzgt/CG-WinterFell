@@ -30,7 +30,6 @@ const Game = ({ onStart }: GameProps) => {
                     <Player />
                     <MonsterTerrain />
                 </Physics>
-
             </Canvas>
             <Loader />
             {onStart && <Score />}

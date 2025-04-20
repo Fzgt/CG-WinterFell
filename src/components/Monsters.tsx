@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEffect, useRef, useMemo } from 'react';
-import { randomInRange } from '../utils';
+import { randomInRange } from '../utils/utils';
 import { cubeCount } from '../constants';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../store';

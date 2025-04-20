@@ -25,7 +25,7 @@ const App = () => {
                 {showWelcome && (
                     <WelcomePage onStart={() => setShowWelcome(false)} />
                 )}
-                <div className={`game-container`}>
+                <div className="game-container">
                     {staticLoaded && <Game onStart={!showWelcome} />}
                 </div>
             </div>
