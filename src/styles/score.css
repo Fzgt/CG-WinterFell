@@ -11,7 +11,7 @@
     font-size: 24px;
     font-style: italic;
     color: #9A5CD0;
-    text-shadow: 
+    text-shadow:
         0 0 5px rgba(154, 92, 208, 0.7),
         0 0 10px rgba(154, 92, 208, 0.5);
     background-color: rgba(0, 0, 0, 0.5);
@@ -32,10 +32,36 @@
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
 }
 
 .score-value {
     animation: pulse 2s infinite ease-in-out;
-} 
+}
+
+.game-over-text {
+    color: #ff4f6e;
+    font-weight: bold;
+    animation: flash 1s infinite;
+    font-size: 26px;
+}
+
+@keyframes flash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}

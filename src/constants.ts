@@ -20,6 +20,7 @@ export const MODEL_PATHS = [
 // textures that need to be preloaded declared here
 export const TEXTURE_PATHS = [
     '/textures/maple.jpg',
+    '/textures/floor.jpg',
 ];
 
 export const wallRadius = 40

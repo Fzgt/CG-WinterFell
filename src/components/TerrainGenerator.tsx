@@ -30,7 +30,7 @@ interface MonsterInstance {
     object: THREE.Object3D;
     mixer?: THREE.AnimationMixer;
     // Tracks which coordinate pattern this monster follows
-    originalIndex?: number; 
+    originalIndex?: number;
 }
 
 interface TerrainProps {
@@ -246,6 +246,25 @@ const MonsterTerrainGenerator = ({
         const children = terrainRef.current?.children;
 
         if (!children) return;
+
+        // Check for collisions with player
+        if (!useStore.getState().gameOver) {
+            const playerPos = useStore.getState().playerPosition;
+
+            for (const monster of instancesRef.current) {
+                const dx = monster.position[0] - playerPos[0];
+                const dy = monster.position[1] - playerPos[1];
+                const dz = monster.position[2] - playerPos[2];
+
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (distance < 15) {
+                    useStore.getState().setGameOver(true);
+                    console.log('Collision detected! Game over.');
+                    break;
+                }
+            }
+        }
 
         for (let i = 0; i < children.length; i++) {
             const monster = instancesRef.current[i];
