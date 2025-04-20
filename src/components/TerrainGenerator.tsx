@@ -231,7 +231,7 @@ const MonsterTerrainGenerator = ({
 
     // Track ship position each frame
     useFrame(() => {
-        shipPositionRef.current = useStore.getState().shipPosition;
+        shipPositionRef.current = useStore.getState().playerPosition;
     });
 
     // Calculate diamond pattern length for recycling

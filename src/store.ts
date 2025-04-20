@@ -1,20 +1,24 @@
 import { create } from 'zustand';
 import { Triplet } from "@react-three/cannon";
-import { shipSpeed } from './constants';
 
-interface ShipStore {
-    shipPosition: Triplet;
-    moveShip: (move?: Triplet) => void;
+interface GameStore {
+    gameStarted: boolean;
+    setGameStarted: (started: boolean) => void;
+    
+    score: number;
+    addScore: (points: number) => void;
+    
+    playerPosition: Triplet;
+    setPlayerPosition: (position: Triplet) => void;
 }
 
-
-export const useStore = create<ShipStore>((set, get) => ({
-    shipPosition: [0, 1, -20],
-    moveShip([moveX, moveY, moveZ]: Triplet = [0, 0, 0]) {
-        const [x, y, z] = get().shipPosition;
-
-        set({
-            shipPosition: [x + moveX, y + moveY, z - shipSpeed - moveZ]
-        })
-    }
+export const useStore = create<GameStore>((set) => ({
+    gameStarted: false,
+    setGameStarted: (started) => set({ gameStarted: started }),
+    
+    score: 0,
+    addScore: (points) => set((state) => ({ score: state.score + points })),
+    
+    playerPosition: [0, 1, -20], // initial position
+    setPlayerPosition: (position) => set({ playerPosition: position })
 }))

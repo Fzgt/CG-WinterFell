@@ -17,7 +17,7 @@ const Ground = () => {
     const texture = useTexture('/textures/tile.jpg');
 
     // Get current ship position from Zustand store
-    const shipPosition = useStore(state => state.shipPosition);
+    const shipPosition = useStore(state => state.playerPosition);
 
     // References to the two ground planes
     const ground1Ref = useRef<THREE.Mesh>(null);

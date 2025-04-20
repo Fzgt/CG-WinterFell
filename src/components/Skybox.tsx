@@ -1,44 +1,26 @@
 import * as THREE from 'three';
-import { useGLTF} from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import { useLayoutEffect, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 
 const Skybox = () => {
-    // Load GLB skybox model
     const { scene: skyboxScene } = useGLTF('/models/skybox/skybox.glb');
-    const skyboxRef = useRef<THREE.Group>(null);  // Typed as THREE.Group
-    const shipPosition = useStore(state => state.shipPosition);
+    const skyboxRef = useRef<THREE.Group>(null);
+    const playerPosition = useStore(state => state.playerPosition);
 
     useLayoutEffect(() => {
-
         if (!skyboxRef.current) return;
 
-        // 6 different scenes with diverse positions
-        skyboxScene.scale.set(1, 1, 1).multiplyScalar(3.5); // Large enough
+        skyboxScene.scale.set(1, 1, 1).multiplyScalar(3.5);
         skyboxScene.position.set(0, 40, 110);
-        // skyboxScene.position.set(0, 40, 620);
-        // skyboxScene.position.set(0, 40, -450); 
-        
-        // Rotate the skybox (in radians)
-        skyboxScene.rotation.set(
-            0,              // X-axis rotation (tilt up/down)
-            Math.PI / 2,    // Y-axis rotation (left/right pan) 
-            0               // Z-axis rotation (rarely needed)
-        );
-
-        /*
-        no rotate:
-        skyboxScene.position.set(240, 35, -130); 
-        */
-        
-        // Attach to ref
+        skyboxScene.rotation.set(0, Math.PI / 2, 0);
         skyboxRef.current.add(skyboxScene);
     }, []);
 
     useEffect(() => {
         if (!skyboxRef.current) return;
-        skyboxRef.current.position.set(...shipPosition);
-    }, [shipPosition]);
+        skyboxRef.current.position.set(...playerPosition);
+    }, [playerPosition]);
 
     return (
         <group ref={skyboxRef}>

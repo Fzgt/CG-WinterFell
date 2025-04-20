@@ -81,7 +81,7 @@ const Monsters = ({
     }, [initialInstances]);
 
     useFrame(() => {
-        shipPositionRef.current = useStore.getState().shipPosition;
+        shipPositionRef.current = useStore.getState().playerPosition;
     });
 
     // frame update: move monsters + update animations
