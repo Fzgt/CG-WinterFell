@@ -5,13 +5,13 @@ import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import MonsterTerrain from './components/MonsterTerrain';
+import Score from './components/Score';
 
-/*
-TODO: design different levels according to time
-fixme: solve kid animation delay and ghost shadow
-*/
+interface GameProps {
+    onStart: boolean;
+}
 
-const Game = () => {
+const Game = ({ onStart }: GameProps) => {
     return (
         <>
             <Canvas>
@@ -30,8 +30,10 @@ const Game = () => {
                     <Player />
                     <MonsterTerrain />
                 </Physics>
+
             </Canvas>
             <Loader />
+            {onStart && <Score />}
         </>
     )
 }
