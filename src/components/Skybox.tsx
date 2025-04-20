@@ -1,30 +1,35 @@
 import * as THREE from 'three';
-import { useGLTF } from '@react-three/drei';
 import { useLayoutEffect, useRef, useEffect } from 'react';
 import { useStore } from '../store';
+import { useTexture } from '@react-three/drei'
 
 const Skybox = () => {
-    const { scene: skyboxScene } = useGLTF('/models/skybox/skybox.glb');
+
+    const skyboxTexture = useTexture("/textures/maple.jpg");
     const skyboxRef = useRef<THREE.Group>(null);
-    const playerPosition = useStore(state => state.playerPosition);
+    const playerPosition = useStore((state) => state.playerPosition);
 
     useLayoutEffect(() => {
-        if (!skyboxRef.current) return;
-
-        skyboxScene.scale.set(1, 1, 1).multiplyScalar(3.5);
-        skyboxScene.position.set(0, 40, 110);
-        skyboxScene.rotation.set(0, Math.PI / 2, 0);
-        skyboxRef.current.add(skyboxScene);
-    }, []);
+        skyboxTexture.wrapS = skyboxTexture.wrapT = THREE.MirroredRepeatWrapping;
+        skyboxTexture.repeat.set(2, 2);
+    });
 
     useEffect(() => {
         if (!skyboxRef.current) return;
-        skyboxRef.current.position.set(...playerPosition);
-    }, [playerPosition]);
+        skyboxRef.current.position.set(...playerPosition)
+    }, [playerPosition])
 
     return (
         <group ref={skyboxRef}>
-            <primitive object={skyboxScene} />
+            <mesh>
+                <sphereGeometry args={[800, 32, 32]} />
+                <meshPhongMaterial
+                    emissive={0xff2190}
+                    side={THREE.BackSide}
+                    emissiveIntensity={0.1}
+                    map={skyboxTexture}
+                />
+            </mesh>
         </group>
     );
 };
