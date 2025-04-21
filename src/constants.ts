@@ -8,13 +8,12 @@ export const cubeCount = 40;
 
 // models that need to be preloaded declared here
 export const MODEL_PATHS = [
-    '/models/monsters/halloween_pumpkin_2.glb',
-    '/models/monsters/halloween_pumpkin.glb',
-    '/models/monsters/emerald_bat.glb',
-    '/models/monsters/glow_bat.glb',
-    '/models/monsters/king_boo.glb',
-    '/models/jo_on_bike__rigged__animated/scene.gltf',
-    '/models/skybox/skybox.glb'
+    '/models/obstacles/halloween_pumpkin_2.glb',
+    '/models/obstacles/halloween_pumpkin.glb',
+    '/models/obstacles/emerald_bat.glb',
+    '/models/obstacles/glow_bat.glb',
+    '/models/obstacles/king_boo.glb',
+    '/models/player/scene.gltf',
 ];
 
 // textures that need to be preloaded declared here

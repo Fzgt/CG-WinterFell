@@ -2,8 +2,8 @@ import { useGLTF } from '@react-three/drei';
 import MonsterTerrainGenerator from './TerrainGenerator';
 
 const MonsterTerrain = () => {
-    const { scene: pumpkin_1 } = useGLTF('/models/monsters/halloween_pumpkin_2.glb') as any;
-    const { scene: pumpkin_2 } = useGLTF('/models/monsters/halloween_pumpkin.glb') as any;
+    const { scene: pumpkin_1 } = useGLTF('/models/obstacles/halloween_pumpkin_2.glb') as any;
+    const { scene: pumpkin_2 } = useGLTF('/models/obstacles/halloween_pumpkin.glb') as any;
 
     return (
         <>
