@@ -5,10 +5,17 @@ import { ResourcePreloader } from './utils/ResourcePreloader';
 import ProgressMonitor from './components/ProgressMonitor';
 import Game from './Game';
 import './styles/layout.css';
+import { useStore } from './store';
 
 const App = () => {
     const [showWelcome, setShowWelcome] = useState(true);
     const [staticLoaded, setStaticLoaded] = useState(false);
+    const setGameStarted = useStore((state) => state.setGameStarted);
+
+    const handleStartGame = () => {
+        setShowWelcome(false);
+        setGameStarted(true);
+    };
 
     return (
         <>
@@ -23,7 +30,7 @@ const App = () => {
 
             <div className="app-container">
                 {showWelcome && (
-                    <WelcomePage onStart={() => setShowWelcome(false)} />
+                    <WelcomePage onStart={handleStartGame} />
                 )}
                 <div className="game-container">
                     {staticLoaded && <Game onStart={!showWelcome} />}
