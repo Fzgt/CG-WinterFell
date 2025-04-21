@@ -27,7 +27,7 @@ const Game = ({ onStart }: GameProps) => {
 
                 <Physics>
                     <Ground />
-                    <Player />
+                    {onStart && <Player />}
                     <MonsterTerrain />
                 </Physics>
             </Canvas>
