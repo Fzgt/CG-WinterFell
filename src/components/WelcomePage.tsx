@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProgress } from '@react-three/drei';
-import '../styles/WelcomePage.css';
+import '../styles/welcome.css';
 import backgroundImage from '../assets/welcome2.jpg';
 interface WelcomePageProps {
     onStart: () => void;

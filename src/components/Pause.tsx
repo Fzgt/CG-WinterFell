@@ -1,4 +1,4 @@
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 import '../styles/pause.css';
 
 const Pause = () => {

@@ -2,19 +2,19 @@ import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 
-const PUMPKIN_COUNT_PER_SECTION = 150;
+const PUMPKIN_COUNT_PER_SECTION = 280;
 const FIELD_WIDTH = 1000;
 const SECTION_LENGTH = 2000;
 const TOTAL_SECTIONS = 4;
 const TOTAL_PUMPKINS = PUMPKIN_COUNT_PER_SECTION * TOTAL_SECTIONS;
 
 const DISTANCE_COLORS = [
-  { distance: 0, color: new THREE.Color('#FF8C00') }, //  橙色
-  { distance: 2000, color: new THREE.Color('#32CD32') }, // 绿色 不动
-  { distance: 4000, color: new THREE.Color('#888888') }, // 棕色 不动
-  { distance: 6000, color: new THREE.Color('#222222') }, // 黑色 不动
+  { distance: 0, color: new THREE.Color('#FF8C00') }, // Orange
+  { distance: 2000, color: new THREE.Color('#32CD32') }, // Green
+  { distance: 4000, color: new THREE.Color('#888888') }, // Brown
+  { distance: 6000, color: new THREE.Color('#222222') }, // Black
 ];
 
 const randomInRange = (from: number, to: number) =>

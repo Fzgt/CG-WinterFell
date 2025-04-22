@@ -1,8 +1,8 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { leftBound, rightBound } from '../constants';
+import { leftBound, rightBound } from '../utils/constants';
 import useKeyboardControls from './useKeyboardControls';
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 import { MotionController } from '../utils/MotionController';
 import * as THREE from 'three';
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { useLayoutEffect, useRef, useEffect } from 'react';
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 import { useTexture } from '@react-three/drei'
 
 const Skybox = () => {
