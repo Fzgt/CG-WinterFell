@@ -5,7 +5,7 @@ import { ResourcePreloader } from './utils/ResourcePreloader';
 import ProgressMonitor from './components/ProgressMonitor';
 import Game from './Game';
 import './styles/layout.css';
-import { useStore } from './store';
+import { useStore } from './store/store';
 
 const App = () => {
     const [showWelcome, setShowWelcome] = useState(true);

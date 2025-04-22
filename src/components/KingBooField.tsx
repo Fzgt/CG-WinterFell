@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 
 const BOO_COUNT_PER_SECTION = 150;
 const FIELD_WIDTH = 1000;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../store';
+import { useStore } from '../store/store';
 import '../styles/score.css';
 import { updateHighScores } from '../utils/utils';
 
@@ -9,8 +9,7 @@ const Score = () => {
     const addScore = useStore(state => state.addScore);
     const gameOver = useStore(state => state.gameOver);
     const [highScores, setHighScores] = useState<number[]>([]);
-    // const addPlayerSpeed = useStore(state => state.addPlayerSpeed);
-    // const [lastSpeedIncrement, setLastSpeedIncrement] = useState(0);
+    const playerSpeed = useStore(state => state.playerSpeed);
 
     useEffect(() => {
         if (gameOver) {
@@ -28,13 +27,6 @@ const Score = () => {
 
         return () => clearInterval(timer);
     }, [gameOver]);
-
-    // useEffect(() => {
-    //     if (score >= lastSpeedIncrement + 300) {
-    //         addPlayerSpeed();
-    //         setLastSpeedIncrement(Math.floor(score / 300) * 300);
-    //     }
-    // }, [score]);
 
     const handlePlayAgain = () => {
         window.location.reload();
@@ -79,7 +71,14 @@ const Score = () => {
                         </button>
                     </div>
                 ) : (
-                    <>score: {score.toLocaleString()}</>
+                    <>
+                        <div style={{ paddingBottom: '10px' }}>
+                            Speed: {playerSpeed.toLocaleString() + ' m/s'}
+                        </div>
+                        <div>
+                            Score: {score.toLocaleString()}
+                        </div>
+                    </>
                 )}
             </div>
         </div>
