@@ -39,7 +39,7 @@ const Player = () => {
                 ref={playerGroupRef}
                 position={[0, 1.5, -20]}
                 rotation={[0, Math.PI, 0]}
-                scale={3}
+                scale={2.5}
             >
                 <primitive object={scene} />
             </group>

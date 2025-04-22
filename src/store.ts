@@ -11,6 +11,9 @@ interface GameStore {
     gameOver: boolean;
     setGameOver: (over: boolean) => void;
 
+    gamePaused: boolean;
+    togglePause: () => void;
+
     score: number;
     addScore: (points: number) => void;
 
@@ -19,7 +22,7 @@ interface GameStore {
 }
 
 export const useStore = create<GameStore>((set) => ({
-    playerSpeed: 5,
+    playerSpeed: 10,
     addPlayerSpeed: () => set(state => {
         const newSpeed = state.playerSpeed + 3;
         console.log("New player speed:", newSpeed);
@@ -32,9 +35,12 @@ export const useStore = create<GameStore>((set) => ({
     gameOver: false,
     setGameOver: (over) => set({ gameOver: over }),
 
+    gamePaused: false,
+    togglePause: () => set(state => ({ gamePaused: !state.gamePaused })),
+
     score: 0,
     addScore: (points) => set((state) => {
-        if (!state.gameOver) {
+        if (!state.gameOver && !state.gamePaused) {
             return { score: state.score + points };
         }
         return state;

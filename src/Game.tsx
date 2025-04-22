@@ -4,8 +4,10 @@ import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
-import MonsterTerrain from './components/MonsterTerrain';
+import PumpkinField from './components/PumpkinField';
+// import KingBooField from './components/KingBooField';
 import Score from './components/Score';
+import Pause from './components/Pause';
 
 interface GameProps {
     onStart: boolean;
@@ -28,11 +30,13 @@ const Game = ({ onStart }: GameProps) => {
                 <Physics>
                     <Ground />
                     {onStart && <Player />}
-                    <MonsterTerrain />
+                    <PumpkinField />
+                    {/* <KingBooField /> */}
                 </Physics>
             </Canvas>
             <Loader />
             {onStart && <Score />}
+            <Pause />
         </>
     )
 }

@@ -41,6 +41,15 @@ const MonsterTerrain = () => {
                 diamondSize={20}
                 monsterScale={0.1}
             />
+            {/* <MonsterTerrainGenerator
+                terrainType="random"
+                monsterModel={pumpkin_1}
+                Yposition={0.5}
+                tunnelLength={10}
+                diamondSize={20}
+                monsterScale={0.1}
+                monsterCount={60}
+            /> */}
         </>
     );
 };
