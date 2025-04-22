@@ -8,9 +8,9 @@ const Score = () => {
     const score = useStore(state => state.score);
     const addScore = useStore(state => state.addScore);
     const gameOver = useStore(state => state.gameOver);
-    const addPlayerSpeed = useStore(state => state.addPlayerSpeed);
     const [highScores, setHighScores] = useState<number[]>([]);
-    const [lastSpeedIncrement, setLastSpeedIncrement] = useState(0);
+    // const addPlayerSpeed = useStore(state => state.addPlayerSpeed);
+    // const [lastSpeedIncrement, setLastSpeedIncrement] = useState(0);
 
     useEffect(() => {
         if (gameOver) {
@@ -29,12 +29,12 @@ const Score = () => {
         return () => clearInterval(timer);
     }, [gameOver]);
 
-    useEffect(() => {
-        if (score >= lastSpeedIncrement + 300) {
-            addPlayerSpeed();
-            setLastSpeedIncrement(Math.floor(score / 300) * 300);
-        }
-    }, [score]);
+    // useEffect(() => {
+    //     if (score >= lastSpeedIncrement + 300) {
+    //         addPlayerSpeed();
+    //         setLastSpeedIncrement(Math.floor(score / 300) * 300);
+    //     }
+    // }, [score]);
 
     const handlePlayAgain = () => {
         window.location.reload();

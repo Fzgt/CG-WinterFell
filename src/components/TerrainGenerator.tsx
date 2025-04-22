@@ -1,18 +1,3 @@
-/**
- * MonsterTerrainGenerator Component
- * 
- * Generates and manages monster-filled terrain of different types (diamond, tunnel, wall).
- * Key Features:
- * - Creates terrain patterns with monsters placed in specific formations
- * - Efficiently recycles monsters when they go out of view
- * - Supports animations for monsters
- * - Maintains seamless terrain continuity
- * 
- * Props:
- * - terrainType: Shape of the terrain ('diamond', 'tunnel', or 'wall')
- * - monsterModel: 3D model used for monsters
- * - Various configuration options for terrain size, monster count, etc.
- */
 import * as THREE from 'three';
 import { useEffect, useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -20,8 +5,7 @@ import { useStore } from '../store';
 import { planeSize, wallRadius, leftBound, cubeSize } from '../constants';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
-// Type definitions for component interfaces
-type TerrainType = 'diamond' | 'tunnel' | 'wall';
+type TerrainType = 'diamond' | 'tunnel' | 'wall' | 'random';
 
 interface MonsterInstance {
     position: [number, number, number];
@@ -29,7 +13,6 @@ interface MonsterInstance {
     scale: number;
     object: THREE.Object3D;
     mixer?: THREE.AnimationMixer;
-    // Tracks which coordinate pattern this monster follows
     originalIndex?: number;
 }
 
@@ -80,13 +63,12 @@ const MonsterTerrainGenerator = ({
             case 'wall': return generateWallCoordinates(gapSize);
             case 'tunnel': return generateTunnelCoordinates(tunnelLength, xPosition);
             case 'diamond': return generateDiamondCoordinates(diamondSize, tunnelLength);
+            case 'random': return generateRandomCoordinates(monsterCount);
             default: return [];
         }
     };
 
     /**
-     * Generates coordinates for wall-type terrain
-     * Creates a zig-zag pattern of monsters along the Z-axis
      * @param gapSize Size of the gap in the center of the wall
      */
     const generateWallCoordinates = (gapSize: number) => {
@@ -117,8 +99,6 @@ const MonsterTerrainGenerator = ({
     };
 
     /**
-     * Generates coordinates for tunnel-type terrain
-     * Creates alternating monsters on left/right sides of a tunnel
      * @param length How long the tunnel should be
      * @param xPosition How far apart the tunnel walls are
      */
@@ -137,8 +117,6 @@ const MonsterTerrainGenerator = ({
     };
 
     /**
-     * Generates coordinates for diamond-type terrain
-     * Creates a diamond-shaped pattern with inner and outer walls
      * @param size Diameter of the diamond formation
      * @param tunnelLength How far back the diamond extends
      */
@@ -185,6 +163,33 @@ const MonsterTerrainGenerator = ({
         // Center block of diamond
         const middleZ = wallEndOffset - tunnelEndOffset - (Math.floor(size / 1.5) * cubeSize) + cubeSize;
         coords.push([0, Yposition, middleZ]);
+
+        return coords;
+    };
+
+    /**
+     * @param count Number of monsters to place
+     */
+    const generateRandomCoordinates = (count: number) => {
+        const coords: [number, number, number][] = [];
+        const startZ = -300; // Starting Z position
+        const endZ = 500;    // Ending Z position
+        const minX = -450;   // Left boundary
+        const maxX = 450;    // Right boundary
+
+        // Helper function to get random number in range
+        const randomInRange = (min: number, max: number) => min + Math.random() * (max - min);
+
+        for (let i = 0; i < count; i++) {
+            // Generate random position within boundaries
+            const x = randomInRange(minX, maxX);
+            const z = randomInRange(startZ, endZ);
+
+            // Add some height variation
+            const y = Yposition;
+
+            coords.push([x, y, z]);
+        }
 
         return coords;
     };
@@ -237,17 +242,13 @@ const MonsterTerrainGenerator = ({
     // Calculate diamond pattern length for recycling
     const diamondPatternLength = diamondSize * cubeSize * 1.3;
 
-    /**
-     * Main animation/recycling loop
-     * Updates monster positions and recycles those that go behind the ship
-     */
     useFrame((_, delta) => {
         const shipZ = shipPositionRef.current[2];
         const children = terrainRef.current?.children;
 
         if (!children) return;
 
-        // Check for collisions with player
+        // collisions detection
         if (!useStore.getState().gameOver) {
             const playerPos = useStore.getState().playerPosition;
 
@@ -278,7 +279,7 @@ const MonsterTerrainGenerator = ({
             mesh.rotation.set(...monster.rotation);
             mesh.scale.set(monster.scale, monster.scale, monster.scale);
 
-            // Recycle monsters that pass behind the ship
+            // Recycle 
             if (monster.position[2] > shipZ + 100) {
                 const originalIndex = monster.originalIndex ?? 0;
                 const originalCoord = originalCoordsRef.current[originalIndex];
