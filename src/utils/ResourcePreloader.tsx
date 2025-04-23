@@ -1,5 +1,5 @@
 import { useGLTF, useTexture } from '@react-three/drei';
-import { MODEL_PATHS, TEXTURE_PATHS } from './constants';
+import { MODEL_PATHS, TEXTURE_PATHS } from '../config/constants';
 
 // Static preloading - happens during module import
 for (const texture of TEXTURE_PATHS) {

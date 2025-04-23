@@ -7,14 +7,14 @@ import { useStore } from '../store/store';
 const PUMPKIN_COUNT_PER_SECTION = 280;
 const FIELD_WIDTH = 1000;
 const SECTION_LENGTH = 2000;
-const TOTAL_SECTIONS = 4;
+const TOTAL_SECTIONS = 8;
 const TOTAL_PUMPKINS = PUMPKIN_COUNT_PER_SECTION * TOTAL_SECTIONS;
 
 const DISTANCE_COLORS = [
   { distance: 0, color: new THREE.Color('#FF8C00') }, // Orange
-  { distance: 2000, color: new THREE.Color('#32CD32') }, // Green
-  { distance: 4000, color: new THREE.Color('#888888') }, // Brown
-  { distance: 6000, color: new THREE.Color('#222222') }, // Black
+  { distance: 3000, color: new THREE.Color('#32CD32') }, // Green
+  { distance: 7000, color: new THREE.Color('#888888') }, // Brown
+  { distance: 12000, color: new THREE.Color('#222222') }, // Black
 ];
 
 const randomInRange = (from: number, to: number) =>
