@@ -1,5 +1,5 @@
 import { useState, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber';
 import WelcomePage from './components/WelcomePage';
 import { ResourcePreloader } from './utils/ResourcePreloader';
 import ProgressMonitor from './components/ProgressMonitor';
@@ -10,7 +10,7 @@ import { useStore } from './store/store';
 const App = () => {
     const [showWelcome, setShowWelcome] = useState(true);
     const [staticLoaded, setStaticLoaded] = useState(false);
-    const setGameStarted = useStore((state) => state.setGameStarted);
+    const setGameStarted = useStore(state => state.setGameStarted);
 
     const handleStartGame = () => {
         setShowWelcome(false);
@@ -29,9 +29,7 @@ const App = () => {
             </div>
 
             <div className="app-container">
-                {showWelcome && (
-                    <WelcomePage onStart={handleStartGame} />
-                )}
+                {showWelcome && <WelcomePage onStart={handleStartGame} />}
                 <div className="game-container">
                     {staticLoaded && <Game onStart={!showWelcome} />}
                 </div>

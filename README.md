@@ -11,8 +11,11 @@ src
 ├─main.tsx
 ├─vite-env.d.ts
 ├─utils
+|   ├─Debug.tsx
 |   ├─MotionController.ts
+|   ├─Pause.tsx
 |   ├─ResourcePreloader.tsx
+|   ├─WebgpuSupport.tsx
 |   └utils.ts
 ├─types
 |   └store.d.ts
@@ -32,13 +35,11 @@ src
 |   └constants.ts
 ├─components
 |     ├─Ground.tsx
-|     ├─Pause.tsx
 |     ├─Player.tsx
 |     ├─ProgressMonitor.tsx
 |     ├─PumpkinField.tsx
 |     ├─Score.tsx
 |     ├─Skybox.tsx
-|     ├─WebgpuSupport.tsx
 |     ├─WelcomePage.tsx
 |     ├─unused
 |     |   ├─MonsterTerrain.tsx
