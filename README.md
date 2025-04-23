@@ -1,7 +1,9 @@
 # CG-WinterFell
+
 <img src="/public/docs/landing-page.jpg" alt="winterfell" width="100%" height="500px">
 
 ## File Tree
+
 ```
 src
 ├─App.tsx
@@ -24,18 +26,19 @@ src
 |   └store.ts
 ├─hooks
 |   ├─useKeyboardControls.ts
-|   └usePlayerMovement.ts
+|   ├─usePlayerMovement.ts
+|   └useWebGPURenderer.ts
 ├─config
 |   └constants.ts
 ├─components
 |     ├─Ground.tsx
-|     ├─KingBooField.tsx
 |     ├─Pause.tsx
 |     ├─Player.tsx
 |     ├─ProgressMonitor.tsx
 |     ├─PumpkinField.tsx
 |     ├─Score.tsx
 |     ├─Skybox.tsx
+|     ├─WebgpuSupport.tsx
 |     ├─WelcomePage.tsx
 |     ├─unused
 |     |   ├─MonsterTerrain.tsx
@@ -57,13 +60,13 @@ $ npm run dev
 
 ## Commit Specification
 
-- feat: new features
-- fix: fix problems
-- chore: modify tool related (including but not limited to documentation, code generation, etc.)
-- docs: modify documentation
-- perf: improve performance
-- refactor: refactor code, theoretically without affecting existing functions
-- revert: rollback
-- style: modify code format, without affecting code logic
-- test: test related
-- ci: CI
+-   feat: new features
+-   fix: fix problems
+-   chore: modify tool related (including but not limited to documentation, code generation, etc.)
+-   docs: modify documentation
+-   perf: improve performance
+-   refactor: refactor code, theoretically without affecting existing functions
+-   revert: rollback
+-   style: modify code format, without affecting code logic
+-   test: test related
+-   ci: CI
