@@ -2,7 +2,7 @@ import { useTexture } from "@react-three/drei";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from 'three';
 import { useFrame } from "@react-three/fiber";
-import { planeSize, planeTextureSize } from "../utils/constants";
+import { planeSize, planeTextureSize } from "../config/constants";
 import { useStore } from "../store/store";
 
 const Ground = () => {

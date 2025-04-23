@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { useEffect, useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../../store/store';
-import { planeSize, wallRadius, leftBound, cubeSize } from '../../utils/constants';
+import { planeSize, wallRadius, leftBound, cubeSize } from '../../config/constants';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 type TerrainType = 'diamond' | 'tunnel' | 'wall' | 'random';

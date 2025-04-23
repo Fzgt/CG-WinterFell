@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { GameStore } from './type';
+import { GameStore } from '../types/store';
 
 export const useStore = create<GameStore>((set) => ({
-    playerSpeed: 10,
+    playerSpeed: 12,
     addPlayerSpeed: () => set(state => {
-        const newSpeed = state.playerSpeed + 3;
+        const newSpeed = state.playerSpeed + 4;
         console.log("New player speed:", newSpeed);
         return { playerSpeed: newSpeed };
     }),
