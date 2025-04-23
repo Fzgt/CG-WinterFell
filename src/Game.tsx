@@ -6,13 +6,16 @@ import Ground from './components/Ground';
 import Player from './components/Player';
 import PumpkinField from './components/PumpkinField';
 import Score from './components/Score';
-import Pause from './components/Pause';
+import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
-import WebgpuSupport from './components/WebgpuSupport';
+import WebgpuSupport from './utils/WebgpuSupport';
+import { Suspense, lazy } from 'react';
 
 interface GameProps {
     onStart: boolean;
 }
+
+const LazyDebugComponent = lazy(() => import('./utils/Debug'));
 
 const Game = ({ onStart }: GameProps) => {
     const isWebGPUSupported = useWebGPUSupport();
@@ -35,7 +38,12 @@ const Game = ({ onStart }: GameProps) => {
                     {onStart && <Player />}
                     <PumpkinField />
                 </Physics>
+
+                <Suspense fallback={null}>
+                    <LazyDebugComponent />
+                </Suspense>
             </Canvas>
+
             <Loader />
             {onStart && <Score />}
             <Pause />
