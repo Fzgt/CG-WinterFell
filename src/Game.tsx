@@ -1,19 +1,22 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/cannon';
 import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import PumpkinField from './components/PumpkinField';
-// import KingBooField from './components/KingBooField';
 import Score from './components/Score';
 import Pause from './components/Pause';
+import { useWebGPUSupport } from './hooks/useWebGPURenderer';
+import WebgpuSupport from './components/WebgpuSupport';
 
 interface GameProps {
     onStart: boolean;
 }
 
 const Game = ({ onStart }: GameProps) => {
+    const isWebGPUSupported = useWebGPUSupport();
+
     return (
         <>
             <Canvas>
@@ -31,14 +34,14 @@ const Game = ({ onStart }: GameProps) => {
                     <Ground />
                     {onStart && <Player />}
                     <PumpkinField />
-                    {/* <KingBooField /> */}
                 </Physics>
             </Canvas>
             <Loader />
             {onStart && <Score />}
             <Pause />
+            {isWebGPUSupported && <WebgpuSupport />}
         </>
-    )
-}
+    );
+};
 
-export default Game; 
+export default Game;
