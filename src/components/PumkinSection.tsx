@@ -27,8 +27,17 @@ const PumpkinSection = ({
 
     function generateSectionPumpkins(section: number) {
         const positions: THREE.Vector3[] = [];
-        const sectionStartZ = section === 0 ? -300 : -section * SECTION_LENGTH;
-        const sectionEndZ = sectionStartZ - SECTION_LENGTH;
+        console.log(section);
+
+        let sectionStartZ, sectionEndZ;
+
+        if (section === 0) {
+            sectionStartZ = -250;
+            sectionEndZ = -SECTION_LENGTH;
+        } else {
+            sectionStartZ = -section * SECTION_LENGTH;
+            sectionEndZ = sectionStartZ - SECTION_LENGTH;
+        }
 
         for (let i = 0; i < PUMPKIN_COUNT_PER_SECTION; i++) {
             const x = randomInRange2(-FIELD_WIDTH / 2, FIELD_WIDTH / 2);
