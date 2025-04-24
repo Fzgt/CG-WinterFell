@@ -1,6 +1,5 @@
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/cannon';
-import { Loader } from '@react-three/drei';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
@@ -9,6 +8,7 @@ import Score from './components/Score';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import WebgpuSupport from './utils/WebgpuSupport';
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 // import { Suspense, lazy } from 'react';
 // import { isDev } from './utils/utils';
 
@@ -23,12 +23,20 @@ const Game = ({ onStart }: GameProps) => {
 
     return (
         <>
-            <Canvas>
-                <ambientLight />
+            <Canvas
+                gl={{
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: 'high-performance',
+                    toneMapping: ACESFilmicToneMapping,
+                    outputColorSpace: SRGBColorSpace,
+                }}
+            >
+                <ambientLight intensity={0.8} />
                 <directionalLight
                     castShadow
                     position={[50, 100, 100]}
-                    intensity={1.5}
+                    intensity={3.0}
                     shadow-mapSize-width={1024}
                     shadow-mapSize-height={1024}
                 />
@@ -38,14 +46,12 @@ const Game = ({ onStart }: GameProps) => {
                     <Ground />
                     {onStart && <Player />}
                     <PumpkinField />
+
+                    {/* {isDev && <Suspense fallback={null}>{<LazyDebugComponent />}</Suspense>} */}
                 </Physics>
-
-                {/* {isDev && <Suspense fallback={null}>{<LazyDebugComponent />}</Suspense>} */}
             </Canvas>
-
-            <Loader />
-            {onStart && <Score />}
             <Pause />
+            {onStart && <Score />}
             {isWebGPUSupported && <WebgpuSupport />}
         </>
     );

@@ -7,32 +7,33 @@ interface WelcomePageProps {
 }
 
 const Snowflakes = () => {
-    const snowflakes = Array(40).fill(0).map((_, index) => {
-        const size = Math.random() * 10 + 2;
-        const startPositionX = Math.random() * 100;
-        const startPositionY = Math.random() * -100;
-        const duration = Math.random() * 10 + 10;
-        const delay = Math.random() * 10;
+    const snowflakes = Array(40)
+        .fill(0)
+        .map((_, index) => {
+            const size = Math.random() * 10 + 2;
+            const startPositionX = Math.random() * 100;
+            const startPositionY = Math.random() * -100;
+            const duration = Math.random() * 10 + 10;
+            const delay = Math.random() * 10;
 
-        return (
-            <div
-                key={index}
-                className="snowflake"
-                style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    left: `${startPositionX}%`,
-                    top: `${startPositionY}px`,
-                    animationDuration: `${duration}s`,
-                    animationDelay: `${delay}s`
-                }}
-            />
-        );
-    });
+            return (
+                <div
+                    key={index}
+                    className="snowflake"
+                    style={{
+                        width: `${size}px`,
+                        height: `${size}px`,
+                        left: `${startPositionX}%`,
+                        top: `${startPositionY}px`,
+                        animationDuration: `${duration}s`,
+                        animationDelay: `${delay}s`,
+                    }}
+                />
+            );
+        });
 
     return <div className="snowflakes-container">{snowflakes}</div>;
 };
-
 
 const WelcomePage = ({ onStart }: WelcomePageProps) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -43,10 +44,7 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
     const handleMouseLeave = () => setIsHovered(false);
 
     return (
-        <div
-            className="welcome-container"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
-        >
+        <div className="welcome-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
             <Snowflakes />
 
             <h1 className="title">WinterFell</h1>
