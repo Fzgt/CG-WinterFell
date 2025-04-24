@@ -1,8 +1,7 @@
 export const planeSize = 1000;
 export const planeTextureSize = planeSize / 20;
-
-export const cubeSize = 20;
-export const cubeCount = 40;
+export const leftBound = -planeSize / 2;
+export const rightBound = planeSize / 2;
 
 // models that need to be preloaded declared here
 export const MODEL_PATHS = [
@@ -14,11 +13,4 @@ export const MODEL_PATHS = [
 ];
 
 // textures that need to be preloaded declared here
-export const TEXTURE_PATHS = [
-    '/textures/maple.jpg',
-    '/textures/floor.jpg',
-];
-
-export const wallRadius = 40
-export const leftBound = (-planeSize / 2)
-export const rightBound = (planeSize / 2)
+export const TEXTURE_PATHS = ['/textures/maple.jpg', '/textures/floor.jpg'];

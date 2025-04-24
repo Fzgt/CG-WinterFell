@@ -12,6 +12,6 @@ export const DISTANCE_COLORS = [
 ];
 
 // PumpkinSection.tsx
-export const PUMPKIN_COUNT_PER_SECTION = 250;
+export const PUMPKIN_COUNT_PER_SECTION = 260;
 export const FIELD_WIDTH = 1000;
 export const SECTION_LENGTH = 2000;

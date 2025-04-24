@@ -32,18 +32,17 @@ src
 |   ├─usePlayerMovement.ts
 |   └useWebGPURenderer.ts
 ├─config
-|   └constants.ts
+|   ├─constants.ts
+|   └pumpkin.ts
 ├─components
 |     ├─Ground.tsx
 |     ├─Player.tsx
 |     ├─ProgressMonitor.tsx
+|     ├─PumkinSection.tsx
 |     ├─PumpkinField.tsx
 |     ├─Score.tsx
 |     ├─Skybox.tsx
-|     ├─WelcomePage.tsx
-|     ├─unused
-|     |   ├─MonsterTerrain.tsx
-|     |   └TerrainGenerator.tsx
+|     └WelcomePage.tsx
 ├─assets
 |   ├─welcome1.jpg
 |   └welcome2.jpg
