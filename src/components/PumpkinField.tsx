@@ -1,22 +1,15 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store/store';
-import { randomInRange2 } from '../utils/utils';
-
-const PUMPKIN_COUNT_PER_SECTION = 250;
-const FIELD_WIDTH = 1000;
-const SECTION_LENGTH = 2000;
-const TOTAL_SECTIONS = 8;
-const TOTAL_PUMPKINS = PUMPKIN_COUNT_PER_SECTION * TOTAL_SECTIONS;
-
-const DISTANCE_COLORS = [
-    { distance: 0, color: new THREE.Color('#FF8C00') }, // Orange
-    { distance: 2500, color: new THREE.Color('#32CD32') }, // Green
-    { distance: 6000, color: new THREE.Color('#888888') }, // Brown
-    { distance: 10000, color: new THREE.Color('#222222') }, // Black
-];
+import PumpkinSection from './PumkinSection';
+import {
+    DISTANCE_COLORS,
+    SECTION_LENGTH,
+    TOTAL_SECTIONS,
+    VISIBLE_SECTIONS,
+} from '../config/pumpkin';
 
 const PumpkinField = () => {
     const { scene: pumpkinModel } = useGLTF('/models/obstacles/halloween_pumpkin_2.glb');
@@ -26,15 +19,35 @@ const PumpkinField = () => {
     const setGameOver = useStore(state => state.setGameOver);
     const addPlayerSpeed = useStore(state => state.addPlayerSpeed);
 
-    const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
-    const dummy = useRef(new THREE.Object3D()).current;
-    const pumpkinPositions = useRef<THREE.Vector3[]>([]);
     const currentColorIndex = useRef<number>(0);
+    const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+
+    const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
 
     const [meshData, setMeshData] = useState<{
         geometry: THREE.BufferGeometry | null;
         material: THREE.MeshStandardMaterial | null;
     }>({ geometry: null, material: null });
+
+    const checkCollision = (position: THREE.Vector3): boolean => {
+        if (gameOver) return false;
+
+        const playerPos = new THREE.Vector3(...playerPosition);
+        const collisionRadius = 15;
+
+        const dx = position.x - playerPos.x;
+        const dy = position.y - playerPos.y;
+        const dz = position.z - playerPos.z;
+
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distance < collisionRadius) {
+            setGameOver(true);
+            return true;
+        }
+
+        return false;
+    };
 
     useEffect(() => {
         let geometry: THREE.BufferGeometry | null = null;
@@ -56,87 +69,58 @@ const PumpkinField = () => {
         }
     }, [pumpkinModel]);
 
-    const generateAllPumpkinsPos = () => {
-        const positions: THREE.Vector3[] = [];
-
-        for (let section = 0; section < TOTAL_SECTIONS; section++) {
-            const sectionStartZ = section === 0 ? -300 : -section * SECTION_LENGTH;
-            const sectionEndZ = sectionStartZ - SECTION_LENGTH;
-
-            for (let i = 0; i < PUMPKIN_COUNT_PER_SECTION; i++) {
-                const x = randomInRange2(-FIELD_WIDTH / 2, FIELD_WIDTH / 2);
-                const z = randomInRange2(sectionStartZ, sectionEndZ);
-                positions.push(new THREE.Vector3(x, 1, z));
-            }
-        }
-
-        return positions;
-    };
-
-    useEffect(() => {
-        if (!meshData.geometry || !meshData.material || !instancedMeshRef.current) return;
-
-        const allPositions = generateAllPumpkinsPos();
-
-        pumpkinPositions.current = allPositions;
-
-        pumpkinPositions.current.forEach((position, i) => {
-            dummy.position.copy(position);
-            dummy.scale.set(0.1, 0.1, 0.1);
-            dummy.updateMatrix();
-            instancedMeshRef.current?.setMatrixAt(i, dummy.matrix);
-        });
-
-        instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-    }, [meshData.geometry, meshData.material, instancedMeshRef.current]);
-
     useFrame(() => {
-        if (gameOver || !instancedMeshRef.current) return;
+        if (gameOver || !meshData.material) return;
 
-        const playerPos = new THREE.Vector3(...playerPosition);
         const totalDistance = Math.abs(playerPosition[2]);
+
+        const newSectionIndex = Math.floor(totalDistance / SECTION_LENGTH);
+
+        if (newSectionIndex > currentSectionIndex) {
+            setCurrentSectionIndex(newSectionIndex);
+
+            const newVisibleSections = [];
+            for (let i = 0; i < VISIBLE_SECTIONS; i++) {
+                const sectionIndex = newSectionIndex + i;
+                if (sectionIndex < TOTAL_SECTIONS) {
+                    newVisibleSections.push(sectionIndex);
+                }
+            }
+            setVisibleSections(newVisibleSections);
+        }
 
         if (
             currentColorIndex.current < DISTANCE_COLORS.length - 1 &&
             totalDistance >= DISTANCE_COLORS[currentColorIndex.current + 1].distance
         ) {
             currentColorIndex.current++;
-
             addPlayerSpeed();
 
-            if (meshData.material) {
-                meshData.material.color.set(DISTANCE_COLORS[currentColorIndex.current].color);
-            }
-        }
-
-        const collisionRadius = 15;
-
-        for (let i = 0; i < pumpkinPositions.current.length; i++) {
-            const position = pumpkinPositions.current[i];
-
-            const dx = position.x - playerPos.x;
-            const dy = position.y - playerPos.y;
-            const dz = position.z - playerPos.z;
-
-            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-            if (distance < collisionRadius) {
-                setGameOver(true);
-                break;
-            }
+            meshData.material.color.set(DISTANCE_COLORS[currentColorIndex.current].color);
         }
     });
 
+    const renderSections = useMemo(() => {
+        if (!meshData.geometry || !meshData.material) return null;
+
+        return visibleSections.map(sectionIndex => (
+            <PumpkinSection
+                key={`section-${sectionIndex}`}
+                sectionIndex={sectionIndex}
+                meshData={{
+                    geometry: meshData.geometry as THREE.BufferGeometry,
+                    material: meshData.material as THREE.MeshStandardMaterial,
+                }}
+                playerPosition={playerPosition}
+                checkCollision={checkCollision}
+                visible={true}
+            />
+        ));
+    }, [meshData, visibleSections, playerPosition]);
+
     if (!meshData.geometry || !meshData.material) return null;
 
-    return (
-        <instancedMesh
-            ref={instancedMeshRef}
-            args={[meshData.geometry, meshData.material, TOTAL_PUMPKINS]}
-            castShadow
-            receiveShadow
-        />
-    );
+    return <>{renderSections}</>;
 };
 
 export default PumpkinField;
