@@ -9,13 +9,14 @@ import Score from './components/Score';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import WebgpuSupport from './utils/WebgpuSupport';
-import { Suspense, lazy } from 'react';
+// import { Suspense, lazy } from 'react';
+// import { isDev } from './utils/utils';
 
 interface GameProps {
     onStart: boolean;
 }
 
-const LazyDebugComponent = lazy(() => import('./utils/Debug'));
+// const LazyDebugComponent = lazy(() => import('./utils/Debug'));
 
 const Game = ({ onStart }: GameProps) => {
     const isWebGPUSupported = useWebGPUSupport();
@@ -39,9 +40,7 @@ const Game = ({ onStart }: GameProps) => {
                     <PumpkinField />
                 </Physics>
 
-                <Suspense fallback={null}>
-                    <LazyDebugComponent />
-                </Suspense>
+                {/* {isDev && <Suspense fallback={null}>{<LazyDebugComponent />}</Suspense>} */}
             </Canvas>
 
             <Loader />
