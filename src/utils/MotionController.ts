@@ -21,4 +21,4 @@ export class MotionController {
     getValue() {
         return this.currentValue;
     }
-} 
+}

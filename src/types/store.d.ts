@@ -1,4 +1,4 @@
-import { Triplet } from "@react-three/cannon";
+import { Triplet } from '@react-three/cannon';
 
 export interface GameStore {
     playerSpeed: number;
