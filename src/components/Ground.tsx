@@ -6,18 +6,27 @@ import { planeSize, planeTextureSize } from '../config/constants';
 import { useStore } from '../store/store';
 
 const Ground = () => {
-    const texture = useTexture('/textures/floor.jpg');
+    // const texture = useTexture('/textures/floor.jpg');
+    const textures = useTexture({
+        map: '/textures/rock_floor/rock_albedo.png',
+        normalMap: '/textures/rock_floor/rock_normal.png',
+        roughnessMap: '/textures/rock_floor/rock_roughness.png',
+        aoMap: '/textures/rock_floor/rock_ao.png',
+        displacementMap: '/textures/rock_floor/rock_height.png'
+    });
 
     const playerPosition = useStore(state => state.playerPosition);
     const ground1Ref = useRef<THREE.Mesh>(null);
     const ground2Ref = useRef<THREE.Mesh>(null);
     const MOVE_DISTANCE = planeSize;
-
+    
     useLayoutEffect(() => {
+        Object.values(textures).forEach(texture => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(planeTextureSize, planeTextureSize);
         texture.anisotropy = 16;
-    }, [texture]);
+        });
+    }, [textures]);
 
     useFrame(() => {
         const [, , playerZ] = playerPosition;
@@ -46,11 +55,11 @@ const Ground = () => {
             >
                 <planeGeometry args={[planeSize, planeSize]} />
                 <meshStandardMaterial
-                    emissive={0xffffff}
-                    roughness={0}
-                    metalness={0}
-                    emissiveMap={texture}
-                    map={texture}
+                    {...textures}
+                    displacementScale={0.8}
+                    metalness={0.1} 
+                    roughness={1}
+                    aoMapIntensity={1}
                 />
             </mesh>
 
@@ -62,11 +71,11 @@ const Ground = () => {
             >
                 <planeGeometry args={[planeSize, planeSize]} />
                 <meshStandardMaterial
-                    emissive={0xffffff}
-                    roughness={0}
-                    metalness={0}
-                    emissiveMap={texture}
-                    map={texture}
+                    {...textures}
+                    displacementScale={0.8}
+                    metalness={0.1} 
+                    roughness={1}
+                    aoMapIntensity={1}
                 />
             </mesh>
         </>
