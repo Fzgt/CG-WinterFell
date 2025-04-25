@@ -35,6 +35,7 @@ src
 |   ├─constants.ts
 |   └pumpkin.ts
 ├─components
+|     ├─GrassField.tsx
 |     ├─Ground.tsx
 |     ├─Player.tsx
 |     ├─ProgressMonitor.tsx
@@ -44,6 +45,7 @@ src
 |     ├─Skybox.tsx
 |     └WelcomePage.tsx
 ├─assets
+|   ├─beyzIcon.png
 |   ├─welcome1.jpg
 |   └welcome2.jpg
 ```

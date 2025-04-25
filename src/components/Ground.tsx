@@ -6,25 +6,24 @@ import { planeSize, planeTextureSize } from '../config/constants';
 import { useStore } from '../store/store';
 
 const Ground = () => {
-    // const texture = useTexture('/textures/floor.jpg');
     const textures = useTexture({
         map: '/textures/rock_floor/rock_albedo.png',
         normalMap: '/textures/rock_floor/rock_normal.png',
         roughnessMap: '/textures/rock_floor/rock_roughness.png',
         aoMap: '/textures/rock_floor/rock_ao.png',
-        displacementMap: '/textures/rock_floor/rock_height.png'
+        displacementMap: '/textures/rock_floor/rock_height.png',
     });
 
     const playerPosition = useStore(state => state.playerPosition);
     const ground1Ref = useRef<THREE.Mesh>(null);
     const ground2Ref = useRef<THREE.Mesh>(null);
     const MOVE_DISTANCE = planeSize;
-    
+
     useLayoutEffect(() => {
         Object.values(textures).forEach(texture => {
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(planeTextureSize, planeTextureSize);
-        texture.anisotropy = 16;
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(planeTextureSize, planeTextureSize);
+            texture.anisotropy = 16;
         });
     }, [textures]);
 
@@ -57,7 +56,7 @@ const Ground = () => {
                 <meshStandardMaterial
                     {...textures}
                     displacementScale={0.8}
-                    metalness={0.1} 
+                    metalness={0.1}
                     roughness={1}
                     aoMapIntensity={1}
                 />
@@ -73,7 +72,7 @@ const Ground = () => {
                 <meshStandardMaterial
                     {...textures}
                     displacementScale={0.8}
-                    metalness={0.1} 
+                    metalness={0.1}
                     roughness={1}
                     aoMapIntensity={1}
                 />
