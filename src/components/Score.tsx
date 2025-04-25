@@ -3,7 +3,6 @@ import { useStore } from '../store/store';
 import '../styles/score.css';
 import { updateHighScores } from '../utils/utils';
 
-
 const Score = () => {
     const score = useStore(state => state.score);
     const addScore = useStore(state => state.addScore);
@@ -57,7 +56,9 @@ const Score = () => {
                                 {highScores.map((highScore, index) => (
                                     <div key={index} className="high-score-item">
                                         <span className="high-score-rank">{index + 1}</span>
-                                        <span className="high-score-value">{highScore.toLocaleString()}</span>
+                                        <span className="high-score-value">
+                                            {highScore.toLocaleString()}
+                                        </span>
                                     </div>
                                 ))}
                                 {highScores.length === 0 && (
@@ -75,9 +76,7 @@ const Score = () => {
                         <div style={{ paddingBottom: '10px' }}>
                             Speed: {playerSpeed.toLocaleString() + ' m/s'}
                         </div>
-                        <div>
-                            Score: {score.toLocaleString()}
-                        </div>
+                        <div>Score: {score.toLocaleString()}</div>
                     </>
                 )}
             </div>
@@ -85,4 +84,4 @@ const Score = () => {
     );
 };
 
-export default Score; 
+export default Score;

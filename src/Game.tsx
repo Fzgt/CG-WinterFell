@@ -8,15 +8,16 @@ import Score from './components/Score';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import WebgpuSupport from './utils/WebgpuSupport';
-import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
+import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
+import { WebGPURenderer } from 'three/webgpu';
 // import { Suspense, lazy } from 'react';
 // import { isDev } from './utils/utils';
+
+// const LazyDebugComponent = lazy(() => import('./utils/Debug'));
 
 interface GameProps {
     onStart: boolean;
 }
-
-// const LazyDebugComponent = lazy(() => import('./utils/Debug'));
 
 const Game = ({ onStart }: GameProps) => {
     const isWebGPUSupported = useWebGPUSupport();
@@ -24,12 +25,21 @@ const Game = ({ onStart }: GameProps) => {
     return (
         <>
             <Canvas
-                gl={{
-                    antialias: true,
-                    alpha: true,
-                    powerPreference: 'high-performance',
-                    toneMapping: ACESFilmicToneMapping,
-                    outputColorSpace: SRGBColorSpace,
+                gl={async props => {
+                    if (isWebGPUSupported) {
+                        const renderer = new WebGPURenderer(props as any);
+                        await renderer.init();
+                        return renderer;
+                    } else {
+                        const renderer = new WebGLRenderer({
+                            antialias: true,
+                            alpha: true,
+                            powerPreference: 'high-performance',
+                        });
+                        renderer.toneMapping = ACESFilmicToneMapping;
+                        renderer.outputColorSpace = SRGBColorSpace;
+                        return renderer;
+                    }
                 }}
             >
                 <ambientLight intensity={0.8} />

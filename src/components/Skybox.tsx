@@ -1,13 +1,19 @@
 import * as THREE from 'three';
 import { useLayoutEffect, useRef, useEffect } from 'react';
 import { useStore } from '../store/store';
-import { useTexture } from '@react-three/drei'
+import { useTexture } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 
 const Skybox = () => {
-
-    const skyboxTexture = useTexture("/textures/maple.jpg");
+    const skyboxTexture = useTexture('/textures/maple.jpg');
     const skyboxRef = useRef<THREE.Group>(null);
-    const playerPosition = useStore((state) => state.playerPosition);
+    const playerPosition = useStore(state => state.playerPosition);
+    const state = useThree();
+
+    useEffect(() => {
+        console.log(state);
+        console.log(state.gl);
+    }, []);
 
     useLayoutEffect(() => {
         skyboxTexture.wrapS = skyboxTexture.wrapT = THREE.MirroredRepeatWrapping;
@@ -16,8 +22,8 @@ const Skybox = () => {
 
     useEffect(() => {
         if (!skyboxRef.current) return;
-        skyboxRef.current.position.set(...playerPosition)
-    }, [playerPosition])
+        skyboxRef.current.position.set(...playerPosition);
+    }, [playerPosition]);
 
     return (
         <group ref={skyboxRef}>

@@ -1,7 +1,6 @@
 import { useProgress } from '@react-three/drei';
 import { useEffect } from 'react';
 
-
 interface ProgressMonitorProps {
     onProgress: (loaded: boolean) => void;
 }

@@ -2,7 +2,7 @@ import { useStore } from '../store/store';
 import '../styles/pause.css';
 
 const Pause = () => {
-    const gamePaused = useStore((state) => state.gamePaused);
+    const gamePaused = useStore(state => state.gamePaused);
 
     if (!gamePaused) return null;
 
@@ -16,4 +16,4 @@ const Pause = () => {
     );
 };
 
-export default Pause; 
+export default Pause;
