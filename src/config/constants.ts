@@ -6,11 +6,16 @@ export const rightBound = planeSize / 2;
 // models that need to be preloaded declared here
 export const MODEL_PATHS = [
     '/models/obstacles/halloween_pumpkin_2.glb',
-    '/models/obstacles/emerald_bat.glb',
-    '/models/obstacles/king_boo.glb',
     '/models/player/scene.gltf',
-    '/models/obstacles/astral_cat.glb',
+    '/models/terrain/grass.glb',
 ];
 
 // textures that need to be preloaded declared here
-export const TEXTURE_PATHS = ['/textures/maple.jpg', '/textures/floor.jpg'];
+export const TEXTURE_PATHS = [
+    '/textures/maple.jpg',
+    '/textures/rock_floor/rock_albedo.png',
+    '/textures/rock_floor/rock_normal.png',
+    '/textures/rock_floor/rock_roughness.png',
+    '/textures/rock_floor/rock_ao.png',
+    '/textures/rock_floor/rock_height.png',
+];

@@ -9,12 +9,8 @@ import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import WebgpuSupport from './utils/WebgpuSupport';
 import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
-import GrassField from './components/GrassField';
+// import GrassField from './components/GrassField';
 import { WebGPURenderer } from 'three/webgpu';
-// import { Suspense, lazy } from 'react';
-// import { isDev } from './utils/utils';
-
-// const LazyDebugComponent = lazy(() => import('./utils/Debug'));
 
 interface GameProps {
     onStart: boolean;
@@ -55,11 +51,9 @@ const Game = ({ onStart }: GameProps) => {
 
                 <Physics>
                     <Ground />
-                    <GrassField/>
+                    {/* <GrassField /> */}
                     {onStart && <Player />}
                     <PumpkinField />
-
-                    {/* {isDev && <Suspense fallback={null}>{<LazyDebugComponent />}</Suspense>} */}
                 </Physics>
             </Canvas>
             <Pause />
