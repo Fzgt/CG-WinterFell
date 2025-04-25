@@ -121,7 +121,7 @@ const GrassField: React.FC = () => {
             mat.transparent = true;
             mat.side = THREE.DoubleSide;
 
-            // Optional: Check if emissiveMap exists
+            // Check if emissiveMap exists
             if (mat.emissiveMap) {
                 mat.map = mat.emissiveMap;
                 mat.emissive = new THREE.Color(0.5, 0.5, 0.5);

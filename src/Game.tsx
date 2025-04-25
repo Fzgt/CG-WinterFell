@@ -57,13 +57,13 @@ const Game = ({ onStart }: GameProps) => {
                     <Ground />
                     <GrassField/>
                     {onStart && <Player />}
-                    {/* <PumpkinField /> */}
+                    <PumpkinField />
 
                     {/* {isDev && <Suspense fallback={null}>{<LazyDebugComponent />}</Suspense>} */}
                 </Physics>
             </Canvas>
-            {/* <Pause /> */}
-            {/* {onStart && <Score />} */}
+            <Pause />
+            {onStart && <Score />}
             {isWebGPUSupported && <WebgpuSupport />}
         </>
     );
