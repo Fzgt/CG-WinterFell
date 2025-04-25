@@ -6,17 +6,20 @@ import { planeSize, planeTextureSize } from '../config/constants';
 import { useStore } from '../store/store';
 
 const Ground = () => {
-    const texture = useTexture('/textures/floor.jpg');
+    // const texture = useTexture('/textures/floor.jpg');
+    const texture = useTexture('/textures/floatingIsland_diffuseMap.png');
 
     const playerPosition = useStore(state => state.playerPosition);
     const ground1Ref = useRef<THREE.Mesh>(null);
     const ground2Ref = useRef<THREE.Mesh>(null);
     const MOVE_DISTANCE = planeSize;
-
+    
     useLayoutEffect(() => {
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(planeTextureSize, planeTextureSize);
-        texture.anisotropy = 16;
+        if (texture) {
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(planeTextureSize, planeTextureSize);
+            texture.anisotropy = 16;
+        }
     }, [texture]);
 
     useFrame(() => {
