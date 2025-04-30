@@ -6,6 +6,7 @@ import ProgressMonitor from './components/ProgressMonitor';
 import Game from './Game';
 import './styles/layout.css';
 import { useStore } from './store/store';
+// import { AudioPreloader } from './components/AudioPreloader';
 
 const App = () => {
     const [showWelcome, setShowWelcome] = useState(true);
@@ -22,6 +23,7 @@ const App = () => {
             <div className="progress-monitor-container">
                 <Canvas>
                     <Suspense fallback={null}>
+                        {/* <AudioPreloader /> */}
                         <ResourcePreloader />
                         <ProgressMonitor onProgress={setStaticLoaded} />
                     </Suspense>
