@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useProgress } from '@react-three/drei';
 import '../styles/welcome.css';
 import backgroundImage from '../assets/welcome2.jpg';
+
 interface WelcomePageProps {
     onStart: () => void;
 }
