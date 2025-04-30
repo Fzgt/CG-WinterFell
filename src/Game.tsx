@@ -11,7 +11,6 @@ import WebgpuSupport from './utils/WebgpuSupport';
 import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
 import GrassField from './components/GrassField';
 import { WebGPURenderer } from 'three/webgpu';
-// import Music, { MusicControl } from './components/Music';
 import { useStore } from './store/store';
 
 interface GameProps {
@@ -58,7 +57,6 @@ const Game = ({ onStart }: GameProps) => {
                     {onStart && <Player />}
                     <PumpkinField />
                 </Physics>
-                {/* {onStart && <Music onStart={onStart} />} */}
             </Canvas>
             {onStart && <Score />}
             {onStart && !gameOver && <Pause />}
