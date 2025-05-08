@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState , useRef } from 'react';
 import { useStore } from '../store/store';
 import '../styles/score.css';
 import { updateHighScores } from '../utils/utils';
@@ -9,13 +9,15 @@ const Score = () => {
     const gameOver = useStore(state => state.gameOver);
     const [highScores, setHighScores] = useState<number[]>([]);
     const playerSpeed = useStore(state => state.playerSpeed);
+    const [showBonus, setShowBonus] = useState(false);
+    const prevScore = useRef(0);
 
     useEffect(() => {
         if (gameOver) {
             const topScores = updateHighScores(score);
             setHighScores(topScores);
         }
-    }, [gameOver]);
+    }, [gameOver, score]);
 
     useEffect(() => {
         if (gameOver) return;
@@ -25,7 +27,19 @@ const Score = () => {
         }, 200);
 
         return () => clearInterval(timer);
-    }, [gameOver]);
+    }, [gameOver, addScore]);
+
+    useEffect(() => {
+        if (!gameOver && score > prevScore.current) {
+            const diff = score - prevScore.current;
+            if (diff === 10) {
+                // This is likely a candy corn collection
+                setShowBonus(true);
+                setTimeout(() => setShowBonus(false), 500);
+            }
+            prevScore.current = score;
+        }
+    }, [score, gameOver]);
 
     const handlePlayAgain = () => {
         window.location.reload();
@@ -76,7 +90,10 @@ const Score = () => {
                         <div style={{ paddingBottom: '10px' }}>
                             Speed: {playerSpeed.toLocaleString() + ' m/s'}
                         </div>
-                        <div>Score: {score.toLocaleString()}</div>
+                        <div className="score-container">
+                            <div>Score: {score.toLocaleString()}</div>
+                            {showBonus && <div className="score-bonus">+10</div>}
+                        </div>
                     </>
                 )}
             </div>
