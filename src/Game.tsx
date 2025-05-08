@@ -4,6 +4,7 @@ import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import PumpkinField from './components/PumpkinField';
+import CandyCornField from './components/CandyCornField';
 import Score from './components/Score';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
@@ -56,6 +57,7 @@ const Game = ({ onStart }: GameProps) => {
                     <GrassField />
                     {onStart && <Player />}
                     <PumpkinField />
+                    <CandyCornField />
                 </Physics>
             </Canvas>
             {onStart && <Score />}

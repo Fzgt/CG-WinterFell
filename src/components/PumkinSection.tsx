@@ -24,6 +24,7 @@ const PumpkinSection = ({
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
     const [positions] = useState(() => generateSectionPumpkins(sectionIndex));
+    
 
     function generateSectionPumpkins(section: number) {
         const positions: THREE.Vector3[] = [];

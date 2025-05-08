@@ -51,7 +51,7 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
             <h1 className="title">WinterFell</h1>
 
             <div className="game-description">
-                Navigate through a Halloween winter world filled with enchanting monsters.
+                Take a ride through a cold Halloween night filled with surprises.
             </div>
 
             <div className="loading-info">
@@ -84,7 +84,7 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
 
             {!isLoading && (
                 <div className="controls-info">
-                    <p>Controls: Use ← → or A D keys to move left and right</p>
+                    <p>Use ← → or A D keys to move left and right</p>
                 </div>
             )}
         </div>
