@@ -1,18 +1,36 @@
-// CandyCornField.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store/store';
-import CandyCornSection from './CandyCornSection';
+import CollectibleSection from './CollectibleSection';
 import { SECTION_LENGTH, VISIBLE_SECTIONS, TOTAL_SECTIONS } from '../config/pumpkin';
 
-const CandyCornField = () => {
-    const { scene: candyCornModel } = useGLTF('/models/collectibles/candy_corn.glb');
+export interface CollectibleConfig {
+  modelPath: string;
+  scale: number;
+  count: number;
+  scoreValue: number;
+  collisionRadius: number;
+  particleColor: string | number;
+  particleCount: number;
+  particleRadius: number;
+  particleSpeed: number;
+  rotationSpeed: number;
+  floatHeight: number;
+}
+
+interface CollectibleFieldProps {
+  config: CollectibleConfig;
+}
+
+const CollectibleField = ({ config }: CollectibleFieldProps) => {
+    const { scene: collectibleModel } = useGLTF(config.modelPath);
 
     const playerPosition = useStore(state => state.playerPosition);
     const gameOver = useStore(state => state.gameOver);
     const addScore = useStore(state => state.addScore);
+    const addScoreEvent = useStore(state => state.addScoreEvent);
 
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
@@ -22,12 +40,12 @@ const CandyCornField = () => {
         material: THREE.MeshStandardMaterial | null;
     }>({ geometry: null, material: null });
 
-    // Check collision with candy corns
+    // Check collision with collectibles
     const checkCollision = (position: THREE.Vector3): boolean => {
         if (gameOver) return false;
 
         const playerPos = new THREE.Vector3(...playerPosition);
-        const collisionRadius = 8; // Smaller than pumpkin collision radius
+        const collisionRadius = config.collisionRadius;
 
         const dx = position.x - playerPos.x;
         const dy = position.y - playerPos.y;
@@ -36,20 +54,20 @@ const CandyCornField = () => {
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         if (distance < collisionRadius) {
-            // Instead of game over, add 10 points
-            addScore(10);
-            return true; // Return true to indicate collision (for removal)
+            addScore(config.scoreValue);
+            addScoreEvent([position.x, position.y, position.z], config.scoreValue);
+            return true; 
         }
 
         return false;
     };
 
-    // Extract geometry and material from the candy corn model
+    // Extract geometry and material from the collectible model
     useEffect(() => {
         let geometry: THREE.BufferGeometry | null = null;
         let material: THREE.MeshStandardMaterial | null = null;
 
-        candyCornModel.traverse((child: THREE.Object3D) => {
+        collectibleModel.traverse((child: THREE.Object3D) => {
             if (child instanceof THREE.Mesh) {
                 geometry = child.geometry;
                 if (child.material instanceof THREE.MeshStandardMaterial) {
@@ -62,7 +80,7 @@ const CandyCornField = () => {
         if (geometry && material) {
             setMeshData({ geometry, material });
         }
-    }, [candyCornModel]);
+    }, [collectibleModel]);
 
     // Update visible sections based on player position
     useFrame(() => {
@@ -89,8 +107,8 @@ const CandyCornField = () => {
         if (!meshData.geometry || !meshData.material) return null;
 
         return visibleSections.map(sectionIndex => (
-            <CandyCornSection
-                key={`candy-section-${sectionIndex}`}
+            <CollectibleSection
+                key={`collectible-section-${config.modelPath}-${sectionIndex}`}
                 sectionIndex={sectionIndex}
                 meshData={{
                     geometry: meshData.geometry as THREE.BufferGeometry,
@@ -98,14 +116,20 @@ const CandyCornField = () => {
                 }}
                 playerPosition={playerPosition}
                 checkCollision={checkCollision}
+                config={config}
                 visible={true}
             />
         ));
-    }, [meshData, visibleSections, playerPosition]);
+    }, [meshData, visibleSections, playerPosition, config]);
 
     if (!meshData.geometry || !meshData.material) return null;
 
     return <>{renderSections}</>;
 };
 
-export default CandyCornField;
+// Preload functionality
+CollectibleField.preload = (modelPath: string) => {
+    useGLTF.preload(modelPath);
+};
+
+export default CollectibleField;
