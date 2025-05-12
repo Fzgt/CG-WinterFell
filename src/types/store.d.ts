@@ -21,9 +21,11 @@ export interface GameStore {
 
     score: number;
     addScore: (points: number) => void;
+    reduceScore: (points: number) => void;
 
     scoreEvents: ScoreEvent[];
     addScoreEvent: (position: Triplet, points: number) => void;
+    reduceScoreEvent: (position: Triplet, points: number) => void;
     clearScoreEvent: (id: number) => void;
 
     playerPosition: Triplet;

@@ -17,6 +17,7 @@ export interface CollectibleConfig {
   particleRadius: number;
   particleSpeed: number;
   rotationSpeed: number;
+  rotation: [number,number,number];
   floatHeight: number;
 }
 
@@ -30,7 +31,9 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
     const playerPosition = useStore(state => state.playerPosition);
     const gameOver = useStore(state => state.gameOver);
     const addScore = useStore(state => state.addScore);
+    const reduceScore = useStore(state => state.reduceScore);
     const addScoreEvent = useStore(state => state.addScoreEvent);
+    const reduceScoreEvent = useStore(state => state.reduceScoreEvent);
 
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
@@ -54,9 +57,14 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         if (distance < collisionRadius) {
-            addScore(config.scoreValue);
-            addScoreEvent([position.x, position.y, position.z], config.scoreValue);
-            return true; 
+            if (config.modelPath.includes('ghost')) {
+                reduceScore(config.scoreValue);
+                reduceScoreEvent([position.x, position.y, position.z], -config.scoreValue);
+            } else {
+                addScore(config.scoreValue);
+                addScoreEvent([position.x, position.y, position.z], config.scoreValue);
+            }
+            return true;
         }
 
         return false;
@@ -72,6 +80,9 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
                 geometry = child.geometry;
                 if (child.material instanceof THREE.MeshStandardMaterial) {
                     material = child.material.clone();
+                    if (config.modelPath.includes('ghost')) {
+                        material.color = new THREE.Color('pink');
+                    }
                     return;
                 }
             }

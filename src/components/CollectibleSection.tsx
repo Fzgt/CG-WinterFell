@@ -156,7 +156,13 @@ const CollectibleSection = ({
                 dummy.position.y = position.y + floatOffset;
                 dummy.scale.set(config.scale, config.scale, config.scale);
                 const rotationSpeed = config.rotationSpeed
-                dummy.rotation.set(0, timeRef.current * rotationSpeed + i * 0.1, 0);
+                // Apply base rotation from config, then add dynamic rotation
+                const baseRotation = config.rotation;
+                dummy.rotation.set(
+                    baseRotation[0], 
+                    baseRotation[1] + (baseRotation[0] == 0? timeRef.current * rotationSpeed + i * 0.1:0), 
+                    baseRotation[2]+ (baseRotation[0] != 0? timeRef.current * rotationSpeed + i * 0.1:0)
+                );
                 dummy.updateMatrix();
                 instancedMeshRef.current?.setMatrixAt(visibleCount++, dummy.matrix);
             }
@@ -180,7 +186,7 @@ const CollectibleSection = ({
 
         timeRef.current += delta;
         
-        let newCollisions = false;
+        // let newCollisions = false;
         
         positions.forEach((position, index) => {
             if (!collectedIndices.has(index) && checkCollision(position)) {
@@ -191,7 +197,7 @@ const CollectibleSection = ({
                     return newSet;
                 });
                 
-                newCollisions = true;
+                // newCollisions = true;
             }
         });
 
