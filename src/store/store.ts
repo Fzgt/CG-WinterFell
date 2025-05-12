@@ -27,9 +27,29 @@ export const useStore = create<GameStore>(set => ({
             }
             return state;
         }),
+    
+    reduceScore: points =>
+        set(state => {
+            if (!state.gameOver && !state.gamePaused) {
+                return { score: state.score - points };
+            }
+            return state;
+        }),    
 
     scoreEvents: [] as ScoreEvent[],
     addScoreEvent: (position, points) =>
+        set(state => {
+            if (!state.gameOver && !state.gamePaused) {
+                const newEvent: ScoreEvent = {
+                    id: Date.now(),
+                    position,
+                    points
+                };
+                return { scoreEvents: [...state.scoreEvents, newEvent] };
+            }
+            return state;
+        }),
+    reduceScoreEvent: (position, points) =>
         set(state => {
             if (!state.gameOver && !state.gamePaused) {
                 const newEvent: ScoreEvent = {

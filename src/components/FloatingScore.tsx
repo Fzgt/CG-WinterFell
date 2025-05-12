@@ -63,12 +63,12 @@ const FloatingScore = ({ position, value, onComplete }: FloatingScoreProps) => {
       occlude={false}
     >
       <div
-        className="floating-score"
+        className={`floating-score ${value < 0 ? 'negative' : ''}`}
         style={{
           opacity: opacity
         }}
       >
-        +{value}
+        {value > 0 ? '+' : ''}{value}
       </div>
     </Html>
   );

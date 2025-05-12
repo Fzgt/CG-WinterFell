@@ -318,3 +318,9 @@
     pointer-events: none;
     will-change: transform, opacity;
 }
+
+.floating-score.negative {
+    font-weight: 900;
+    color: #ff2d55;
+    text-shadow: 0 0 10px rgba(230, 6, 47, 0.7), 0 0 5px #000;
+}
