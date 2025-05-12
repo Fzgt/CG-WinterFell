@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { randomInRange2 } from '../utils/utils';
 import { FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
+import { CollectibleConfig } from './CollectibleField';
 
-const CANDY_CORN_COUNT_PER_SECTION = 100;
-
+// For tracking pumpkin positions to avoid collisions 
 if (!window.pumpkinRegistry) {
     window.pumpkinRegistry = {};
 }
@@ -18,7 +18,7 @@ declare global {
     }
 }
 
-interface CandyCornSectionProps {
+interface CollectibleSectionProps {
     sectionIndex: number;
     meshData: {
         geometry: THREE.BufferGeometry;
@@ -26,25 +26,27 @@ interface CandyCornSectionProps {
     };
     playerPosition: [number, number, number];
     checkCollision: (position: THREE.Vector3) => boolean;
+    config: CollectibleConfig;
     visible?: boolean;
 }
 
-const CandyCornSection = ({
+const CollectibleSection = ({
     sectionIndex,
     meshData,
     checkCollision,
+    config,
     visible = true,
-}: CandyCornSectionProps) => {
+}: CollectibleSectionProps) => {
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
     const [positions] = useState(() => {
         const pumpkinsInSection = window.pumpkinRegistry[sectionIndex] || [];
         
-        return generateSectionCandyCorns(sectionIndex, pumpkinsInSection);
+        return generateSectionCollectibles(sectionIndex, pumpkinsInSection, config.count);
     });
     const [collectedIndices, setCollectedIndices] = useState<Set<number>>(new Set());
     
-    // Get Three.js scene for particle effects
+    // Three.js particle effects
     const { scene } = useThree();
 
     function isTooCloseToAnyPumpkin(position: THREE.Vector3, pumpkins: THREE.Vector3[]): boolean {
@@ -63,8 +65,8 @@ const CandyCornSection = ({
         return false;
     }
 
-    // Generate random positions for candy corns in this section
-    function generateSectionCandyCorns(section: number, pumpkins: THREE.Vector3[]) {
+    // Generate random positions for collectibles in this section
+    function generateSectionCollectibles(section: number, pumpkins: THREE.Vector3[], count: number) {
         const positions: THREE.Vector3[] = [];
 
         let sectionStartZ, sectionEndZ;
@@ -78,9 +80,9 @@ const CandyCornSection = ({
         }
 
         let attempts = 0;
-        const maxAttempts = CANDY_CORN_COUNT_PER_SECTION * 5;
+        const maxAttempts = count * 5;
         
-        while (positions.length < CANDY_CORN_COUNT_PER_SECTION && attempts < maxAttempts) {
+        while (positions.length < count && attempts < maxAttempts) {
             attempts++;
             
             const x = randomInRange2(-FIELD_WIDTH / 2, FIELD_WIDTH / 2);
@@ -95,15 +97,14 @@ const CandyCornSection = ({
         return positions;
     }
     
-    // Create particle effect for collection
+    // Particle effect for collection
     const createCollectionEffect = useCallback((position: THREE.Vector3) => {
-        // Create a simple particle system for collection effect
         const particles = new THREE.Group();
         
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < config.particleCount; i++) {
             const particle = new THREE.Mesh(
-                new THREE.SphereGeometry(0.2, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0xffff00 })
+                new THREE.SphereGeometry(config.particleRadius, 8, 8),
+                new THREE.MeshBasicMaterial({ color: config.particleColor })
             );
             
             // Random offset from center
@@ -134,23 +135,28 @@ const CandyCornSection = ({
                 }
             });
         }, 500);
-    }, [scene]);
+    }, [scene, config]);
 
+    const timeRef = useRef(0);
+    
     // Update instance matrix
     const updateInstanceMatrix = useCallback(() => {
         if (!instancedMeshRef.current) return;
 
-        // Reset counter for compacting the instances array
         let visibleCount = 0;
+        
+        // Update time for continuous rotation
+        timeRef.current += 0.01;
 
         positions.forEach((position, i) => {
             if (!collectedIndices.has(i)) {
-                // Set position, add some rotation and floating animation
                 dummy.position.copy(position);
-                // Make candy corns smaller than pumpkins
-                dummy.scale.set(3, 3, 3);
-                // Add a slight rotation for visual interest
-                dummy.rotation.set(0, Date.now() * 0.001 + i, 0);
+                const floatHeight = config.floatHeight
+                const floatOffset = Math.sin(timeRef.current + i * 0.5) * floatHeight;
+                dummy.position.y = position.y + floatOffset;
+                dummy.scale.set(config.scale, config.scale, config.scale);
+                const rotationSpeed = config.rotationSpeed
+                dummy.rotation.set(0, timeRef.current * rotationSpeed + i * 0.1, 0);
                 dummy.updateMatrix();
                 instancedMeshRef.current?.setMatrixAt(visibleCount++, dummy.matrix);
             }
@@ -161,25 +167,24 @@ const CandyCornSection = ({
             instancedMeshRef.current.count = visibleCount;
             instancedMeshRef.current.instanceMatrix.needsUpdate = true;
         }
-    }, [positions, collectedIndices]);
+    }, [positions, collectedIndices, config.scale, config.rotationSpeed, config.floatHeight]);
 
     // Initial setup
     useEffect(() => {
         updateInstanceMatrix();
     }, [meshData.geometry, meshData.material, updateInstanceMatrix]);
 
-    // Check collisions and animate candy corns
-    useFrame(() => {
+    // Check collisions and animate collectibles
+    useFrame((_, delta) => {
         if (!visible || !instancedMeshRef.current) return;
 
+        timeRef.current += delta;
+        
         let newCollisions = false;
         
         positions.forEach((position, index) => {
             if (!collectedIndices.has(index) && checkCollision(position)) {
-                // Create visual effect
                 createCollectionEffect(position);
-                
-                // Mark as collected
                 setCollectedIndices(prev => {
                     const newSet = new Set(prev);
                     newSet.add(index);
@@ -190,10 +195,8 @@ const CandyCornSection = ({
             }
         });
 
-        // Only update matrices if there are new collisions or for animation
-        if (newCollisions || true) { // Always update for animation
-            updateInstanceMatrix();
-        }
+        // Always update matrices for smooth animation
+        updateInstanceMatrix();
     });
 
     if (!visible) return null;
@@ -201,11 +204,11 @@ const CandyCornSection = ({
     return (
         <instancedMesh
             ref={instancedMeshRef}
-            args={[meshData.geometry, meshData.material, CANDY_CORN_COUNT_PER_SECTION]}
+            args={[meshData.geometry, meshData.material, config.count]}
             castShadow
             receiveShadow
         />
     );
 };
 
-export default CandyCornSection;
+export default CollectibleSection;
