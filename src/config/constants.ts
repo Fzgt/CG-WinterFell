@@ -9,6 +9,9 @@ export const MODEL_PATHS = [
     '/models/obstacles/halloween_pumpkin_2.glb',
     '/models/player/scene.gltf',
     '/models/terrain/grass.glb',
+    '/models/collectibles/candy_corn.glb',
+    '/models/collectibles/treasure_chest.glb',
+    '/models/collectibles/halloween_ghost.glb',
 ];
 
 // textures that need to be preloaded declared here

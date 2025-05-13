@@ -5,7 +5,7 @@ import { updateHighScores } from '../utils/utils';
 
 const Score = () => {
     const score = useStore(state => state.score);
-    const addScore = useStore(state => state.addScore);
+    /*const addScore = useStore(state => state.addScore);*/
     const gameOver = useStore(state => state.gameOver);
     const [highScores, setHighScores] = useState<number[]>([]);
     const playerSpeed = useStore(state => state.playerSpeed);
@@ -15,8 +15,10 @@ const Score = () => {
             const topScores = updateHighScores(score);
             setHighScores(topScores);
         }
-    }, [gameOver]);
+    }, [gameOver, score]);
 
+    // Automatic scoring based on distance
+    /*
     useEffect(() => {
         if (gameOver) return;
 
@@ -25,7 +27,8 @@ const Score = () => {
         }, 200);
 
         return () => clearInterval(timer);
-    }, [gameOver]);
+    }, [gameOver, addScore]);
+    */
 
     const handlePlayAgain = () => {
         window.location.reload();
@@ -76,7 +79,9 @@ const Score = () => {
                         <div style={{ paddingBottom: '10px' }}>
                             Speed: {playerSpeed.toLocaleString() + ' m/s'}
                         </div>
-                        <div>Score: {score.toLocaleString()}</div>
+                        <div className="score-container">
+                            <div>Score: {score.toLocaleString()}</div>
+                        </div>
                     </>
                 )}
             </div>

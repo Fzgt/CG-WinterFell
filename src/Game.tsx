@@ -4,7 +4,9 @@ import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import PumpkinField from './components/PumpkinField';
+import CollectibleField from './components/CollectibleField';
 import Score from './components/Score';
+import FloatingScoreManager from './components/FloatingScoreManager';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import WebgpuSupport from './utils/WebgpuSupport';
@@ -12,6 +14,8 @@ import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
 import GrassField from './components/GrassField';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
+import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG} from './config/collectibles';
+
 
 interface GameProps {
     onStart: boolean;
@@ -56,6 +60,10 @@ const Game = ({ onStart }: GameProps) => {
                     <GrassField />
                     {onStart && <Player />}
                     <PumpkinField />
+                    <CollectibleField config={CANDY_CORN_CONFIG} />
+                    <CollectibleField config={TREASURE_CHEST_CONFIG} />
+                    <CollectibleField config={GHOST_CONFIG} />
+                    {onStart && <FloatingScoreManager />}
                 </Physics>
             </Canvas>
             {onStart && <Score />}

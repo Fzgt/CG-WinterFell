@@ -1,7 +1,7 @@
 .score-display {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
+    top: 20px;           
+    left: 20px;        
     font-family: 'Orbitron', sans-serif;
     z-index: 1000;
     pointer-events: none;
@@ -19,6 +19,17 @@
     letter-spacing: 1px;
 }
 
+.score-value::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0; 
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, #9a5cd0, transparent); 
+}
+
+/* The rest of the CSS remains unchanged */
 .score-value.game-over {
     position: fixed;
     top: 50%;
@@ -33,16 +44,6 @@
     box-shadow: 0 0 30px rgba(154, 92, 208, 0.7), inset 0 0 20px rgba(154, 92, 208, 0.3);
     pointer-events: all;
     backdrop-filter: blur(5px);
-}
-
-.score-value::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(90deg, #9a5cd0, transparent);
 }
 
 @keyframes pulse {
@@ -288,4 +289,38 @@
     text-align: center;
     font-style: italic;
     padding: 10px;
+}
+
+.score-container {
+    position: relative;
+    display: inline-block;
+}
+
+@keyframes fadeUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+}
+
+.floating-score {
+    color: #FFD700;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Orbitron', sans-serif;
+    font-style: italic;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.7), 0 0 5px #000;
+    white-space: nowrap;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+.floating-score.negative {
+    font-weight: 900;
+    color: #ff2d55;
+    text-shadow: 0 0 10px rgba(230, 6, 47, 0.7), 0 0 5px #000;
 }
