@@ -45,22 +45,18 @@ const CollectibleSection = ({
         return generateSectionCollectibles(sectionIndex, pumpkinsInSection, config.count);
     });
     const [collectedIndices, setCollectedIndices] = useState<Set<number>>(new Set());
-    
-    // Three.js particle effects
+
     const { scene } = useThree();
+    const timeRef = useRef(0);
+    const frameCounter = useRef(0);
 
     function isTooCloseToAnyPumpkin(position: THREE.Vector3, pumpkins: THREE.Vector3[]): boolean {
-        const MIN_DISTANCE = 25;
-        const MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
-        
+        const MIN_DISTANCE_SQ = 25 * 25;
         for (const pumpkin of pumpkins) {
             const dx = position.x - pumpkin.x;
             const dz = position.z - pumpkin.z;
             const distSquared = dx * dx + dz * dz;
-            
-            if (distSquared < MIN_DISTANCE_SQUARED) {
-                return true;
-            }
+            if (distSquared < MIN_DISTANCE_SQ) return true;
         }
         return false;
     }
@@ -68,20 +64,11 @@ const CollectibleSection = ({
     // Generate random positions for collectibles in this section
     function generateSectionCollectibles(section: number, pumpkins: THREE.Vector3[], count: number) {
         const positions: THREE.Vector3[] = [];
-
-        let sectionStartZ, sectionEndZ;
-
-        if (section === 0) {
-            sectionStartZ = -250;
-            sectionEndZ = -SECTION_LENGTH;
-        } else {
-            sectionStartZ = -section * SECTION_LENGTH;
-            sectionEndZ = sectionStartZ - SECTION_LENGTH;
-        }
-
+        const sectionStartZ = section === 0 ? -250 : -section * SECTION_LENGTH;
+        const sectionEndZ = sectionStartZ - SECTION_LENGTH;
         let attempts = 0;
         const maxAttempts = count * 5;
-        
+
         while (positions.length < count && attempts < maxAttempts) {
             attempts++;
             
@@ -96,8 +83,7 @@ const CollectibleSection = ({
         
         return positions;
     }
-    
-    // Particle effect for collection
+
     const createCollectionEffect = useCallback((position: THREE.Vector3) => {
         const particles = new THREE.Group();
         
@@ -137,9 +123,6 @@ const CollectibleSection = ({
         }, 500);
     }, [scene, config]);
 
-    const timeRef = useRef(0);
-    
-    // Update instance matrix
     const updateInstanceMatrix = useCallback(() => {
         if (!instancedMeshRef.current) return;
 
@@ -151,29 +134,24 @@ const CollectibleSection = ({
         positions.forEach((position, i) => {
             if (!collectedIndices.has(i)) {
                 dummy.position.copy(position);
-                const floatHeight = config.floatHeight
-                const floatOffset = Math.sin(timeRef.current + i * 0.5) * floatHeight;
-                dummy.position.y = position.y + floatOffset;
+                dummy.position.y = position.y + Math.sin(timeRef.current + i * 0.5) * config.floatHeight;
                 dummy.scale.set(config.scale, config.scale, config.scale);
-                const rotationSpeed = config.rotationSpeed
-                // Apply base rotation from config, then add dynamic rotation
+
                 const baseRotation = config.rotation;
                 dummy.rotation.set(
-                    baseRotation[0], 
-                    baseRotation[1] + (baseRotation[0] == 0? timeRef.current * rotationSpeed + i * 0.1:0), 
-                    baseRotation[2]+ (baseRotation[0] != 0? timeRef.current * rotationSpeed + i * 0.1:0)
+                    baseRotation[0],
+                    baseRotation[1] + (baseRotation[0] === 0 ? timeRef.current * config.rotationSpeed + i * 0.1 : 0),
+                    baseRotation[2]
                 );
+
                 dummy.updateMatrix();
                 instancedMeshRef.current?.setMatrixAt(visibleCount++, dummy.matrix);
             }
         });
 
-        // Update the instance count to match visible items
-        if (instancedMeshRef.current) {
-            instancedMeshRef.current.count = visibleCount;
-            instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-        }
-    }, [positions, collectedIndices, config.scale, config.rotationSpeed, config.floatHeight]);
+        instancedMeshRef.current.count = visibleCount;
+        instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+    }, [positions, collectedIndices, config]);
 
     // Initial setup
     useEffect(() => {
@@ -185,24 +163,31 @@ const CollectibleSection = ({
         if (!visible || !instancedMeshRef.current) return;
 
         timeRef.current += delta;
-        
-        // let newCollisions = false;
-        
+        frameCounter.current++;
+
+        let needsUpdate = false;
+        const newCollected = new Set<number>();
+
         positions.forEach((position, index) => {
             if (!collectedIndices.has(index) && checkCollision(position)) {
                 createCollectionEffect(position);
-                setCollectedIndices(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add(index);
-                    return newSet;
-                });
-                
-                // newCollisions = true;
+                newCollected.add(index);
+                needsUpdate = true;
             }
         });
 
-        // Always update matrices for smooth animation
-        updateInstanceMatrix();
+        if (newCollected.size > 0) {
+            setCollectedIndices(prev => {
+                const updated = new Set(prev);
+                newCollected.forEach(i => updated.add(i));
+                return updated;
+            });
+        }
+
+        // Update matrix every 2 frames to reduce CPU load
+        if (frameCounter.current % 5 === 0 || needsUpdate) {
+            updateInstanceMatrix();
+        }
     });
 
     if (!visible) return null;
