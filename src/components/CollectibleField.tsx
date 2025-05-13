@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -34,6 +34,7 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
     const reduceScore = useStore(state => state.reduceScore);
     const addScoreEvent = useStore(state => state.addScoreEvent);
     const reduceScoreEvent = useStore(state => state.reduceScoreEvent);
+    const frameCounter = useRef(0);
 
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
@@ -96,23 +97,26 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
     // Update visible sections based on player position
     useFrame(() => {
         if (gameOver) return;
-
+    
+        frameCounter.current++;
+        if (frameCounter.current % 5 !== 0) return; // Throttle to every 5 frames
+    
         const totalDistance = Math.abs(playerPosition[2]);
         const newSectionIndex = Math.floor(totalDistance / SECTION_LENGTH);
-
+    
         if (newSectionIndex > currentSectionIndex) {
-            setCurrentSectionIndex(newSectionIndex);
-
-            const newVisibleSections = [];
-            for (let i = 0; i < VISIBLE_SECTIONS; i++) {
-                const sectionIndex = newSectionIndex + i;
-                if (sectionIndex < TOTAL_SECTIONS) {
-                    newVisibleSections.push(sectionIndex);
-                }
+          setCurrentSectionIndex(newSectionIndex);
+    
+          const newVisibleSections: number[] = [];
+          for (let i = 0; i < VISIBLE_SECTIONS; i++) {
+            const sectionIndex = newSectionIndex + i;
+            if (sectionIndex < TOTAL_SECTIONS) {
+              newVisibleSections.push(sectionIndex);
             }
-            setVisibleSections(newVisibleSections);
+          }
+          setVisibleSections(newVisibleSections);
         }
-    });
+      });
 
     const renderSections = useMemo(() => {
         if (!meshData.geometry || !meshData.material) return null;
