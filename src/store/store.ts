@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameStore } from '../types/store';
+import { GameStore, ScoreEvent } from '../types/store';
 
 export const useStore = create<GameStore>(set => ({
     playerSpeed: 12,
@@ -27,6 +27,44 @@ export const useStore = create<GameStore>(set => ({
             }
             return state;
         }),
+    
+    reduceScore: points =>
+        set(state => {
+            if (!state.gameOver && !state.gamePaused) {
+                return { score: state.score - points };
+            }
+            return state;
+        }),    
+
+    scoreEvents: [] as ScoreEvent[],
+    addScoreEvent: (position, points) =>
+        set(state => {
+            if (!state.gameOver && !state.gamePaused) {
+                const newEvent: ScoreEvent = {
+                    id: Date.now(),
+                    position,
+                    points
+                };
+                return { scoreEvents: [...state.scoreEvents, newEvent] };
+            }
+            return state;
+        }),
+    reduceScoreEvent: (position, points) =>
+        set(state => {
+            if (!state.gameOver && !state.gamePaused) {
+                const newEvent: ScoreEvent = {
+                    id: Date.now(),
+                    position,
+                    points
+                };
+                return { scoreEvents: [...state.scoreEvents, newEvent] };
+            }
+            return state;
+        }),
+    clearScoreEvent: (id) =>
+        set(state => ({
+            scoreEvents: state.scoreEvents.filter(event => event.id !== id)
+        })),
 
     playerPosition: [0, 1, -20], // player initial position
     setPlayerPosition: position => set({ playerPosition: position }),

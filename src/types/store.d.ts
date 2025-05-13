@@ -1,5 +1,11 @@
 import { Triplet } from '@react-three/cannon';
 
+export interface ScoreEvent {
+    id: number;
+    position: Triplet;
+    points: number;
+}
+
 export interface GameStore {
     playerSpeed: number;
     addPlayerSpeed: () => void;
@@ -15,6 +21,12 @@ export interface GameStore {
 
     score: number;
     addScore: (points: number) => void;
+    reduceScore: (points: number) => void;
+
+    scoreEvents: ScoreEvent[];
+    addScoreEvent: (position: Triplet, points: number) => void;
+    reduceScoreEvent: (position: Triplet, points: number) => void;
+    clearScoreEvent: (id: number) => void;
 
     playerPosition: Triplet;
     setPlayerPosition: (position: Triplet) => void;
