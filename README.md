@@ -6,12 +6,12 @@
 
 ```
 src
+├─.DS_Store
 ├─App.tsx
 ├─Game.tsx
 ├─main.tsx
 ├─vite-env.d.ts
 ├─utils
-|   ├─Debug.tsx
 |   ├─MotionController.ts
 |   ├─Pause.tsx
 |   ├─ResourcePreloader.tsx
@@ -32,9 +32,14 @@ src
 |   ├─usePlayerMovement.ts
 |   └useWebGPURenderer.ts
 ├─config
+|   ├─collectibles.ts
 |   ├─constants.ts
 |   └pumpkin.ts
 ├─components
+|     ├─CollectibleField.tsx
+|     ├─CollectibleSection.tsx
+|     ├─FloatingScore.tsx
+|     ├─FloatingScoreManager.tsx
 |     ├─GrassField.tsx
 |     ├─Ground.tsx
 |     ├─Player.tsx
