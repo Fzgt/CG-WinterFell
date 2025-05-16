@@ -17,8 +17,12 @@ export interface CollectibleConfig {
   particleRadius: number;
   particleSpeed: number;
   rotationSpeed: number;
-  rotation: [number,number,number];
+  rotation: [number, number, number];
   floatHeight: number;
+  glowColor: string | number;
+  glowSize: number; 
+  glowOpacity: number;
+  glowOffsetY: number;
 }
 
 interface CollectibleFieldProps {
@@ -58,7 +62,7 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         if (distance < collisionRadius) {
-            if (config.modelPath.includes('ghost')) {
+            if (config.modelPath.includes('ghost') || config.modelPath.includes('bottle')) {
                 reduceScore(config.scoreValue);
                 reduceScoreEvent([position.x, position.y, position.z], -config.scoreValue);
             } else {

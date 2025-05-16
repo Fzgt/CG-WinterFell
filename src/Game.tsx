@@ -14,7 +14,7 @@ import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
 import GrassField from './components/GrassField';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
-import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG} from './config/collectibles';
+import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG, MINI_CANDY_CONFIG, BOTTLE_CONFIG} from './config/collectibles';
 
 
 interface GameProps {
@@ -63,6 +63,8 @@ const Game = ({ onStart }: GameProps) => {
                     <CollectibleField config={CANDY_CORN_CONFIG} />
                     <CollectibleField config={TREASURE_CHEST_CONFIG} />
                     <CollectibleField config={GHOST_CONFIG} />
+                    <CollectibleField config={MINI_CANDY_CONFIG} />
+                    <CollectibleField config={BOTTLE_CONFIG} />
                     {onStart && <FloatingScoreManager />}
                 </Physics>
             </Canvas>

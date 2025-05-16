@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 import { randomInRange2 } from '../utils/utils';
 import { FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
 import { CollectibleConfig } from './CollectibleField';
 
-// For tracking pumpkin positions to avoid collisions 
+// Track pumpkin positions to avoid overlapping
 if (!window.pumpkinRegistry) {
     window.pumpkinRegistry = {};
 }
@@ -30,6 +31,12 @@ interface CollectibleSectionProps {
     visible?: boolean;
 }
 
+const CANDY_COLORS = [
+    0xffffff, 
+    0xffff00, 
+    0x800080, 
+];
+
 const CollectibleSection = ({
     sectionIndex,
     meshData,
@@ -38,52 +45,114 @@ const CollectibleSection = ({
     visible = true,
 }: CollectibleSectionProps) => {
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
+    const glowMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
+    const glowDummy = useRef(new THREE.Object3D()).current;
+    
     const [positions] = useState(() => {
         const pumpkinsInSection = window.pumpkinRegistry[sectionIndex] || [];
-        
         return generateSectionCollectibles(sectionIndex, pumpkinsInSection, config.count);
     });
+    
     const [collectedIndices, setCollectedIndices] = useState<Set<number>>(new Set());
 
+    const [instanceColors] = useState(() => {
+        if (config.modelPath.includes('mini_candy')) {
+            return Array(config.count).fill(0).map(() => 
+                CANDY_COLORS[Math.floor(Math.random() * CANDY_COLORS.length)]
+            );
+        }
+        return [];
+    });
+
+     // Create glow material using the texture
+    const glowTexture = useTexture('/textures/glow.png');
+        const [glowMaterial] = useState(() => {
+            glowTexture.wrapS = glowTexture.wrapT = THREE.ClampToEdgeWrapping;
+            
+            return new THREE.MeshBasicMaterial({
+                map: glowTexture,
+                color: config.glowColor,
+                opacity: config.glowOpacity,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+            });
+    });
+    const [glowGeometry] = useState(() => new THREE.SphereGeometry(4, 16, 16));
+    
+    // Three.js particle effects
     const { scene } = useThree();
-    const timeRef = useRef(0);
-    const frameCounter = useRef(0);
 
     function isTooCloseToAnyPumpkin(position: THREE.Vector3, pumpkins: THREE.Vector3[]): boolean {
-        const MIN_DISTANCE_SQ = 25 * 25;
+        const MIN_DISTANCE = 25;
+        const MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
+        
         for (const pumpkin of pumpkins) {
             const dx = position.x - pumpkin.x;
             const dz = position.z - pumpkin.z;
             const distSquared = dx * dx + dz * dz;
-            if (distSquared < MIN_DISTANCE_SQ) return true;
+            
+            if (distSquared < MIN_DISTANCE_SQUARED) {
+                return true;
+            }
         }
         return false;
     }
 
-    // Generate random positions for collectibles in this section
     function generateSectionCollectibles(section: number, pumpkins: THREE.Vector3[], count: number) {
         const positions: THREE.Vector3[] = [];
-        const sectionStartZ = section === 0 ? -250 : -section * SECTION_LENGTH;
-        const sectionEndZ = sectionStartZ - SECTION_LENGTH;
-        let attempts = 0;
-        const maxAttempts = count * 5;
 
+        let sectionStartZ, sectionEndZ;
+
+        if (section === 0) {
+            sectionStartZ = -250;
+            sectionEndZ = -SECTION_LENGTH;
+        } else {
+            sectionStartZ = -section * SECTION_LENGTH;
+            sectionEndZ = sectionStartZ - SECTION_LENGTH;
+        }
+
+        let attempts = 0;
+        const maxAttempts = count * 8;
+        
         while (positions.length < count && attempts < maxAttempts) {
             attempts++;
             
             const x = randomInRange2(-FIELD_WIDTH / 2, FIELD_WIDTH / 2);
             const z = randomInRange2(sectionStartZ, sectionEndZ);
-            const pos = new THREE.Vector3(x, 5, z);
             
-            if (!isTooCloseToAnyPumpkin(pos, pumpkins)) {
+            const y = config.floatHeight > 0 ? 5 + config.floatHeight : 1;
+            const pos = new THREE.Vector3(x, y, z);
+            
+            if (!isTooCloseToAnyPumpkin(pos, pumpkins) && !isTooCloseToExistingCollectibles(pos, positions)) {
                 positions.push(pos);
             }
         }
         
+        console.log(`Section ${section}: Generated ${positions.length}/${count} collectibles (${config.modelPath})`);
         return positions;
     }
-
+    
+    // Track other collectibles' positions to avoid overlapping
+    function isTooCloseToExistingCollectibles(position: THREE.Vector3, existingPositions: THREE.Vector3[]): boolean {
+        const MIN_DISTANCE = 15;
+        const MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
+        
+        for (const existing of existingPositions) {
+            const dx = position.x - existing.x;
+            const dz = position.z - existing.z;
+            const distSquared = dx * dx + dz * dz;
+            
+            if (distSquared < MIN_DISTANCE_SQUARED) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // Particle effect for collection
     const createCollectionEffect = useCallback((position: THREE.Vector3) => {
         const particles = new THREE.Group();
         
@@ -92,8 +161,6 @@ const CollectibleSection = ({
                 new THREE.SphereGeometry(config.particleRadius, 8, 8),
                 new THREE.MeshBasicMaterial({ color: config.particleColor })
             );
-            
-            // Random offset from center
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 2;
             particle.position.set(
@@ -107,7 +174,6 @@ const CollectibleSection = ({
         
         scene.add(particles);
         
-        // Remove after animation
         setTimeout(() => {
             scene.remove(particles);
             particles.traverse(obj => {
@@ -123,35 +189,72 @@ const CollectibleSection = ({
         }, 500);
     }, [scene, config]);
 
+    const timeRef = useRef(0);
+    
     const updateInstanceMatrix = useCallback(() => {
-        if (!instancedMeshRef.current) return;
+        if (!instancedMeshRef.current || !glowMeshRef.current) return;
 
         let visibleCount = 0;
         
-        // Update time for continuous rotation
-        timeRef.current += 0.01;
-
         positions.forEach((position, i) => {
             if (!collectedIndices.has(i)) {
+                // Update main collectible
                 dummy.position.copy(position);
-                dummy.position.y = position.y + Math.sin(timeRef.current + i * 0.5) * config.floatHeight;
+                const floatHeight = config.floatHeight;
+                const floatOffset = Math.sin(timeRef.current + i * 0.5) * floatHeight;
+                dummy.position.y = position.y + floatOffset;
                 dummy.scale.set(config.scale, config.scale, config.scale);
-
+                
+                // Apply base rotation from config, then add dynamic rotation
                 const baseRotation = config.rotation;
-                dummy.rotation.set(
-                    baseRotation[0],
-                    baseRotation[1] + (baseRotation[0] === 0 ? timeRef.current * config.rotationSpeed + i * 0.1 : 0),
-                    baseRotation[2]
-                );
-
+                if (config.rotationSpeed !== 0) {
+                    dummy.rotation.set(
+                        baseRotation[0], 
+                        baseRotation[1] + timeRef.current * config.rotationSpeed + i * 0.1, 
+                        baseRotation[2]
+                    );
+                } else {
+                    // Non rotating item - no variation
+                    dummy.rotation.set(
+                        baseRotation[0], 
+                        baseRotation[1], 
+                        baseRotation[2]
+                    );
+                }
                 dummy.updateMatrix();
-                instancedMeshRef.current?.setMatrixAt(visibleCount++, dummy.matrix);
+                instancedMeshRef.current?.setMatrixAt(visibleCount, dummy.matrix);
+
+                // Update glow effect (billboard to face camera)
+                glowDummy.position.copy(dummy.position);
+                glowDummy.position.y += config.glowOffsetY;
+                // Make glow face camera (optional - remove if you want it to float with the collectible)
+                glowDummy.rotation.set(0, Math.PI/4, 0);
+                const glowScale = config.glowSize || 1.5;
+                glowDummy.scale.set(glowScale, glowScale, glowScale);
+
+                glowDummy.updateMatrix();
+                glowMeshRef.current?.setMatrixAt(visibleCount, glowDummy.matrix);
+
+                if (config.modelPath.includes('mini_candy') && instanceColors.length > 0) {
+                    const color = new THREE.Color(instanceColors[i]);
+                    instancedMeshRef.current?.setColorAt(visibleCount, color);
+                }
+                
+                visibleCount++;
             }
         });
-
-        instancedMeshRef.current.count = visibleCount;
-        instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-    }, [positions, collectedIndices, config]);
+        
+        if (instancedMeshRef.current && glowMeshRef.current) {
+            instancedMeshRef.current.count = visibleCount;
+            instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+            glowMeshRef.current.count = visibleCount;
+            glowMeshRef.current.instanceMatrix.needsUpdate = true;
+            
+            if (config.modelPath.includes('mini_candy')) {
+                instancedMeshRef.current.instanceColor!.needsUpdate = true;
+            }
+        }
+    }, [positions, collectedIndices, config, instanceColors]);
 
     // Initial setup
     useEffect(() => {
@@ -159,46 +262,46 @@ const CollectibleSection = ({
     }, [meshData.geometry, meshData.material, updateInstanceMatrix]);
 
     // Check collisions and animate collectibles
-    useFrame((_, delta) => {
+    useFrame((state) => {
         if (!visible || !instancedMeshRef.current) return;
 
-        timeRef.current += delta;
-        frameCounter.current++;
-
-        let needsUpdate = false;
-        const newCollected = new Set<number>();
-
+        // Use consistent time progression
+        timeRef.current = state.clock.getElapsedTime();
+        
         positions.forEach((position, index) => {
             if (!collectedIndices.has(index) && checkCollision(position)) {
                 createCollectionEffect(position);
-                newCollected.add(index);
-                needsUpdate = true;
+                setCollectedIndices(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(index);
+                    return newSet;
+                });
             }
         });
 
-        if (newCollected.size > 0) {
-            setCollectedIndices(prev => {
-                const updated = new Set(prev);
-                newCollected.forEach(i => updated.add(i));
-                return updated;
-            });
-        }
-
-        // Update matrix every 2 frames to reduce CPU load
-        if (frameCounter.current % 5 === 0 || needsUpdate) {
-            updateInstanceMatrix();
-        }
+        // Always update matrices for smooth animation
+        updateInstanceMatrix();
     });
 
     if (!visible) return null;
 
     return (
-        <instancedMesh
-            ref={instancedMeshRef}
-            args={[meshData.geometry, meshData.material, config.count]}
-            castShadow
-            receiveShadow
-        />
+        <group>
+        {/* Conditionally render glow effect if enabled (default true) */}
+            <instancedMesh
+                ref={glowMeshRef}
+                args={[glowGeometry, glowMaterial, config.count]}
+                renderOrder={1}
+            />
+        {/* Main collectible (rendered on top) */}
+            <instancedMesh
+                ref={instancedMeshRef}
+                args={[meshData.geometry, meshData.material, config.count]}
+                castShadow
+                receiveShadow
+                renderOrder={2}
+            />
+        </group>
     );
 };
 
