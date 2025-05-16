@@ -1,12 +1,10 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
 import { randomInRange2 } from '../utils/utils';
 import { FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
 import { CollectibleConfig } from './CollectibleField';
 
-// Track pumpkin positions to avoid overlapping
 if (!window.pumpkinRegistry) {
     window.pumpkinRegistry = {};
 }
@@ -45,9 +43,7 @@ const CollectibleSection = ({
     visible = true,
 }: CollectibleSectionProps) => {
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
-    const glowMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
-    const glowDummy = useRef(new THREE.Object3D()).current;
     
     const [positions] = useState(() => {
         const pumpkinsInSection = window.pumpkinRegistry[sectionIndex] || [];
@@ -64,23 +60,6 @@ const CollectibleSection = ({
         }
         return [];
     });
-
-     // Create glow material using the texture
-    const glowTexture = useTexture('/textures/glow.png');
-        const [glowMaterial] = useState(() => {
-            glowTexture.wrapS = glowTexture.wrapT = THREE.ClampToEdgeWrapping;
-            
-            return new THREE.MeshBasicMaterial({
-                map: glowTexture,
-                color: config.glowColor,
-                opacity: config.glowOpacity,
-                transparent: true,
-                blending: THREE.AdditiveBlending,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-            });
-    });
-    const [glowGeometry] = useState(() => new THREE.SphereGeometry(4, 16, 16));
     
     // Three.js particle effects
     const { scene } = useThree();
@@ -88,7 +67,6 @@ const CollectibleSection = ({
     function isTooCloseToAnyPumpkin(position: THREE.Vector3, pumpkins: THREE.Vector3[]): boolean {
         const MIN_DISTANCE = 25;
         const MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
-        
         for (const pumpkin of pumpkins) {
             const dx = position.x - pumpkin.x;
             const dz = position.z - pumpkin.z;
@@ -116,7 +94,7 @@ const CollectibleSection = ({
 
         let attempts = 0;
         const maxAttempts = count * 8;
-        
+
         while (positions.length < count && attempts < maxAttempts) {
             attempts++;
             
@@ -151,8 +129,7 @@ const CollectibleSection = ({
         }
         return false;
     }
-    
-    // Particle effect for collection
+
     const createCollectionEffect = useCallback((position: THREE.Vector3) => {
         const particles = new THREE.Group();
         
@@ -161,6 +138,7 @@ const CollectibleSection = ({
                 new THREE.SphereGeometry(config.particleRadius, 8, 8),
                 new THREE.MeshBasicMaterial({ color: config.particleColor })
             );
+
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 2;
             particle.position.set(
@@ -192,7 +170,7 @@ const CollectibleSection = ({
     const timeRef = useRef(0);
     
     const updateInstanceMatrix = useCallback(() => {
-        if (!instancedMeshRef.current || !glowMeshRef.current) return;
+        if (!instancedMeshRef.current) return;
 
         let visibleCount = 0;
         
@@ -224,16 +202,6 @@ const CollectibleSection = ({
                 dummy.updateMatrix();
                 instancedMeshRef.current?.setMatrixAt(visibleCount, dummy.matrix);
 
-                // Update glow effect (billboard to face camera)
-                glowDummy.position.copy(dummy.position);
-                glowDummy.position.y += config.glowOffsetY;
-                glowDummy.rotation.set(0, Math.PI/4, 0);
-                const glowScale = config.glowSize || 1.5;
-                glowDummy.scale.set(glowScale, glowScale, glowScale);
-
-                glowDummy.updateMatrix();
-                glowMeshRef.current?.setMatrixAt(visibleCount, glowDummy.matrix);
-
                 if (config.modelPath.includes('mini_candy') && instanceColors.length > 0) {
                     const color = new THREE.Color(instanceColors[i]);
                     instancedMeshRef.current?.setColorAt(visibleCount, color);
@@ -243,12 +211,9 @@ const CollectibleSection = ({
             }
         });
         
-        if (instancedMeshRef.current && glowMeshRef.current) {
+        if (instancedMeshRef.current) {
             instancedMeshRef.current.count = visibleCount;
             instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-            glowMeshRef.current.count = visibleCount;
-            glowMeshRef.current.instanceMatrix.needsUpdate = true;
-            
             if (config.modelPath.includes('mini_candy')) {
                 instancedMeshRef.current.instanceColor!.needsUpdate = true;
             }
@@ -284,13 +249,6 @@ const CollectibleSection = ({
 
     return (
         <group>
-        {/* Render glow effect */}
-            <instancedMesh
-                ref={glowMeshRef}
-                args={[glowGeometry, glowMaterial, config.count]}
-                renderOrder={1}
-            />
-        {/* Main collectible (rendered on top) */}
             <instancedMesh
                 ref={instancedMeshRef}
                 args={[meshData.geometry, meshData.material, config.count]}

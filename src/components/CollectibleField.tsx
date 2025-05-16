@@ -17,12 +17,8 @@ export interface CollectibleConfig {
   particleRadius: number;
   particleSpeed: number;
   rotationSpeed: number;
-  rotation: [number, number, number];
   floatHeight: number;
-  glowColor: string | number;
-  glowSize: number; 
-  glowOpacity: number;
-  glowOffsetY: number;
+  rotation: [number, number, number];
 }
 
 interface CollectibleFieldProps {
