@@ -227,7 +227,6 @@ const CollectibleSection = ({
                 // Update glow effect (billboard to face camera)
                 glowDummy.position.copy(dummy.position);
                 glowDummy.position.y += config.glowOffsetY;
-                // Make glow face camera (optional - remove if you want it to float with the collectible)
                 glowDummy.rotation.set(0, Math.PI/4, 0);
                 const glowScale = config.glowSize || 1.5;
                 glowDummy.scale.set(glowScale, glowScale, glowScale);
@@ -278,8 +277,6 @@ const CollectibleSection = ({
                 });
             }
         });
-
-        // Always update matrices for smooth animation
         updateInstanceMatrix();
     });
 
@@ -287,7 +284,7 @@ const CollectibleSection = ({
 
     return (
         <group>
-        {/* Conditionally render glow effect if enabled (default true) */}
+        {/* Render glow effect */}
             <instancedMesh
                 ref={glowMeshRef}
                 args={[glowGeometry, glowMaterial, config.count]}
