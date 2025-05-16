@@ -24,5 +24,4 @@ export const TEXTURE_PATHS = [
     '/textures/rock_floor/rock_roughness.png',
     '/textures/rock_floor/rock_ao.png',
     '/textures/rock_floor/rock_height.png',
-    '/textures/glow.png',
 ];
