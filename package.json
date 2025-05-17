@@ -17,12 +17,14 @@
         "@swc/core": "^1.11.4",
         "@types/three": "^0.174.0",
         "gsap": "^3.12.7",
+        "howler": "^2.2.4",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "three": "^0.174.0",
         "zustand": "^5.0.3"
     },
     "devDependencies": {
+        "@types/howler": "^2.2.12",
         "@types/node": "^22.14.1",
         "@types/react": "^18.0.28",
         "@types/react-dom": "^18.0.11",
