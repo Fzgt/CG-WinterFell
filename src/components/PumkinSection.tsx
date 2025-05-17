@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { randomInRange2 } from '../utils/utils';
 import { PUMPKIN_COUNT_PER_SECTION, FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
-
 interface PumpkinSectionProps {
     sectionIndex: number;
     meshData: {
@@ -23,7 +22,11 @@ const PumpkinSection = ({
 }: PumpkinSectionProps) => {
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
-    const [positions] = useState(() => generateSectionPumpkins(sectionIndex));
+    const [positions] = useState(() => {
+        const pumpkins = generateSectionPumpkins(sectionIndex);
+        window.pumpkinRegistry[sectionIndex] = pumpkins;
+        return pumpkins;
+    });
     
 
     function generateSectionPumpkins(section: number) {

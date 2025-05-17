@@ -12,6 +12,8 @@ export const MODEL_PATHS = [
     '/models/collectibles/candy_corn.glb',
     '/models/collectibles/treasure_chest.glb',
     '/models/collectibles/halloween_ghost.glb',
+    '/models/collectibles/mini_candy.glb',
+    '/models/collectibles/bottle.glb',
 ];
 
 // textures that need to be preloaded declared here
