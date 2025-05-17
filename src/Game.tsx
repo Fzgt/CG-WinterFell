@@ -14,6 +14,7 @@ import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
 import GrassField from './components/GrassField';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
+import SoundTrack from './components/SoundTrack';
 import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG, MINI_CANDY_CONFIG, BOTTLE_CONFIG} from './config/collectibles';
 
 
@@ -27,6 +28,7 @@ const Game = ({ onStart }: GameProps) => {
 
     return (
         <>
+            <SoundTrack onStart={onStart} />
             <Canvas
                 gl={async props => {
                     if (isWebGPUSupported) {
