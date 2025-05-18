@@ -71,4 +71,7 @@ export const useStore = create<GameStore>(set => ({
 
     isMusicPlaying: true,
     toggleMusic: () => set(state => ({ isMusicPlaying: !state.isMusicPlaying })),
+
+    playCollectSound: () => {},
+    playNegativeSound: () => {}, 
 }));
