@@ -2,6 +2,8 @@ import { Howl } from 'howler'
 import { useEffect, useRef } from 'react'
 import { useStore } from '../store/store'
 import halloween_sound from '../assets/audio/spooky-halloween-soundtrack.mp3'
+import collectCoinSound from '../assets/audio/collectcoin.wav'
+import negativeCollectSound from '../assets/audio/negativeCollectionSound.wav'
 
 interface MusicProps {
     onStart: boolean;
@@ -20,12 +22,46 @@ const SoundTrack = ({ onStart }: MusicProps) => {
     const INTRO_DURATION = 31.5; // 0-31 sec
     const LOOP_DURATION = 16;  // 31-47 sec
 
+    //Collection sound effect
+    const collectSoundRef = useRef<Howl | null>(null)
+
+    // Initialize collection sound effects
+    useEffect(() => {
+        const collectSound = new Howl({
+            src: [collectCoinSound],
+            volume: 0.5,
+            preload: true
+        });
+        
+        const negativeSound = new Howl({
+            src: [negativeCollectSound],
+            volume: 0.6,
+            preload: true
+        });
+
+        collectSoundRef.current = collectSound;
+
+        // Update store with play methods
+        useStore.setState({ 
+            playCollectSound: () => collectSound.play(),
+            playNegativeSound: () => negativeSound.play() 
+        });
+
+        return () => {
+            collectSound.unload();
+            negativeSound.unload();
+            collectSoundRef.current = null;
+        };
+    }, []);
+
+    // Initialize background music
     useEffect(() => {
         if (!onStart) return;
 
         const sound = new Howl({
             src: [halloween_sound],
             volume: 0.3,
+            preload: true,
             sprite: {
                 //intro
                 intro: [0, INTRO_DURATION * 1000],
