@@ -19,8 +19,8 @@ const SoundTrack = ({ onStart }: MusicProps) => {
     const currentPlayingRef = useRef<string>('') // 'intro' or 'loop'
     const currentSoundIdRef = useRef<number | null>(null)
 
-    const INTRO_DURATION = 31.5; // 0-31 sec
-    const LOOP_DURATION = 16;  // 31-47 sec
+    const INTRO_DURATION = 32; // 0-32 sec
+    const LOOP_DURATION = 16;  // 32-48 sec
 
     //Collection sound effect
     const collectSoundRef = useRef<Howl | null>(null)
