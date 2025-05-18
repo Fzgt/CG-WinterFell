@@ -33,4 +33,7 @@ export interface GameStore {
 
     isMusicPlaying: boolean;
     toggleMusic: () => void;
+    
+    playCollectSound: () => void;
+    playNegativeSound: () => void;
 }

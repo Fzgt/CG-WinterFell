@@ -61,9 +61,11 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
             if (config.modelPath.includes('ghost') || config.modelPath.includes('bottle')) {
                 reduceScore(config.scoreValue);
                 reduceScoreEvent([position.x, position.y, position.z], -config.scoreValue);
+                useStore.getState().playNegativeSound();
             } else {
                 addScore(config.scoreValue);
                 addScoreEvent([position.x, position.y, position.z], config.scoreValue);
+                useStore.getState().playCollectSound();
             }
             return true;
         }
