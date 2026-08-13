@@ -1,79 +1,47 @@
-# CG-WinterFell
+# WinterFell
 
-<img src="/public/docs/landing-page.jpg" alt="winterfell" width="100%" height="500px">
+**A WebGPU-first endless runner built with React Three Fiber and Cannon physics.**
 
-## File Tree
+[Play the live demo](https://cg-winter-fell.vercel.app) · Use <kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> to move. Press <kbd>Space</kbd> to pause.
 
-```
-src
-├─.DS_Store
-├─App.tsx
-├─Game.tsx
-├─main.tsx
-├─vite-env.d.ts
-├─utils
-|   ├─MotionController.ts
-|   ├─Pause.tsx
-|   ├─ResourcePreloader.tsx
-|   ├─WebgpuSupport.tsx
-|   └utils.ts
-├─types
-|   └store.d.ts
-├─styles
-|   ├─index.css
-|   ├─layout.css
-|   ├─pause.css
-|   ├─score.css
-|   └welcome.css
-├─store
-|   └store.ts
-├─hooks
-|   ├─useKeyboardControls.ts
-|   ├─usePlayerMovement.ts
-|   └useWebGPURenderer.ts
-├─config
-|   ├─collectibles.ts
-|   ├─constants.ts
-|   └pumpkin.ts
-├─components
-|     ├─CollectibleField.tsx
-|     ├─CollectibleSection.tsx
-|     ├─FloatingScore.tsx
-|     ├─FloatingScoreManager.tsx
-|     ├─GrassField.tsx
-|     ├─Ground.tsx
-|     ├─Player.tsx
-|     ├─ProgressMonitor.tsx
-|     ├─PumkinSection.tsx
-|     ├─PumpkinField.tsx
-|     ├─Score.tsx
-|     ├─Skybox.tsx
-|     └WelcomePage.tsx
-├─assets
-|   ├─beyzIcon.png
-|   ├─welcome1.jpg
-|   └welcome2.jpg
+<p align="center">
+  <a href="https://cg-winter-fell.vercel.app">
+    <img src="./public/docs/landing-page.jpg" alt="WinterFell game preview" width="760" />
+  </a>
+</p>
+
+WinterFell is a compact real-time graphics experiment set on an endless Halloween trail. The player moves through a continuously recycled world, avoids pumpkins, and collects artifacts for score while the pace increases over time.
+
+## Under the hood
+
+- **Progressive rendering** — selects Three.js `WebGPURenderer` when WebGPU is available and falls back to an ACES-tonemapped WebGL renderer.
+- **Endless world streaming** — terrain segments are repositioned ahead of the player instead of allowing the scene to grow without bounds.
+- **Instanced scenery** — repeated grass and collectible geometry is rendered through instancing, with only nearby sections kept active.
+- **Physics-driven play** — Cannon bodies power movement and collision detection while React Three Fiber coordinates the render loop, camera, and animation state.
+- **Feedback systems** — collectible variants, floating scores, progressive speed, sound effects, and music complete the game loop.
+
+## Runtime model
+
+```text
+Keyboard input ──→ movement controller ──→ player physics body
+                                              │
+                                              ├──→ camera follow
+                                              ├──→ section streaming
+                                              └──→ collisions ──→ score + audio
+
+Browser capability ──→ WebGPU renderer
+                   └──→ WebGL fallback
 ```
 
-## Start
+## Stack
+
+React 19 · TypeScript · Three.js · React Three Fiber · Drei · Cannon · Zustand · Howler · Vite
+
+## Run locally
 
 ```bash
-
-$ npm install
-
-$ npm run dev
-
+npm install
+npm run dev
 ```
 
-## Commit Specification
-
--   feat: new features
--   fix: fix problems
--   chore: modify tool related (including but not limited to documentation, code generation, etc.)
--   docs: modify documentation
--   perf: improve performance
--   refactor: refactor code, theoretically without affecting existing functions
--   revert: rollback
--   style: modify code format, without affecting code logic
--   test: test related
--   ci: CI
+Create a production build with `npm run build`.
