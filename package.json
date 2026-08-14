@@ -34,6 +34,7 @@
         "eslint": "^8.38.0",
         "eslint-plugin-react-hooks": "^4.6.0",
         "eslint-plugin-react-refresh": "^0.3.4",
+        "playwright": "^1.62.1",
         "r3f-perf": "^7.2.3",
         "terser": "^5.39.0",
         "typescript": "^5.0.2",

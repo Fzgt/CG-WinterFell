@@ -16,6 +16,8 @@ import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
 import SoundTrack from './components/SoundTrack';
 import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG, MINI_CANDY_CONFIG, BOTTLE_CONFIG} from './config/collectibles';
+import { benchFlags } from './utils/bench';
+import PerfProbe from './utils/PerfProbe';
 
 
 interface GameProps {
@@ -23,7 +25,10 @@ interface GameProps {
 }
 
 const Game = ({ onStart }: GameProps) => {
-    const isWebGPUSupported = useWebGPUSupport();
+    const webGPUAvailable = useWebGPUSupport();
+    // ?renderer=webgl forces the fallback path so the two renderers can be
+    // benchmarked against the same scene.
+    const isWebGPUSupported = webGPUAvailable && !benchFlags.forceWebGL;
     const gameOver = useStore(state => state.gameOver);
 
     return (
@@ -47,6 +52,7 @@ const Game = ({ onStart }: GameProps) => {
                     }
                 }}
             >
+                {benchFlags.perf && <PerfProbe />}
                 <ambientLight intensity={0.8} />
                 <directionalLight
                     castShadow

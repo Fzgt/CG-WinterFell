@@ -45,3 +45,28 @@ npm run dev
 ```
 
 Create a production build with `npm run build`.
+
+## Benchmarking
+
+`bench/run.mjs` drives the game in headless Chromium and samples renderer
+stats every frame, so the rendering choices above can be checked rather than
+asserted. It plays each scenario for a fixed window and prints a comparison.
+
+```bash
+npm run dev                                     # in one shell
+node bench/run.mjs                              # in another
+node bench/run.mjs --seconds 45 --width 3840 --height 2160
+```
+
+The app exposes a few opt-in URL flags for it — a normal visit is unaffected:
+`?perf=1` collects stats, `?renderer=webgl` forces the fallback path,
+`?instancing=off` swaps the pumpkin `InstancedMesh` for one mesh per pumpkin,
+and `?immortal=1` ignores collisions so a run keeps streaming for the whole
+window.
+
+Two things worth knowing when reading the output. Frame rate is paced by the
+compositor (~120 fps here), so on a desktop GPU most scenarios pin to that cap
+and FPS will not separate them — draw calls and triangles are the useful
+signal. And instancing is a trade, not a free win: it collapses a section into
+one draw call but also into one bounding volume, so per-instance frustum
+culling is lost and more geometry is submitted. The script reports both sides.

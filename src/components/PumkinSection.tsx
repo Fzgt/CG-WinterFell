@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { randomInRange2 } from '../utils/utils';
 import { PUMPKIN_COUNT_PER_SECTION, FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
+import { benchFlags } from '../utils/bench';
 interface PumpkinSectionProps {
     sectionIndex: number;
     meshData: {
@@ -75,6 +76,27 @@ const PumpkinSection = ({
     });
 
     if (!visible) return null;
+
+    // Naive baseline for benchmarking (?instancing=off): one mesh per pumpkin,
+    // i.e. one draw call each, instead of a single InstancedMesh for the
+    // whole section. Only used to measure what instancing buys.
+    if (!benchFlags.instancing) {
+        return (
+            <group>
+                {positions.map((position, i) => (
+                    <mesh
+                        key={i}
+                        geometry={meshData.geometry}
+                        material={meshData.material}
+                        position={position}
+                        scale={[0.1, 0.1, 0.1]}
+                        castShadow
+                        receiveShadow
+                    />
+                ))}
+            </group>
+        );
+    }
 
     return (
         <instancedMesh

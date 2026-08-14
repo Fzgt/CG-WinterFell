@@ -10,6 +10,7 @@ import {
     TOTAL_SECTIONS,
     VISIBLE_SECTIONS,
 } from '../config/pumpkin';
+import { benchFlags } from '../utils/bench';
 
 const PumpkinField = () => {
     const { scene: pumpkinModel } = useGLTF('/models/obstacles/halloween_pumpkin_2.glb');
@@ -42,6 +43,10 @@ const PumpkinField = () => {
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         if (distance < collisionRadius) {
+            // ?immortal=1 keeps a benchmark run going: measuring render cost
+            // over a fixed window needs the world to keep streaming, and an
+            // auto-running player hits a pumpkin within seconds otherwise.
+            if (benchFlags.immortal) return false;
             setGameOver(true);
             return true;
         }
