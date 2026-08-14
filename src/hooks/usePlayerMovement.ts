@@ -21,6 +21,8 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     const { left, right } = useKeyboardControls();
 
     const FIXED_LATERAL_SPEED = 5;
+    /** Longest frame allowed to drive movement, in seconds (~3 frames at 60fps). */
+    const MAX_FRAME_DELTA = 1 / 20;
 
     const xPosition = useRef(new MotionController(0, 0.2));
     const zPosition = useRef(new MotionController(-20, 0.15));
@@ -51,9 +53,17 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         };
     }, [togglePause]);
 
-    useFrame((_, delta) => {
+    useFrame((_, rawDelta) => {
         if (gameOver || gamePaused) return;
         if (!physicsRef.current || !playerGroupRef.current) return;
+
+        // A dropped frame must not teleport the player. Movement is
+        // delta-scaled, so one long frame — a background tab, a GC pause, a
+        // slow first paint — would otherwise advance the run by thousands of
+        // units in a single step, straight through whatever was in the way.
+        // Cap it at ~3 frames' worth and let the world move slightly slower
+        // during a hitch instead.
+        const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
 
         const lateralMoveSpeed = FIXED_LATERAL_SPEED * 60 * delta;
         const forwardSpeed = playerSpeed * delta * 60;

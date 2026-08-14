@@ -16,6 +16,22 @@ export const useStore = create<GameStore>(set => ({
     gameOver: false,
     setGameOver: over => set({ gameOver: over }),
 
+    // Bumping this remounts the scene (see Game.tsx), which resets every
+    // section, the player and the physics world without reloading the page —
+    // restarting used to be window.location.reload(), which meant sitting
+    // through a full asset load between two-second runs.
+    runId: 0,
+    restart: () =>
+        set(state => ({
+            runId: state.runId + 1,
+            score: 0,
+            gameOver: false,
+            gamePaused: false,
+            playerSpeed: 12,
+            scoreEvents: [],
+            playerPosition: [0, 1, -20],
+        })),
+
     gamePaused: false,
     togglePause: () => set(state => ({ gamePaused: !state.gamePaused })),
 

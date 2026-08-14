@@ -30,8 +30,10 @@ const Score = () => {
     }, [gameOver, addScore]);
     */
 
+    const restart = useStore(state => state.restart);
+
     const handlePlayAgain = () => {
-        window.location.reload();
+        restart();
     };
 
     return (

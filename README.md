@@ -58,6 +58,17 @@ node bench/run.mjs                              # in another
 node bench/run.mjs --seconds 45 --width 3840 --height 2160
 ```
 
+`bench/fairness.mjs` checks the obstacle layout instead of the renderer: it
+imports the real generator and sweeps each section geometrically, reporting
+what fraction of layouts have no path through and how tight the tightest gap
+gets. Playtesting this headlessly does not work — WebGL there falls back to
+software rasterisation and frames take seconds — so the layout is measured
+directly.
+
+```bash
+node bench/fairness.mjs --sections 10 --trials 30
+```
+
 The app exposes a few opt-in URL flags for it — a normal visit is unaffected:
 `?perf=1` collects stats, `?renderer=webgl` forces the fallback path,
 `?instancing=off` swaps the pumpkin `InstancedMesh` for one mesh per pumpkin,

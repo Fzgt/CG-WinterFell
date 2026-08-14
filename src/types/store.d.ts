@@ -16,6 +16,9 @@ export interface GameStore {
     gameOver: boolean;
     setGameOver: (over: boolean) => void;
 
+    runId: number;
+    restart: () => void;
+
     gamePaused: boolean;
     togglePause: () => void;
 

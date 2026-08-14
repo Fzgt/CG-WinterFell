@@ -30,6 +30,7 @@ const Game = ({ onStart }: GameProps) => {
     // benchmarked against the same scene.
     const isWebGPUSupported = webGPUAvailable && !benchFlags.forceWebGL;
     const gameOver = useStore(state => state.gameOver);
+    const runId = useStore(state => state.runId);
 
     return (
         <>
@@ -63,7 +64,7 @@ const Game = ({ onStart }: GameProps) => {
                 />
                 <Skybox />
 
-                <Physics>
+                <Physics key={runId}>
                     <Ground />
                     <GrassField />
                     {onStart && <Player />}
