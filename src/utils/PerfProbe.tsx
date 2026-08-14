@@ -19,6 +19,9 @@ import { useStore } from '../store/store';
  * sampling. Each read then covers exactly one frame's worth of rendering on
  * either backend, which makes the two directly comparable.
  */
+/** A frame at or above this is treated as a stall, not a slow frame. */
+const STALL_MS = 250;
+
 const PerfProbe = () => {
     const gl = useThree(state => state.gl);
     const last = useRef(performance.now());
@@ -46,9 +49,13 @@ const PerfProbe = () => {
         const render = info.render ?? {};
         const memory = info.memory ?? {};
 
-        // Skip the first frame and any post-stall frame, which would
-        // otherwise dominate the tail percentiles.
-        if (frameMs > 0 && frameMs < 1000) {
+        // Long frames are recorded separately rather than dropped. Silently
+        // discarding them made a software-rendered run that was spending
+        // seconds per frame report a steady 120fps, because only the handful
+        // of fast frames survived the filter.
+        if (frameMs >= STALL_MS) {
+            bench.stalls.push(frameMs);
+        } else if (frameMs > 0) {
             bench.push({
                 t: now,
                 frameMs,

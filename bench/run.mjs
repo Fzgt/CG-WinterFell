@@ -75,8 +75,16 @@ const runScenario = async (browser, scenario) => {
     await page.keyboard.up('ArrowRight');
 
     const report = await page.evaluate(() => window.__bench.report());
+    // Headless Chromium usually has no GPU for WebGL and quietly falls back to
+    // SwiftShader. Software-rasterising this scene takes seconds per frame, so
+    // any timing measured that way says nothing about real hardware.
+    const gpu = await page.evaluate(() => {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+        return dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'unknown';
+    });
     await page.close();
-    return { ...scenario, report };
+    return { ...scenario, report, gpu };
 };
 
 const browser = await chromium.launch({
@@ -121,14 +129,36 @@ if (capped.length) {
             ` or re-run with a larger --width/--height.`,
     );
 }
-console.log(`\n| Scenario | Renderer used | FPS avg | FPS p50 | FPS p05 | Frame p95 | Draw calls | Triangles |`);
-console.log(`| --- | --- | --- | --- | --- | --- | --- | --- |`);
+console.log(`\n| Scenario | Renderer used | FPS avg | Frame p95 | Stalls | Draw calls | Triangles |`);
+console.log(`| --- | --- | --- | --- | --- | --- | --- |`);
 for (const r of ok) {
     const s = r.report;
+    const stalls = s.stalls
+        ? `${s.stalls} (${s.stallSec}s, worst ${s.worstStallMs}ms)`
+        : 'none';
     console.log(
-        `| ${r.name} | ${s.renderer} | ${round(s.fps.mean)} | ${round(s.fps.p50)} | ${round(s.fps.p05)} ` +
-            `| ${round(s.frameMs.p95)} ms | ${Math.round(s.drawCalls.mean)} ` +
+        `| ${r.name} | ${s.renderer} | ${round(s.fps.mean)} | ${round(s.frameMs.p95)} ms ` +
+            `| ${stalls} | ${Math.round(s.drawCalls.mean)} ` +
             `| ${Math.round(s.triangles.mean).toLocaleString()} |`,
+    );
+}
+
+const software = ok.filter(r => /swiftshader|llvmpipe|software/i.test(r.gpu ?? ''));
+if (software.length) {
+    console.log(
+        `\n> WARNING: WebGL here is ${software[0].gpu} — software rasterisation, not a GPU.` +
+            ` Draw-call and triangle counts are CPU-side and still valid, but any frame` +
+            ` timing from a WebGL row is meaningless for real hardware. Compare timings` +
+            ` only within the same backend, or run the benchmark against a real browser.`,
+    );
+}
+
+const stalled = ok.filter(r => (r.report.stallSec ?? 0) > r.report.durationSec * 0.2);
+if (stalled.length) {
+    console.log(
+        `\n> WARNING: ${stalled.map(r => r.name).join(', ')} spent over a fifth of the` +
+            ` window stalled. The FPS column only covers frames under 250ms, so treat it` +
+            ` as "speed while it was actually running", not throughput.`,
     );
 }
 

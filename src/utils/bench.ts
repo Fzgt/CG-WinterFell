@@ -66,6 +66,14 @@ class Bench {
     samples: BenchSample[] = [];
 
     /**
+     * Frames longer than STALL_MS. These are kept out of the frame-time
+     * percentiles — one multi-second hitch would otherwise swamp them — but
+     * counted here, because a run that stalls is exactly what a percentile
+     * table would otherwise hide.
+     */
+    stalls: number[] = [];
+
+    /**
      * Which renderer actually ended up being used. Reported by the probe from
      * the live renderer rather than inferred from the flags, so a WebGPU init
      * that silently fell back can't be mistaken for a WebGPU result.
@@ -75,6 +83,7 @@ class Bench {
     /** Discard everything collected so far — call once the scene has settled. */
     reset() {
         this.samples = [];
+        this.stalls = [];
     }
 
     push(sample: BenchSample) {
@@ -108,10 +117,17 @@ class Bench {
         }
 
         const last = samples[samples.length - 1];
+        const stallMs = this.stalls.reduce((a, v) => a + v, 0);
         return {
             renderer: this.renderer,
             samples: samples.length,
             durationSec: Number((spanMs / 1000).toFixed(1)),
+            // A run can look like a steady 120fps and still have spent most of
+            // its wall-clock time stalled, so surface that rather than leaving
+            // it to be inferred from the percentiles.
+            stalls: this.stalls.length,
+            stallSec: Number((stallMs / 1000).toFixed(1)),
+            worstStallMs: this.stalls.length ? Math.round(Math.max(...this.stalls)) : 0,
             distanceTravelled: Math.round(Math.abs(last.z - samples[0].z)),
             frameMs: summarise(frameMs),
             fps: {
