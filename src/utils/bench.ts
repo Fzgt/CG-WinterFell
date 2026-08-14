@@ -37,6 +37,8 @@ export interface BenchSample {
      * if the player never moved.
      */
     z: number;
+    /** Sections held in the pumpkin registry; should track what is on screen. */
+    registrySections: number;
 }
 
 const quantile = (sorted: number[], q: number) => {
@@ -140,6 +142,7 @@ class Bench {
             triangles: summarise(samples.map(s => s.triangles)),
             geometries: last.geometries,
             textures: last.textures,
+            registrySections: last.registrySections,
             series,
         };
     }

@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { randomInRange2 } from '../utils/utils';
 import { PUMPKIN_COUNT_PER_SECTION, FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
 import { benchFlags } from '../utils/bench';
+import { publishSectionPumpkins, releaseSectionPumpkins } from '../utils/pumpkinRegistry';
 interface PumpkinSectionProps {
     sectionIndex: number;
     meshData: {
@@ -25,9 +26,16 @@ const PumpkinSection = ({
     const dummy = useRef(new THREE.Object3D()).current;
     const [positions] = useState(() => {
         const pumpkins = generateSectionPumpkins(sectionIndex);
-        window.pumpkinRegistry[sectionIndex] = pumpkins;
+        publishSectionPumpkins(sectionIndex, pumpkins);
         return pumpkins;
     });
+
+    // Drop this section's layout once it scrolls out of view, so the registry
+    // only ever holds the sections currently on screen.
+    useEffect(
+        () => () => releaseSectionPumpkins(sectionIndex),
+        [sectionIndex],
+    );
     
 
     function generateSectionPumpkins(section: number) {

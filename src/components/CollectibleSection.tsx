@@ -4,18 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { randomInRange2 } from '../utils/utils';
 import { FIELD_WIDTH, SECTION_LENGTH } from '../config/pumpkin';
 import { CollectibleConfig } from './CollectibleField';
-
-if (!window.pumpkinRegistry) {
-    window.pumpkinRegistry = {};
-}
-
-declare global {
-    interface Window {
-        pumpkinRegistry: {
-            [sectionIndex: number]: THREE.Vector3[];
-        };
-    }
-}
+import { getSectionPumpkins } from '../utils/pumpkinRegistry';
 
 interface CollectibleSectionProps {
     sectionIndex: number;
@@ -46,7 +35,7 @@ const CollectibleSection = ({
     const dummy = useRef(new THREE.Object3D()).current;
     
     const [positions] = useState(() => {
-        const pumpkinsInSection = window.pumpkinRegistry[sectionIndex] || [];
+        const pumpkinsInSection = getSectionPumpkins(sectionIndex);
         return generateSectionCollectibles(sectionIndex, pumpkinsInSection, config.count);
     });
     

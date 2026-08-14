@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { getBench } from './bench';
 import { useStore } from '../store/store';
+import { registrySize } from './pumpkinRegistry';
 
 /**
  * Samples renderer stats once per frame into window.__bench. Mounted only
@@ -66,6 +67,7 @@ const PerfProbe = () => {
                 // getState() rather than a subscription: this must not cause
                 // re-renders inside the loop it is measuring.
                 z: useStore.getState().playerPosition[2],
+                registrySections: registrySize(),
             });
         }
 

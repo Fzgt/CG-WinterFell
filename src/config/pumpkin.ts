@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 // PumpkinField.tsx
-export const TOTAL_SECTIONS = 100;
 export const VISIBLE_SECTIONS = 3;
 
 export const DISTANCE_COLORS = [

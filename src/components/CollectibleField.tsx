@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store/store';
 import CollectibleSection from './CollectibleSection';
-import { SECTION_LENGTH, VISIBLE_SECTIONS, TOTAL_SECTIONS } from '../config/pumpkin';
+import { SECTION_LENGTH, VISIBLE_SECTIONS } from '../config/pumpkin';
 
 export interface CollectibleConfig {
   modelPath: string;
@@ -109,12 +109,12 @@ const CollectibleField = ({ config }: CollectibleFieldProps) => {
         if (newSectionIndex > currentSectionIndex) {
           setCurrentSectionIndex(newSectionIndex);
     
+          // Endless, for the same reason as PumpkinField: the old
+          // `sectionIndex < TOTAL_SECTIONS` cap made collectibles stop
+          // appearing once the player passed section 100.
           const newVisibleSections: number[] = [];
           for (let i = 0; i < VISIBLE_SECTIONS; i++) {
-            const sectionIndex = newSectionIndex + i;
-            if (sectionIndex < TOTAL_SECTIONS) {
-              newVisibleSections.push(sectionIndex);
-            }
+            newVisibleSections.push(newSectionIndex + i);
           }
           setVisibleSections(newVisibleSections);
         }

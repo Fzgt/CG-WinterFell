@@ -7,7 +7,6 @@ import PumpkinSection from './PumkinSection';
 import {
     DISTANCE_COLORS,
     SECTION_LENGTH,
-    TOTAL_SECTIONS,
     VISIBLE_SECTIONS,
 } from '../config/pumpkin';
 import { benchFlags } from '../utils/bench';
@@ -84,12 +83,14 @@ const PumpkinField = () => {
         if (newSectionIndex > currentSectionIndex) {
             setCurrentSectionIndex(newSectionIndex);
 
+            // Sections are generated from their index and only a few are ever
+            // mounted, so there is no reason to stop at a fixed count. The old
+            // `sectionIndex < TOTAL_SECTIONS` guard emptied this list once the
+            // player passed section 100, leaving an endless runner with nothing
+            // left to run through and nothing left to collide with.
             const newVisibleSections = [];
             for (let i = 0; i < VISIBLE_SECTIONS; i++) {
-                const sectionIndex = newSectionIndex + i;
-                if (sectionIndex < TOTAL_SECTIONS) {
-                    newVisibleSections.push(sectionIndex);
-                }
+                newVisibleSections.push(newSectionIndex + i);
             }
             setVisibleSections(newVisibleSections);
         }
