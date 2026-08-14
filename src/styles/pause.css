@@ -1,37 +1,34 @@
 .pause-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    background: rgba(8, 7, 15, 0.72);
+    backdrop-filter: blur(3px);
 }
 
 .pause-content {
-    background-color: rgba(0, 0, 0, 0.8);
-    padding: 30px 50px;
-    border-radius: 10px;
+    padding: 2rem 3rem;
     text-align: center;
-    border: 2px solid #e9d8f6;
-    box-shadow: 0 0 30px rgba(154, 92, 208, 0.7), inset 0 0 20px rgba(154, 92, 208, 0.3);
+    font-family: var(--font-display);
+    color: var(--moon);
 }
 
 .pause-content h2 {
-    font-size: 36px;
-    margin-bottom: 20px;
-    color: rgb(239, 215, 255);
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 650;
-    text-shadow: 0 0 30px rgba(154, 92, 208, 1), 0 0 10px rgba(231, 212, 255,0.6);
+    margin: 0 0 0.9rem;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
+    text-transform: uppercase;
+    color: var(--ember-bright);
 }
 
 .pause-content p {
-    font-size: 18px;
-    color: #cccccc;
-    font-family: 'Orbitron', sans-serif;
-    font-style: italic;
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--moon-dim);
 }

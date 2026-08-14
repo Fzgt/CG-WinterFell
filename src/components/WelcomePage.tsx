@@ -1,92 +1,112 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useProgress } from '@react-three/drei';
 import '../styles/welcome.css';
-import backgroundImage from '../assets/welcome2.jpg';
 
 interface WelcomePageProps {
     onStart: () => void;
 }
 
-const Snowflakes = () => {
-    const snowflakes = Array(40)
-        .fill(0)
-        .map((_, index) => {
-            const size = Math.random() * 10 + 2;
-            const startPositionX = Math.random() * 100;
-            const startPositionY = Math.random() * -100;
-            const duration = Math.random() * 10 + 10;
-            const delay = Math.random() * 10;
+const EMBER_COUNT = 28;
 
-            return (
-                <div
-                    key={index}
-                    className="snowflake"
-                    style={{
+const Embers = () => {
+    // Positions are fixed for the life of the menu; regenerating them on every
+    // render would restart each animation and make the field twitch.
+    const embers = useMemo(
+        () =>
+            Array.from({ length: EMBER_COUNT }, (_, index) => {
+                const size = Math.random() * 4 + 2;
+                return {
+                    key: index,
+                    style: {
                         width: `${size}px`,
                         height: `${size}px`,
-                        left: `${startPositionX}%`,
-                        top: `${startPositionY}px`,
-                        animationDuration: `${duration}s`,
-                        animationDelay: `${delay}s`,
-                    }}
-                />
-            );
-        });
+                        left: `${Math.random() * 100}%`,
+                        animationDuration: `${Math.random() * 9 + 9}s`,
+                        animationDelay: `${Math.random() * 12}s`,
+                        '--drift': `${Math.random() * 120 - 60}px`,
+                    } as React.CSSProperties,
+                };
+            }),
+        [],
+    );
 
-    return <div className="snowflakes-container">{snowflakes}</div>;
+    return (
+        <div className="embers-container" aria-hidden="true">
+            {embers.map(({ key, style }) => (
+                <div key={key} className="ember" style={style} />
+            ))}
+        </div>
+    );
 };
 
 const WelcomePage = ({ onStart }: WelcomePageProps) => {
-    const [isHovered, setIsHovered] = useState(false);
     const { progress, loaded, total } = useProgress();
     const isLoading = progress < 100;
 
-    const handleMouseEnter = () => setIsHovered(true);
-    const handleMouseLeave = () => setIsHovered(false);
-
     return (
-        <div className="welcome-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
-            <Snowflakes />
+        <div className="welcome-container">
+            <Embers />
 
-            <h1 className="title">WinterFell</h1>
+            <div className="welcome-content">
+                <h1 className="title">Winterfell</h1>
 
-            <div className="game-description">
-                Take a ride through a cold Halloween night filled with surprises.
-            </div>
+                <p className="tagline">
+                    Run the Halloween trail. Dodge the pumpkins, take the
+                    treats, and see how far the night lets you get.
+                </p>
 
-            <div className="loading-info">
-                {isLoading ? (
-                    <>
-                        <div className="progress-bar">
+                <div className="loading-info">
+                    {isLoading ? (
+                        <>
                             <div
-                                className="progress-bar-fill"
-                                style={{ transform: `scaleX(${progress / 100})` }}
-                            />
-                        </div>
-                        <div className="loading-text">
-                            Loading resources... {Math.round(progress)}%
-                            <div className="loading-details">
-                                Loaded {loaded} of {total} assets
+                                className="progress-bar"
+                                role="progressbar"
+                                aria-valuenow={Math.round(progress)}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                            >
+                                <div
+                                    className="progress-bar-fill"
+                                    style={{
+                                        transform: `scaleX(${progress / 100})`,
+                                    }}
+                                />
                             </div>
-                        </div>
-                    </>
-                ) : (
-                    <button
-                        className={`start-button ${isHovered ? 'hovered' : ''}`}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                        onClick={onStart}
-                    >
-                        Start Game
-                    </button>
+                            <div className="loading-text">
+                                Waking the pumpkins…{' '}
+                                <strong>{Math.round(progress)}%</strong>
+                                {total > 0 && (
+                                    <>
+                                        {' '}
+                                        ({loaded}/{total})
+                                    </>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <button
+                            className="btn btn-primary start-button"
+                            onClick={onStart}
+                        >
+                            Start Run
+                        </button>
+                    )}
+                </div>
+
+                {!isLoading && (
+                    <div className="controls-info">
+                        <p>
+                            <span className="key">←</span>
+                            <span className="key">→</span> or{' '}
+                            <span className="key">A</span>
+                            <span className="key">D</span> to steer
+                        </p>
+                        <p>
+                            <span className="key">Space</span> to pause
+                        </p>
+                    </div>
                 )}
             </div>
-
-            {!isLoading && (
-                <div className="controls-info">
-                    <p>Use ← → or A D keys to move left and right</p>
-                </div>
-            )}
         </div>
     );
 };

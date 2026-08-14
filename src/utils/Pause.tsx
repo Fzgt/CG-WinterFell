@@ -9,8 +9,10 @@ const Pause = () => {
     return (
         <div className="pause-overlay">
             <div className="pause-content">
-                <h2>Game Paused</h2>
-                <p>Press SPACE to continue</p>
+                <h2>Paused</h2>
+                <p>
+                    <span className="key">Space</span> to continue
+                </p>
             </div>
         </div>
     );

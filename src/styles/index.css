@@ -1,3 +1,5 @@
+@import './theme.css';
+
 html,
 body {
     margin: 0;
@@ -6,4 +8,11 @@ body {
 
 #root {
     height: 100%;
+}
+
+body {
+    background: var(--night-900);
+    color: var(--moon);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
 }

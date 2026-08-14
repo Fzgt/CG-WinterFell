@@ -54,13 +54,25 @@ const Game = ({ onStart }: GameProps) => {
                 }}
             >
                 {benchFlags.perf && <PerfProbe />}
-                <ambientLight intensity={0.8} />
+                {/* Distance fog in the sky's own colour. Sections used to pop
+                    into view at the far plane with nothing to soften them;
+                    now the trail fades out ahead, which both hides the seam
+                    and gives the night some depth. */}
+                <fog attach="fog" args={['#1b1830', 260, 900]} />
+                <ambientLight intensity={0.55} color="#93a7ff" />
                 <directionalLight
                     castShadow
                     position={[50, 100, 100]}
-                    intensity={3.0}
+                    intensity={2.4}
+                    color="#dfe7ff"
                     shadow-mapSize-width={1024}
                     shadow-mapSize-height={1024}
+                />
+                {/* A warm bounce from the pumpkins, so the ground is not lit
+                    purely by cold moonlight. */}
+                <hemisphereLight
+                    args={['#ffb066', '#241a2e', 0.5]}
+                    position={[0, 40, 0]}
                 />
                 <Skybox />
 

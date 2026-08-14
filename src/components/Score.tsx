@@ -5,87 +5,107 @@ import { updateHighScores } from '../utils/utils';
 
 const Score = () => {
     const score = useStore(state => state.score);
-    /*const addScore = useStore(state => state.addScore);*/
     const gameOver = useStore(state => state.gameOver);
-    const [highScores, setHighScores] = useState<number[]>([]);
-    const playerSpeed = useStore(state => state.playerSpeed);
-
-    useEffect(() => {
-        if (gameOver) {
-            const topScores = updateHighScores(score);
-            setHighScores(topScores);
-        }
-    }, [gameOver, score]);
-
-    // Automatic scoring based on distance
-    /*
-    useEffect(() => {
-        if (gameOver) return;
-
-        const timer = setInterval(() => {
-            addScore(3);
-        }, 200);
-
-        return () => clearInterval(timer);
-    }, [gameOver, addScore]);
-    */
-
+    const playerPosition = useStore(state => state.playerPosition);
     const restart = useStore(state => state.restart);
+    const [highScores, setHighScores] = useState<number[]>([]);
+    const [finalScore, setFinalScore] = useState(0);
+    const [finalDistance, setFinalDistance] = useState(0);
 
-    const handlePlayAgain = () => {
-        restart();
-    };
+    // Distance is what an endless runner is actually about, and unlike the
+    // speed readout the HUD used to show, it is something the player is
+    // trying to push. Metres, not raw world units.
+    const distance = Math.max(0, Math.round(Math.abs(playerPosition[2]) / 10));
+
+    useEffect(() => {
+        if (!gameOver) return;
+        // Freeze the run's figures: the scene keeps ticking underneath the
+        // modal, so reading live state here would let them drift.
+        setFinalScore(score);
+        setFinalDistance(distance);
+        setHighScores(updateHighScores(score));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gameOver]);
+
+    if (gameOver) {
+        // Only the first row matching this run is highlighted, so two equal
+        // scores don't both light up.
+        const currentIndex = highScores.indexOf(finalScore);
+
+        return (
+            <div className="game-over-overlay">
+                <div className="game-over-container panel">
+                    <h2 className="game-over-title">Run Over</h2>
+
+                    <div className="final-score">
+                        {finalScore.toLocaleString()}
+                    </div>
+                    <div className="final-score-label">Score</div>
+
+                    <div className="run-stats">
+                        <div>
+                            Distance
+                            <strong>{finalDistance.toLocaleString()} m</strong>
+                        </div>
+                        <div>
+                            Best
+                            <strong>
+                                {(highScores[0] ?? 0).toLocaleString()}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div className="best-scores">
+                        <h3 className="best-scores-title">Best runs</h3>
+                        {highScores.length ? (
+                            highScores.map((highScore, index) => (
+                                <div
+                                    key={index}
+                                    className={`best-score-row${
+                                        index === currentIndex
+                                            ? ' is-current'
+                                            : ''
+                                    }`}
+                                >
+                                    <span className="best-score-rank">
+                                        #{index + 1}
+                                    </span>
+                                    <span className="best-score-value">
+                                        {highScore.toLocaleString()}
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="best-score-row">
+                                <span>No runs yet</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        className="btn btn-primary restart-button"
+                        onClick={restart}
+                        autoFocus
+                    >
+                        Run Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="score-display">
-            <div className={`score-value ${gameOver ? 'game-over' : ''}`}>
-                {gameOver ? (
-                    <div className="game-over-container">
-                        <div className="game-over-text">
-                            <span className="animated-letter">G</span>
-                            <span className="animated-letter">a</span>
-                            <span className="animated-letter">m</span>
-                            <span className="animated-letter">e</span>
-                            <span className="animated-letter">&nbsp;</span>
-                            <span className="animated-letter">O</span>
-                            <span className="animated-letter">v</span>
-                            <span className="animated-letter">e</span>
-                            <span className="animated-letter">r</span>
-                            <span className="animated-letter">!</span>
-                        </div>
-                        <div className="final-score">Score: {score.toLocaleString()}</div>
-
-                        <div className="high-scores-container">
-                            <h3 className="high-scores-title">Best Scores</h3>
-                            <div className="high-scores-list">
-                                {highScores.map((highScore, index) => (
-                                    <div key={index} className="high-score-item">
-                                        <span className="high-score-rank">{index + 1}</span>
-                                        <span className="high-score-value">
-                                            {highScore.toLocaleString()}
-                                        </span>
-                                    </div>
-                                ))}
-                                {highScores.length === 0 && (
-                                    <div className="no-scores">No records yet</div>
-                                )}
-                            </div>
-                        </div>
-
-                        <button className="restart-button" onClick={handlePlayAgain}>
-                            Play Again
-                        </button>
-                    </div>
-                ) : (
-                    <>
-                        <div style={{ paddingBottom: '10px' }}>
-                            Speed: {playerSpeed.toLocaleString() + ' m/s'}
-                        </div>
-                        <div className="score-container">
-                            <div>Score: {score.toLocaleString()}</div>
-                        </div>
-                    </>
-                )}
+        <div className="hud">
+            <div className="hud-score">
+                <span className="hud-score-value">
+                    {score.toLocaleString()}
+                </span>
+                <span className="hud-score-label">Score</span>
+            </div>
+            <div className="hud-meta">
+                <span>
+                    <strong>{distance.toLocaleString()}</strong> m
+                </span>
             </div>
         </div>
     );

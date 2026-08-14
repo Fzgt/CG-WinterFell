@@ -1,0 +1,105 @@
+/**
+ * One palette for every surface in the game.
+ *
+ * The scene is a low-poly Halloween night: deep blue dark, warm jack-o'-lantern
+ * light. The interface used to ignore that — a photoreal stock menu, a grey box
+ * of purple italics for the HUD, a violet neon modal — so nothing looked like
+ * it belonged to the same game. Everything now reads from here.
+ */
+:root {
+    --night-900: #08070f;
+    --night-800: #0f0d1a;
+    --night-700: #171426;
+    --night-600: #221d35;
+
+    /* Jack-o'-lantern light: the one warm colour, used for anything that is
+       the player's own progress or the primary action. */
+    --ember: #ff8b3d;
+    --ember-bright: #ffb066;
+    --ember-glow: rgba(255, 139, 61, 0.35);
+
+    /* Moonlight: everything informational. */
+    --moon: #d8e3ff;
+    --moon-dim: rgba(216, 227, 255, 0.62);
+    --moon-faint: rgba(216, 227, 255, 0.32);
+
+    --hazard: #ff5470;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 22px;
+
+    --shadow-lift: 0 18px 50px rgba(0, 0, 0, 0.55);
+    --shadow-ember: 0 8px 30px var(--ember-glow);
+
+    /* No webfont: the previous UI asked for 'Orbitron' everywhere without ever
+       loading it, so all of it silently fell back to the browser default.
+       A system stack renders the same on every machine and costs no request. */
+    --font-display: 'Avenir Next', 'Segoe UI', system-ui, -apple-system,
+        sans-serif;
+    --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    /* Figures that do not jitter as the score ticks up. */
+    --font-numeric: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+}
+
+.panel {
+    background: linear-gradient(
+        160deg,
+        rgba(34, 29, 53, 0.92),
+        rgba(15, 13, 26, 0.94)
+    );
+    border: 1px solid rgba(216, 227, 255, 0.12);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lift);
+    backdrop-filter: blur(14px);
+}
+
+.btn {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.85rem 2.2rem;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(180deg, var(--ember-bright), var(--ember));
+    color: #2a1405;
+    box-shadow: var(--shadow-ember);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 38px rgba(255, 139, 61, 0.5);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-primary:focus-visible {
+    outline: 2px solid var(--moon);
+    outline-offset: 3px;
+}
+
+/* A keyboard key, for control hints. */
+.key {
+    display: inline-block;
+    min-width: 1.9em;
+    padding: 0.18em 0.5em;
+    margin: 0 0.15em;
+    font-family: var(--font-ui);
+    font-size: 0.92em;
+    font-weight: 600;
+    color: var(--moon);
+    background: rgba(216, 227, 255, 0.1);
+    border: 1px solid rgba(216, 227, 255, 0.22);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+}

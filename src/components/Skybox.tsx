@@ -2,19 +2,11 @@ import * as THREE from 'three';
 import { useLayoutEffect, useRef, useEffect } from 'react';
 import { useStore } from '../store/store';
 import { useTexture } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
 
 const Skybox = () => {
     const skyboxTexture = useTexture('/textures/maple.jpg');
     const skyboxRef = useRef<THREE.Group>(null);
     const playerPosition = useStore(state => state.playerPosition);
-    const state = useThree();
-
-    useEffect(() => {
-        console.log(state);
-        console.log(state.gl);
-    }, []);
-
     useLayoutEffect(() => {
         skyboxTexture.wrapS = skyboxTexture.wrapT = THREE.MirroredRepeatWrapping;
         skyboxTexture.repeat.set(2, 2);
@@ -30,10 +22,12 @@ const Skybox = () => {
             <mesh>
                 <sphereGeometry args={[800, 32, 32]} />
                 <meshPhongMaterial
-                    emissive={0xff2190}
                     side={THREE.BackSide}
-                    emissiveIntensity={0.1}
                     map={skyboxTexture}
+                    // A cool wash tying the sky to the fog colour. It used to
+                    // be lit hot pink, which matched nothing else on screen.
+                    emissive={0x1b1830}
+                    emissiveIntensity={0.35}
                 />
             </mesh>
         </group>
