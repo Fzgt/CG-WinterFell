@@ -20,7 +20,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     const setPlayerPosition = useStore(state => state.setPlayerPosition);
     const { left, right } = useKeyboardControls();
 
-    const FIXED_LATERAL_SPEED = 5;
+    const FIXED_LATERAL_SPEED = 1.6;
     /** Longest frame allowed to drive movement, in seconds (~3 frames at 60fps). */
     const MAX_FRAME_DELTA = 1 / 20;
 
@@ -96,8 +96,14 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // console.log('Player Position:', Math.abs(Math.round(newZ)));
 
         if (cameraRef.current) {
-            cameraRef.current.position.set(newX, 6, newZ + 12);
-            cameraRef.current.lookAt(newX, 2, newZ);
+            // High and well back, aimed down the trail rather than level with
+            // it. At the old eye height of 6 units the grid collapsed into a
+            // few horizontal lines on the horizon and half the frame was empty
+            // floor; from up here the lines converge and the run reads as
+            // depth. The camera also lags the player's steering (0.5x) so
+            // moving sideways swings the view instead of gluing it to them.
+            cameraRef.current.position.set(newX * 0.55, 11, newZ + 20);
+            cameraRef.current.lookAt(newX * 0.35, 2, newZ - 55);
         }
     });
 };

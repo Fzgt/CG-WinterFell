@@ -3,21 +3,19 @@ import { Physics } from '@react-three/cannon';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
-import PumpkinField from './components/PumpkinField';
-import CollectibleField from './components/CollectibleField';
+import ObstacleField from './components/ObstacleField';
+import PickupField from './components/PickupField';
+import LevelDirector from './components/LevelDirector';
 import Score from './components/Score';
 import FloatingScoreManager from './components/FloatingScoreManager';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
-import WebgpuSupport from './utils/WebgpuSupport';
-import { ACESFilmicToneMapping, SRGBColorSpace, WebGLRenderer } from 'three';
-import GrassField from './components/GrassField';
+import { ACESFilmicToneMapping } from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
-import SoundTrack from './components/SoundTrack';
-import { CANDY_CORN_CONFIG, GHOST_CONFIG, TREASURE_CHEST_CONFIG, MINI_CANDY_CONFIG, BOTTLE_CONFIG} from './config/collectibles';
 import { benchFlags } from './utils/bench';
 import PerfProbe from './utils/PerfProbe';
+import PostFX from './components/PostFX';
 
 
 interface GameProps {
@@ -34,26 +32,26 @@ const Game = ({ onStart }: GameProps) => {
 
     return (
         <>
-            <SoundTrack onStart={onStart} />
             <Canvas
                 gl={async props => {
-                    if (isWebGPUSupported) {
-                        const renderer = new WebGPURenderer(props as any);
-                        await renderer.init();
-                        return renderer;
-                    } else {
-                        const renderer = new WebGLRenderer({
-                            antialias: true,
-                            alpha: true,
-                            powerPreference: 'high-performance',
-                        });
-                        renderer.toneMapping = ACESFilmicToneMapping;
-                        renderer.outputColorSpace = SRGBColorSpace;
-                        return renderer;
-                    }
+                    // One renderer for both backends. WebGPURenderer drives
+                    // WebGPU where it exists and its own WebGL2 backend where
+                    // it doesn't, which matters here because the bloom pass
+                    // (see PostFX) is built from three's node pipeline: a
+                    // plain WebGLRenderer could not run it, and the fallback
+                    // would silently lose the glow the whole look rests on.
+                    const renderer = new WebGPURenderer({
+                        ...(props as object),
+                        antialias: true,
+                        forceWebGL: !isWebGPUSupported,
+                    } as never);
+                    renderer.toneMapping = ACESFilmicToneMapping;
+                    await renderer.init();
+                    return renderer;
                 }}
             >
                 {benchFlags.perf && <PerfProbe />}
+                <PostFX />
                 {/* Distance fog in the sky's own colour. Sections used to pop
                     into view at the far plane with nothing to soften them;
                     now the trail fades out ahead, which both hides the seam
@@ -78,20 +76,15 @@ const Game = ({ onStart }: GameProps) => {
 
                 <Physics key={runId}>
                     <Ground />
-                    <GrassField />
                     {onStart && <Player />}
-                    <PumpkinField />
-                    <CollectibleField config={CANDY_CORN_CONFIG} />
-                    <CollectibleField config={TREASURE_CHEST_CONFIG} />
-                    <CollectibleField config={GHOST_CONFIG} />
-                    <CollectibleField config={MINI_CANDY_CONFIG} />
-                    <CollectibleField config={BOTTLE_CONFIG} />
+                    {onStart && <LevelDirector />}
+                    <ObstacleField />
+                    <PickupField />
                     {onStart && <FloatingScoreManager />}
                 </Physics>
             </Canvas>
             {onStart && <Score />}
             {onStart && !gameOver && <Pause />}
-            {onStart && isWebGPUSupported && <WebgpuSupport />}
         </>
     );
 };

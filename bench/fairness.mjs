@@ -38,12 +38,12 @@ await page.goto(URL, { waitUntil: 'domcontentloaded' });
 
 const results = await page.evaluate(
     async ({ sections, trials }) => {
-        const mod = await import('/src/utils/generatePumpkins.ts');
-        const cfg = await import('/src/config/pumpkin.ts');
+        const mod = await import('/src/utils/generateObstacles.ts');
+        const cfg = await import('/src/config/obstacles.ts');
 
-        // The player's collision radius against a pumpkin, and how far it can
+        // The player's collision radius against an obstacle, and how far it can
         // move sideways while covering one unit forward. Both come from the
-        // game: PumpkinField uses radius 15, and usePlayerMovement moves
+        // game: ObstacleField uses radius 15, and usePlayerMovement moves
         // FIXED_LATERAL_SPEED (5) sideways against playerSpeed (12) forward.
         const HIT_RADIUS = 15;
         const LATERAL_PER_FORWARD = 5 / 12;
@@ -55,14 +55,14 @@ const results = await page.evaluate(
             let tightest = Infinity;
 
             for (let t = 0; t < trials; t++) {
-                const pumpkins = mod.generateSectionPumpkins(section, 0);
-                const zs = pumpkins.map(p => p.z);
+                const obstacles = mod.generateSectionObstacles(section, 0);
+                const zs = obstacles.map(p => p.z);
                 const startZ = Math.max(...zs);
                 const endZ = Math.min(...zs);
 
                 // Reachable set of x positions, swept forward. Start anywhere,
                 // widen by what the player could reach over each step, then
-                // remove anything within HIT_RADIUS of a pumpkin.
+                // remove anything within HIT_RADIUS of an obstacle.
                 let reach = [[-cfg.FIELD_WIDTH / 2, cfg.FIELD_WIDTH / 2]];
                 let deadAt = null;
 
@@ -70,7 +70,7 @@ const results = await page.evaluate(
                     const grow = STEP * LATERAL_PER_FORWARD;
                     reach = reach.map(([a, b]) => [a - grow, b + grow]);
 
-                    const near = pumpkins.filter(
+                    const near = obstacles.filter(
                         p => p.z <= z && p.z > z - STEP,
                     );
                     for (const p of near) {
@@ -107,10 +107,10 @@ const results = await page.evaluate(
                 if (deadAt !== null) blocked++;
             }
 
-            const pumpkins = mod.generateSectionPumpkins(section, 0);
+            const obstacles = mod.generateSectionObstacles(section, 0);
             out.push({
                 section,
-                pumpkins: pumpkins.length,
+                obstacles: obstacles.length,
                 blockedPct: Math.round((blocked / trials) * 100),
                 tightestGap: Math.round(tightest),
             });
@@ -123,11 +123,11 @@ const results = await page.evaluate(
 await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
-console.log('| Section | Pumpkins | Layouts with no way through | Tightest gap |');
+console.log('| Section | Obstacles | Layouts with no way through | Tightest gap |');
 console.log('| --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
-        `| ${r.section} | ${r.pumpkins} | ${r.blockedPct}% | ${r.tightestGap} units |`,
+        `| ${r.section} | ${r.obstacles} | ${r.blockedPct}% | ${r.tightestGap} units |`,
     );
 }
 const worst = Math.max(...results.map(r => r.blockedPct));

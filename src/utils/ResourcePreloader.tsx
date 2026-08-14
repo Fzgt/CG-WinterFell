@@ -1,32 +1,18 @@
-import { useGLTF, useTexture } from '@react-three/drei';
-import { MODEL_PATHS, TEXTURE_PATHS } from '../config/constants';
-import { ALL_COLLECTIBLES } from '../config/collectibles';
+import { useGLTF } from '@react-three/drei';
+import { MODEL_PATHS } from '../config/constants';
 
-// Static preloading - happens during module import
-for (const texture of TEXTURE_PATHS) {
-    useTexture.preload(texture);
-}
-
+// Warm the cache at module load, so the menu's progress bar has something to
+// report before the scene mounts.
 for (const model of MODEL_PATHS) {
     useGLTF.preload(model);
 }
 
-for (const collectible of ALL_COLLECTIBLES) {
-    useGLTF.preload(collectible.modelPath);
-}
-
+/**
+ * Drives drei's loading manager so the menu can show real progress. With the
+ * scene now built from generated geometry, the player model is the only thing
+ * left to wait for.
+ */
 export const ResourcePreloader = () => {
-    console.log(' ############ Resource Preloader ##############');
-
-    // To trigger loading Manager
-    // @ts-ignore
-    const models = MODEL_PATHS.map(path => useGLTF(path));
-    // @ts-ignore
-    const textures = useTexture(TEXTURE_PATHS);
-
-    ALL_COLLECTIBLES.forEach(config => {
-        useGLTF(config.modelPath);
-    });
-
+    MODEL_PATHS.forEach(path => useGLTF(path));
     return null;
 };

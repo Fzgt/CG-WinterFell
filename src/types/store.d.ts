@@ -8,13 +8,16 @@ export interface ScoreEvent {
 
 export interface GameStore {
     playerSpeed: number;
-    addPlayerSpeed: () => void;
+    setPlayerSpeed: (speed: number) => void;
 
     gameStarted: boolean;
     setGameStarted: (started: boolean) => void;
 
     gameOver: boolean;
     setGameOver: (over: boolean) => void;
+
+    level: number;
+    setLevel: (level: number) => void;
 
     runId: number;
     restart: () => void;

@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { getBench } from './bench';
 import { useStore } from '../store/store';
-import { registrySize } from './pumpkinRegistry';
+import { registrySize } from './obstacleRegistry';
 
 /**
  * Samples renderer stats once per frame into window.__bench. Mounted only

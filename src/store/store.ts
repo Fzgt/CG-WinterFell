@@ -3,12 +3,9 @@ import { GameStore, ScoreEvent } from '../types/store';
 
 export const useStore = create<GameStore>(set => ({
     playerSpeed: 12,
-    addPlayerSpeed: () =>
-        set(state => {
-            const newSpeed = state.playerSpeed + 5;
-            console.log('New player speed:', newSpeed);
-            return { playerSpeed: newSpeed };
-        }),
+    // Speed is a property of the level now, not something accumulated by
+    // passing colour thresholds, so the director sets it outright.
+    setPlayerSpeed: speed => set({ playerSpeed: speed }),
 
     gameStarted: false,
     setGameStarted: started => set({ gameStarted: started }),
@@ -20,6 +17,9 @@ export const useStore = create<GameStore>(set => ({
     // section, the player and the physics world without reloading the page —
     // restarting used to be window.location.reload(), which meant sitting
     // through a full asset load between two-second runs.
+    level: 0,
+    setLevel: level => set({ level }),
+
     runId: 0,
     restart: () =>
         set(state => ({
@@ -28,6 +28,7 @@ export const useStore = create<GameStore>(set => ({
             gameOver: false,
             gamePaused: false,
             playerSpeed: 12,
+            level: 0,
             scoreEvents: [],
             playerPosition: [0, 1, -20],
         })),

@@ -29,10 +29,10 @@ const Player = () => {
             <PerspectiveCamera
                 ref={cameraRef}
                 makeDefault
-                fov={90}
+                fov={68}
                 near={0.1}
                 far={1200}
-                position={[0, 6, -10]}
+                position={[0, 11, 20]}
             />
             <group ref={physicsRef} />
             <group
