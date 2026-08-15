@@ -14,16 +14,20 @@ import { paletteFor } from '../config/levels';
  * displacement maps — five downloads for a flat grey field that swallowed the
  * light.
  *
- * The rails are thin boxes rather than lines. WebGL ignores line width, so a
- * LineSegments grid is always one pixel wide, and one-pixel geometry does not
+ * Everything here is thin boxes rather than lines. WebGL ignores line width, so
+ * a LineSegments grid is always one pixel wide, and one-pixel geometry does not
  * survive the bloom pass: the grid rendered perfectly with post-processing off
  * and disappeared with it on. Geometry with actual width both survives and can
  * be made genuinely bright.
+ *
+ * The grid spans exactly the width the craft can steer across, so what you can
+ * see is what you can use.
  */
-const RAIL_SPACING = 9;
-const RAIL_WIDTH = 0.5;
-/** Rails cover the corridor plus a margin; past that the floor goes dark. */
-const RAIL_HALF_WIDTH = FIELD_WIDTH / 2 + 40;
+const RAIL_SPACING = 10;
+const RAIL_WIDTH = 0.55;
+const RUNG_SPACING = 26;
+const RUNG_WIDTH = 0.35;
+const RAIL_HALF_WIDTH = FIELD_WIDTH / 2;
 
 const RailTile = ({
     tileRef,
@@ -32,37 +36,65 @@ const RailTile = ({
     tileRef: React.RefObject<THREE.Group>;
     color: THREE.Color;
 }) => {
-    const count = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
-    const meshRef = useRef<THREE.InstancedMesh>(null);
+    const railCount = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
+    const rungCount = Math.floor(planeSize / RUNG_SPACING) + 1;
+    const railsRef = useRef<THREE.InstancedMesh>(null);
+    const rungsRef = useRef<THREE.InstancedMesh>(null);
 
-    const geometry = useMemo(
+    const railGeometry = useMemo(
         () => new THREE.BoxGeometry(RAIL_WIDTH, 0.1, planeSize),
         [],
     );
+    const rungGeometry = useMemo(
+        () => new THREE.BoxGeometry(RAIL_HALF_WIDTH * 2, 0.1, RUNG_WIDTH),
+        [],
+    );
 
-    // Laid out once, on the first frame after the ref is attached; only the
-    // tile's own position moves after that.
+    // Laid out once, on the first frame after the refs attach; only the tile's
+    // own position moves after that.
     useFrame(() => {
-        const mesh = meshRef.current;
-        if (!mesh || mesh.userData.laidOut) return;
+        const rails = railsRef.current;
+        const rungs = rungsRef.current;
+        if (!rails || !rungs || rails.userData.laidOut) return;
+
         const dummy = new THREE.Object3D();
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < railCount; i++) {
             dummy.position.set(-RAIL_HALF_WIDTH + i * RAIL_SPACING, 0, 0);
             dummy.updateMatrix();
-            mesh.setMatrixAt(i, dummy.matrix);
+            rails.setMatrixAt(i, dummy.matrix);
         }
-        mesh.instanceMatrix.needsUpdate = true;
-        mesh.userData.laidOut = true;
+        for (let i = 0; i < rungCount; i++) {
+            dummy.position.set(0, 0, -planeSize / 2 + i * RUNG_SPACING);
+            dummy.updateMatrix();
+            rungs.setMatrixAt(i, dummy.matrix);
+        }
+        rails.instanceMatrix.needsUpdate = true;
+        rungs.instanceMatrix.needsUpdate = true;
+        rails.userData.laidOut = true;
     });
 
     return (
         <group ref={tileRef}>
             <instancedMesh
-                ref={meshRef}
-                args={[geometry, undefined, count]}
+                ref={railsRef}
+                args={[railGeometry, undefined, railCount]}
                 frustumCulled={false}
             >
                 <meshBasicMaterial color={color} toneMapped={false} />
+            </instancedMesh>
+            {/* Cross lines, dimmer so they read as ties between the rails
+                rather than competing with them for the eye. */}
+            <instancedMesh
+                ref={rungsRef}
+                args={[rungGeometry, undefined, rungCount]}
+                frustumCulled={false}
+            >
+                <meshBasicMaterial
+                    color={color}
+                    toneMapped={false}
+                    transparent
+                    opacity={0.38}
+                />
             </instancedMesh>
         </group>
     );

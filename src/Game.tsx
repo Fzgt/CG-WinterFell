@@ -17,6 +17,7 @@ import { useStore } from './store/store';
 import { benchFlags } from './utils/bench';
 import PerfProbe from './utils/PerfProbe';
 import PostFX from './components/PostFX';
+import Warmup from './components/Warmup';
 
 
 interface GameProps {
@@ -53,6 +54,7 @@ const Game = ({ onStart }: GameProps) => {
             >
                 {benchFlags.perf && <PerfProbe />}
                 <PostFX />
+                <Warmup />
                 {/* Distance fog in the sky's own colour. Sections used to pop
                     into view at the far plane with nothing to soften them;
                     now the trail fades out ahead, which both hides the seam

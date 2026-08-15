@@ -25,14 +25,44 @@ const PlayerCraft = () => {
     const glowRef = useRef<THREE.PointLight>(null);
     const clock = useRef(0);
 
-    // A four-sided cone laid on its side: a clean faceted dart whose faces
-    // catch the light differently, which a flat triangle fan would not.
+    /**
+     * An extruded ship outline rather than a cone. The cone read as a plain
+     * pyramid from behind — the only angle the player ever sees it from —
+     * with no silhouette to speak of. This is drawn as a 2D profile with a
+     * pointed nose, swept wings and a notched tail, then given thickness, so
+     * the shape survives being viewed head-on.
+     */
     const hull = useMemo(() => {
-        const geometry = new THREE.ConeGeometry(1.9, 6.4, 4);
+        const shape = new THREE.Shape();
+        shape.moveTo(0, -3.6); // nose
+        shape.lineTo(0.9, -0.6);
+        shape.lineTo(2.9, 1.9); // starboard wingtip
+        shape.lineTo(2.1, 2.6);
+        shape.lineTo(0.85, 2.1);
+        shape.lineTo(0.7, 3.0); // tail notch
+        shape.lineTo(-0.7, 3.0);
+        shape.lineTo(-0.85, 2.1);
+        shape.lineTo(-2.1, 2.6);
+        shape.lineTo(-2.9, 1.9); // port wingtip
+        shape.lineTo(-0.9, -0.6);
+        shape.closePath();
+
+        const geometry = new THREE.ExtrudeGeometry(shape, {
+            depth: 0.75,
+            bevelEnabled: true,
+            bevelThickness: 0.28,
+            bevelSize: 0.22,
+            bevelSegments: 1,
+        });
+        // Lay the profile flat and point the nose down -Z.
         geometry.rotateX(-Math.PI / 2);
-        geometry.scale(1, 0.42, 1);
+        geometry.center();
         return geometry;
     }, []);
+
+    // A bright outline over the dark body: the shape stays legible against a
+    // dark track, and the edges are what bloom picks up.
+    const outline = useMemo(() => new THREE.EdgesGeometry(hull, 25), [hull]);
 
     useFrame((_, delta) => {
         clock.current += Math.min(delta, 1 / 20);
@@ -53,14 +83,17 @@ const PlayerCraft = () => {
         <group>
             <mesh geometry={hull}>
                 <meshStandardMaterial
-                    color="#12122a"
+                    color="#0a0a18"
                     emissive={palette.neon}
-                    emissiveIntensity={0.55}
-                    roughness={0.25}
-                    metalness={0.45}
+                    emissiveIntensity={0.28}
+                    roughness={0.3}
+                    metalness={0.5}
                     flatShading
                 />
             </mesh>
+            <lineSegments geometry={outline}>
+                <lineBasicMaterial color={palette.neon} toneMapped={false} />
+            </lineSegments>
 
             {/* Engine flare. Small on purpose: bloom does the rest, and at any
                 real size it swallows the hull it is supposed to sit behind. */}

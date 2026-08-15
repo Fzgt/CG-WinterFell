@@ -20,11 +20,23 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     const setPlayerPosition = useStore(state => state.setPlayerPosition);
     const { left, right } = useKeyboardControls();
 
-    const FIXED_LATERAL_SPEED = 1.6;
+    /**
+     * Sideways travel, in world units per second.
+     *
+     * Steering used to set the smoothing target to `current - step` and then
+     * ease 20% of the way there each frame, so the craft actually moved at a
+     * fifth of the configured speed and never quite reached the edge of the
+     * track — crossing it took the better part of ten seconds. The target is
+     * now a lane position that moves at this speed outright, with the craft
+     * easing onto it, so the number means what it says.
+     */
+    const LATERAL_SPEED = 78;
     /** Longest frame allowed to drive movement, in seconds (~3 frames at 60fps). */
     const MAX_FRAME_DELTA = 1 / 20;
 
-    const xPosition = useRef(new MotionController(0, 0.2));
+    const xPosition = useRef(new MotionController(0, 0.28));
+    /** Where the player is steering to; the craft eases onto it. */
+    const laneX = useRef(0);
     // The camera chases the player's lane rather than sitting at a fraction of
     // it. Smoothing here is what gives the turn some weight; a fixed fraction
     // just leaves the player stranded off to one side.
@@ -69,22 +81,19 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // during a hitch instead.
         const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
 
-        const lateralMoveSpeed = FIXED_LATERAL_SPEED * 60 * delta;
+        const lateralStep = LATERAL_SPEED * delta;
         const forwardSpeed = playerSpeed * delta * 60;
 
         if (left) {
-            rotationZ.current.setTarget(-Math.PI / 9);
-            xPosition.current.setTarget(
-                Math.max(xPosition.current.getValue() - lateralMoveSpeed, leftBound)
-            );
+            rotationZ.current.setTarget(-Math.PI / 7);
+            laneX.current = Math.max(laneX.current - lateralStep, leftBound);
         } else if (right) {
-            rotationZ.current.setTarget(Math.PI / 9);
-            xPosition.current.setTarget(
-                Math.min(xPosition.current.getValue() + lateralMoveSpeed, rightBound)
-            );
+            rotationZ.current.setTarget(Math.PI / 7);
+            laneX.current = Math.min(laneX.current + lateralStep, rightBound);
         } else {
             rotationZ.current.setTarget(0);
         }
+        xPosition.current.setTarget(laneX.current);
 
         zPosition.current.setTarget(zPosition.current.getValue() - forwardSpeed);
 

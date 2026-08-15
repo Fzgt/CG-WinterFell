@@ -1,6 +1,8 @@
+import { FIELD_WIDTH } from './obstacles';
+
 export const planeSize = 1000;
-export const leftBound = -56;
-export const rightBound = 56;
+export const leftBound = -FIELD_WIDTH / 2;
+export const rightBound = FIELD_WIDTH / 2;
 
 // Nothing left to preload: every object in the scene is generated geometry.
 // Kept as an empty list so the loading path still has one place to grow from
