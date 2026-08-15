@@ -17,18 +17,19 @@
 }
 
 .pause-content h2 {
-    margin: 0 0 0.9rem;
-    font-size: 1rem;
+    margin: 0 0 1.4rem;
+    font-size: clamp(2.6rem, 9vw, 5rem);
     font-weight: 800;
     letter-spacing: 0.3em;
     text-indent: 0.3em;
     text-transform: uppercase;
-    color: var(--ember-bright);
+    color: var(--level-neon);
+    text-shadow: 0 0 40px var(--ember-glow);
 }
 
 .pause-content p {
     margin: 0;
     font-family: var(--font-ui);
-    font-size: 0.9rem;
+    font-size: clamp(0.95rem, 1.8vw, 1.15rem);
     color: var(--moon-dim);
 }

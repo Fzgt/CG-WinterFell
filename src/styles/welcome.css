@@ -32,7 +32,7 @@
         /* ground fog */
             radial-gradient(
                 ellipse 120% 45% at 50% 104%,
-                rgba(255, 139, 61, 0.16),
+                color-mix(in srgb, var(--level-neon) 20%, transparent),
                 transparent 60%
             ),
         linear-gradient(180deg, #05040b 0%, var(--night-800) 55%, #191024 100%);
@@ -85,11 +85,11 @@
     letter-spacing: 0.22em;
     text-indent: 0.22em; /* keeps tracking from shifting the centre */
     text-transform: uppercase;
-    background: linear-gradient(180deg, #fff 20%, var(--ember-bright) 115%);
+    background: linear-gradient(180deg, #fff 18%, var(--level-neon) 115%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 6px 30px rgba(255, 139, 61, 0.35));
+    filter: drop-shadow(0 6px 34px var(--ember-glow));
 }
 
 .tagline {
@@ -161,8 +161,8 @@
     position: absolute;
     bottom: -6vh;
     border-radius: 50%;
-    background: var(--ember-bright);
-    box-shadow: 0 0 8px var(--ember);
+    background: var(--level-neon);
+    box-shadow: 0 0 8px var(--level-neon);
     animation: rise linear infinite;
 }
 

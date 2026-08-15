@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../store/store';
 import { levelAt, paletteFor } from '../config/levels';
@@ -29,7 +30,19 @@ const LevelDirector = () => {
     });
 
     useEffect(() => {
-        setPlayerSpeed(paletteFor(level).speed);
+        const palette = paletteFor(level);
+        setPlayerSpeed(palette.speed);
+
+        // Hand the palette to CSS so the HUD, pause screen and game-over panel
+        // are the same colour as the level behind them, instead of staying the
+        // one accent they were designed with.
+        const root = document.documentElement.style;
+        root.setProperty('--level-neon', palette.neon);
+        root.setProperty('--level-accent', palette.accent);
+        const [r, g, b] = new THREE.Color(palette.neon)
+            .toArray()
+            .map(v => Math.round(v * 255));
+        root.setProperty('--ember-glow', `rgba(${r}, ${g}, ${b}, 0.38)`);
         // Level 0 is the start of the run, not an advancement, so it gets no
         // fanfare — otherwise every restart would open with a level-up.
         if (level > 0 && level !== lastAnnounced.current) {

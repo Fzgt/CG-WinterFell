@@ -51,8 +51,8 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
                 <h1 className="title">Winterfell</h1>
 
                 <p className="tagline">
-                    Run the Halloween trail. Dodge the pumpkins, take the
-                    treats, and see how far the night lets you get.
+                    Outrun the grid. Thread the pylons, take the light, and
+                    see how many sectors you can clear before it catches you.
                 </p>
 
                 <div className="loading-info">
@@ -73,7 +73,7 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
                                 />
                             </div>
                             <div className="loading-text">
-                                Waking the pumpkins…{' '}
+                                Powering up the grid…{' '}
                                 <strong>{Math.round(progress)}%</strong>
                                 {total > 0 && (
                                     <>

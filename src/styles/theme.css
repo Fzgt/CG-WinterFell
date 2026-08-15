@@ -12,11 +12,16 @@
     --night-700: #171426;
     --night-600: #221d35;
 
-    /* Jack-o'-lantern light: the one warm colour, used for anything that is
-       the player's own progress or the primary action. */
-    --ember: #ff8b3d;
-    --ember-bright: #ffb066;
-    --ember-glow: rgba(255, 139, 61, 0.35);
+    /* The interface takes the level's own colour, so a menu opened over a
+       magenta run is magenta. LevelDirector rewrites --level-neon as the run
+       progresses; the fallbacks here are level 0, which is what the menu and
+       a fresh run show. */
+    --level-neon: #00e5ff;
+    --level-accent: #ffe066;
+
+    --ember: var(--level-neon);
+    --ember-bright: var(--level-accent);
+    --ember-glow: rgba(0, 229, 255, 0.35);
 
     /* Moonlight: everything informational. */
     --moon: #d8e3ff;
@@ -56,11 +61,13 @@
 
 .btn {
     font-family: var(--font-display);
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    /* An arcade game's call to action should be able to carry a room. The
+       first pass sized these like a settings dialog. */
+    font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 0.85rem 2.2rem;
+    padding: 1.15rem 3.4rem;
     border-radius: 999px;
     border: none;
     cursor: pointer;
@@ -69,14 +76,19 @@
 }
 
 .btn-primary {
-    background: linear-gradient(180deg, var(--ember-bright), var(--ember));
-    color: #2a1405;
-    box-shadow: var(--shadow-ember);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--level-neon) 55%, white),
+        var(--level-neon)
+    );
+    color: #05070d;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+        0 10px 40px var(--ember-glow);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 38px rgba(255, 139, 61, 0.5);
+    box-shadow: 0 14px 46px var(--ember-glow);
 }
 
 .btn-primary:active {
@@ -91,11 +103,11 @@
 /* A keyboard key, for control hints. */
 .key {
     display: inline-block;
-    min-width: 1.9em;
-    padding: 0.18em 0.5em;
-    margin: 0 0.15em;
+    min-width: 2em;
+    padding: 0.28em 0.62em;
+    margin: 0 0.2em;
     font-family: var(--font-ui);
-    font-size: 0.92em;
+    font-size: 1em;
     font-weight: 600;
     color: var(--moon);
     background: rgba(216, 227, 255, 0.1);
