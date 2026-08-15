@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store/store';
 import { paletteFor } from '../config/levels';
-import { beatPulse } from '../utils/music';
 
 /**
  * The player: a glowing dart with a pulsing engine.
@@ -76,16 +75,14 @@ const PlayerCraft = () => {
         clock.current += Math.min(delta, 1 / 20);
         const beat = Math.sin(clock.current * (8 + playerSpeed * 0.4));
 
-        // The engine keeps the music's beat when it is playing, and falls
-        // back to the speed-driven flicker when it is not.
-        const kick = beatPulse();
-        const drive = kick > 0 ? kick : (beat + 1) / 2;
+        // The engine flickers faster the quicker the run gets, which is the
+        // only on-screen cue that speed has stepped up between levels.
         if (engineRef.current) {
-            const pulse = 1 + drive * 0.3;
+            const pulse = 1 + beat * 0.22;
             engineRef.current.scale.set(pulse, pulse, 1 + pulse * 0.9);
         }
         if (glowRef.current) {
-            glowRef.current.intensity = gameOver ? 0 : 7 + drive * 7;
+            glowRef.current.intensity = gameOver ? 0 : 9 + beat * 3;
         }
     });
 

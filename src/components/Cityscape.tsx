@@ -5,7 +5,6 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { planeSize } from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
-import { getBeat } from '../utils/music';
 
 /**
  * The skyline flanking the track.
@@ -247,14 +246,8 @@ const Cityscape = () => {
     const build2 = useMemo(buildTile, []);
 
     useFrame(({ clock }) => {
-        // Aviation beacons keep the city's rhythm: on the music's half-time
-        // when it plays, on their own slow pulse when it does not.
-        const beat = getBeat();
-        beaconMaterial.opacity = beat
-            ? beat.index % 2 === 0
-                ? 0.2 + 0.8 * Math.pow(1 - beat.phase, 2)
-                : 0.2
-            : 0.25 + 0.75 * Math.abs(Math.sin(clock.elapsedTime * 1.6));
+        // Aviation beacons blink slowly, all in phase — a city rhythm.
+        beaconMaterial.opacity = 0.25 + 0.75 * Math.abs(Math.sin(clock.elapsedTime * 1.6));
 
         const [, , playerZ] = playerPosition;
         if (!tile1.current || !tile2.current) return;

@@ -5,7 +5,6 @@ import { planeSize } from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
 import { paletteFor } from '../config/levels';
-import { beatPulse } from '../utils/music';
 
 /**
  * The floor: glowing rails running away from the player, converging on the
@@ -39,12 +38,10 @@ const RAIL_HALF_WIDTH = FIELD_WIDTH / 2;
 
 const RailTile = ({
     tileRef,
-    railMaterial,
-    rungMaterial,
+    color,
 }: {
     tileRef: React.RefObject<THREE.Group>;
-    railMaterial: THREE.MeshBasicMaterial;
-    rungMaterial: THREE.MeshBasicMaterial;
+    color: THREE.Color;
 }) => {
     const railCount = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
     const rungCount = Math.floor(planeSize / RUNG_SPACING) + 1;
@@ -90,9 +87,11 @@ const RailTile = ({
         <group ref={tileRef}>
             <instancedMesh
                 ref={railsRef}
-                args={[railGeometry, railMaterial, railCount]}
+                args={[railGeometry, undefined, railCount]}
                 frustumCulled={false}
-            />
+            >
+                <meshBasicMaterial color={color} toneMapped={false} />
+            </instancedMesh>
             {/* Cross lines, dimmer so they read as ties between the rails
                 rather than competing with them for the eye. */}
             {/* A dark floor under the grid, so looking down shows ground
@@ -103,9 +102,16 @@ const RailTile = ({
             </mesh>
             <instancedMesh
                 ref={rungsRef}
-                args={[rungGeometry, rungMaterial, rungCount]}
+                args={[rungGeometry, undefined, rungCount]}
                 frustumCulled={false}
-            />
+            >
+                <meshBasicMaterial
+                    color={color}
+                    toneMapped={false}
+                    transparent
+                    opacity={0.28}
+                />
+            </instancedMesh>
         </group>
     );
 };
@@ -116,32 +122,12 @@ const Ground = () => {
     const ground1Ref = useRef<THREE.Group>(null);
     const ground2Ref = useRef<THREE.Group>(null);
 
-    const baseColor = useMemo(
+    const color = useMemo(
         () => new THREE.Color(paletteFor(level).neon),
         [level],
     );
-    const railMaterial = useMemo(
-        () => new THREE.MeshBasicMaterial({ toneMapped: false }),
-        [],
-    );
-    const rungMaterial = useMemo(
-        () =>
-            new THREE.MeshBasicMaterial({
-                toneMapped: false,
-                transparent: true,
-                opacity: 0.28,
-            }),
-        [],
-    );
 
     useFrame(() => {
-        // The rails breathe on the kick: base brightness between beats, a
-        // push of light on each one. beatPulse() is 0 with no music running,
-        // so the menu and a muted game read as before.
-        const pulse = beatPulse();
-        railMaterial.color.copy(baseColor).multiplyScalar(0.82 + 0.38 * pulse);
-        rungMaterial.color.copy(baseColor);
-
         const [, , playerZ] = playerPosition;
         if (!ground1Ref.current || !ground2Ref.current) return;
 
@@ -158,16 +144,8 @@ const Ground = () => {
 
     return (
         <>
-            <RailTile
-                tileRef={ground1Ref}
-                railMaterial={railMaterial}
-                rungMaterial={rungMaterial}
-            />
-            <RailTile
-                tileRef={ground2Ref}
-                railMaterial={railMaterial}
-                rungMaterial={rungMaterial}
-            />
+            <RailTile tileRef={ground1Ref} color={color} />
+            <RailTile tileRef={ground2Ref} color={color} />
         </>
     );
 };

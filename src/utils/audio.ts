@@ -13,9 +13,6 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = false;
 
-export const audioContext = () => context();
-export const masterGain = () => master;
-
 const context = () => {
     if (!ctx) {
         const Ctor =
@@ -51,29 +48,18 @@ interface ToneOptions {
     gain?: number;
 }
 
-interface NoteOptions extends ToneOptions {
-    /** Absolute AudioContext time to start at; overrides `delay`. */
-    at?: number;
-}
-
-/**
- * Schedule a note at an absolute AudioContext time. The music scheduler needs
- * this — it plans notes ahead against the audio clock, and "delay from now"
- * drifts with however late the scheduling tick happened to run.
- */
-export const noteAt = ({
+const tone = ({
     freq,
     toFreq,
     duration,
     delay = 0,
-    at,
     type = 'square',
     gain = 0.5,
-}: NoteOptions) => {
+}: ToneOptions) => {
     const audio = context();
     if (!audio || !master) return;
 
-    const start = at ?? audio.currentTime + delay;
+    const start = audio.currentTime + delay;
     const osc = audio.createOscillator();
     const env = audio.createGain();
 
@@ -81,6 +67,7 @@ export const noteAt = ({
     osc.frequency.setValueAtTime(freq, start);
     if (toFreq) osc.frequency.exponentialRampToValueAtTime(toFreq, start + duration);
 
+    // A short attack and an exponential tail: instant on, no click off.
     env.gain.setValueAtTime(0.0001, start);
     env.gain.exponentialRampToValueAtTime(gain, start + 0.012);
     env.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -90,8 +77,6 @@ export const noteAt = ({
     osc.start(start);
     osc.stop(start + duration + 0.02);
 };
-
-const tone = (options: ToneOptions) => noteAt(options);
 
 /**
  * Sector fanfare: a quick pentatonic sparkle up two octaves into a held major

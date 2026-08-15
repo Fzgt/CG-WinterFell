@@ -8,7 +8,6 @@ import { SECTION_LENGTH, VISIBLE_SECTIONS } from '../config/obstacles';
 import { benchFlags } from '../utils/bench';
 import { paletteFor } from '../config/levels';
 import { playCrash } from '../utils/audio';
-import { beatPulse } from '../utils/music';
 import type { Obstacle } from '../utils/generateObstacles';
 
 /**
@@ -85,16 +84,13 @@ const ObstacleField = () => {
         return { bodyGeometry, frameGeometry, bodyMaterial, frameMaterial };
     }, []);
 
-    const baseNeon = useMemo(
-        () => new THREE.Color(paletteFor(level).neon),
-        [level],
-    );
-
     useEffect(() => {
+        const neon = new THREE.Color(paletteFor(level).neon);
         // Body: a dark read of the level colour, visible on its own without
-        // leaning on emissive.
-        meshData.bodyMaterial.color.copy(baseNeon).multiplyScalar(0.13);
-    }, [baseNeon, meshData]);
+        // leaning on emissive; frame: the full neon.
+        meshData.bodyMaterial.color.copy(neon).multiplyScalar(0.13);
+        meshData.frameMaterial.color.copy(neon);
+    }, [level, meshData]);
 
     const checkCollision = (obstacle: Obstacle): boolean => {
         if (gameOver) return false;
@@ -113,11 +109,6 @@ const ObstacleField = () => {
     };
 
     useFrame(() => {
-        // The frames flash on the kick — the danger keeps the beat.
-        meshData.frameMaterial.color
-            .copy(baseNeon)
-            .multiplyScalar(0.8 + 0.45 * beatPulse());
-
         if (gameOver) return;
 
         const next = Math.floor(Math.abs(playerPosition[2]) / SECTION_LENGTH);
