@@ -41,12 +41,11 @@ const results = await page.evaluate(
         const mod = await import('/src/utils/generateObstacles.ts');
         const cfg = await import('/src/config/obstacles.ts');
 
-        // The player's collision radius against an obstacle, and how far it can
-        // move sideways while covering one unit forward. Both come from the
-        // game: ObstacleField uses radius 15, and usePlayerMovement moves
-        // FIXED_LATERAL_SPEED (5) sideways against playerSpeed (12) forward.
-        const HIT_RADIUS = 15;
-        const LATERAL_PER_FORWARD = 5 / 12;
+        // Each obstacle now carries its own collision footprint, so the sweep
+        // uses that rather than one figure for all of them. Sideways reach per
+        // unit travelled comes from the game: LATERAL_SPEED against the
+        // opening playerSpeed.
+        const LATERAL_PER_FORWARD = 44 / (12 * 60);
         const STEP = 10; // forward sampling resolution
 
         const out = [];
@@ -55,7 +54,9 @@ const results = await page.evaluate(
             let tightest = Infinity;
 
             for (let t = 0; t < trials; t++) {
-                const obstacles = mod.generateSectionObstacles(section, 0);
+                const obstacles = mod
+                    .generateSectionObstacles(section, 0)
+                    .map(o => ({ x: o.position.x, z: o.position.z, r: o.radius }));
                 const zs = obstacles.map(p => p.z);
                 const startZ = Math.max(...zs);
                 const endZ = Math.min(...zs);
@@ -76,8 +77,8 @@ const results = await page.evaluate(
                     for (const p of near) {
                         const next = [];
                         for (const [a, b] of reach) {
-                            const lo = p.x - HIT_RADIUS;
-                            const hi = p.x + HIT_RADIUS;
+                            const lo = p.x - p.r;
+                            const hi = p.x + p.r;
                             if (hi <= a || lo >= b) next.push([a, b]);
                             else {
                                 if (lo > a) next.push([a, lo]);
@@ -107,10 +108,10 @@ const results = await page.evaluate(
                 if (deadAt !== null) blocked++;
             }
 
-            const obstacles = mod.generateSectionObstacles(section, 0);
+            const sample = mod.generateSectionObstacles(section, 0);
             out.push({
                 section,
-                obstacles: obstacles.length,
+                obstacles: sample.length,
                 blockedPct: Math.round((blocked / trials) * 100),
                 tightestGap: Math.round(tightest),
             });

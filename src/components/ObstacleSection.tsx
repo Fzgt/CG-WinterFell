@@ -1,9 +1,16 @@
 import { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { generateSectionObstacles } from '../utils/generateObstacles';
+import {
+    generateSectionObstacles,
+    Obstacle,
+} from '../utils/generateObstacles';
 import { benchFlags } from '../utils/bench';
-import { publishSectionObstacles, releaseSectionObstacles } from '../utils/obstacleRegistry';
+import {
+    publishSectionObstacles,
+    releaseSectionObstacles,
+} from '../utils/obstacleRegistry';
+
 interface ObstacleSectionProps {
     sectionIndex: number;
     meshData: {
@@ -11,7 +18,7 @@ interface ObstacleSectionProps {
         material: THREE.MeshStandardMaterial;
     };
     playerPosition: [number, number, number];
-    checkCollision: (position: THREE.Vector3) => boolean;
+    checkCollision: (obstacle: Obstacle) => boolean;
     visible?: boolean;
 }
 
@@ -24,10 +31,13 @@ const ObstacleSection = ({
 }: ObstacleSectionProps) => {
     const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
-    const [positions] = useState(() => {
-        const pumpkins = generateSectionObstacles(sectionIndex, playerPosition[0]);
-        publishSectionObstacles(sectionIndex, pumpkins);
-        return pumpkins;
+    const [obstacles] = useState(() => {
+        const generated = generateSectionObstacles(
+            sectionIndex,
+            playerPosition[0],
+        );
+        publishSectionObstacles(sectionIndex, generated);
+        return generated;
     });
 
     // Drop this section's layout once it scrolls out of view, so the registry
@@ -36,46 +46,46 @@ const ObstacleSection = ({
         () => () => releaseSectionObstacles(sectionIndex),
         [sectionIndex],
     );
-    
 
     useEffect(() => {
-        if (!instancedMeshRef.current || !meshData.geometry || !meshData.material) return;
+        const mesh = instancedMeshRef.current;
+        if (!mesh || !meshData.geometry || !meshData.material) return;
 
-        positions.forEach((position, i) => {
-            dummy.position.copy(position);
+        obstacles.forEach((obstacle, i) => {
+            dummy.position.copy(obstacle.position);
+            dummy.scale.copy(obstacle.scale);
+            dummy.rotation.set(0, obstacle.rotationY, 0);
             dummy.updateMatrix();
-            instancedMeshRef.current?.setMatrixAt(i, dummy.matrix);
+            mesh.setMatrixAt(i, dummy.matrix);
         });
 
-        instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-    }, [meshData.geometry, meshData.material]);
+        mesh.instanceMatrix.needsUpdate = true;
+    }, [meshData.geometry, meshData.material, obstacles, dummy]);
 
     useFrame(() => {
         if (!visible || !instancedMeshRef.current) return;
 
-        for (const position of positions) {
-            if (checkCollision(position)) {
-                break;
-            }
+        for (const obstacle of obstacles) {
+            if (checkCollision(obstacle)) break;
         }
     });
 
     if (!visible) return null;
 
-    // Naive baseline for benchmarking (?instancing=off): one mesh per pumpkin,
-    // i.e. one draw call each, instead of a single InstancedMesh for the
-    // whole section. Only used to measure what instancing buys.
+    // Naive baseline for benchmarking (?instancing=off): one mesh per
+    // obstacle, i.e. one draw call each. Only used to measure what instancing
+    // buys.
     if (!benchFlags.instancing) {
         return (
             <group>
-                {positions.map((position, i) => (
+                {obstacles.map((obstacle, i) => (
                     <mesh
                         key={i}
                         geometry={meshData.geometry}
                         material={meshData.material}
-                        position={position}
-                        castShadow
-                        receiveShadow
+                        position={obstacle.position}
+                        scale={obstacle.scale}
+                        rotation={[0, obstacle.rotationY, 0]}
                     />
                 ))}
             </group>
@@ -85,9 +95,7 @@ const ObstacleSection = ({
     return (
         <instancedMesh
             ref={instancedMeshRef}
-            args={[meshData.geometry, meshData.material, positions.length]}
-            castShadow
-            receiveShadow
+            args={[meshData.geometry, meshData.material, obstacles.length]}
         />
     );
 };

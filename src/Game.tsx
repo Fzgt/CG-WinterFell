@@ -4,11 +4,9 @@ import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import ObstacleField from './components/ObstacleField';
-import PickupField from './components/PickupField';
 import CraftTrail from './components/CraftTrail';
 import LevelDirector from './components/LevelDirector';
 import Score from './components/Score';
-import FloatingScoreManager from './components/FloatingScoreManager';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
 import { ACESFilmicToneMapping } from 'three';
@@ -83,8 +81,6 @@ const Game = ({ onStart }: GameProps) => {
                     {onStart && <CraftTrail />}
                     {onStart && <LevelDirector />}
                     <ObstacleField />
-                    <PickupField />
-                    {onStart && <FloatingScoreManager />}
                 </Physics>
             </Canvas>
             {onStart && <Score />}

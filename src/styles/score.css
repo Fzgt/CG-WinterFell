@@ -103,6 +103,13 @@
     font-variant-numeric: tabular-nums;
 }
 
+.final-score-unit {
+    margin-left: 0.15em;
+    font-size: 0.35em;
+    font-weight: 600;
+    color: var(--moon-faint);
+}
+
 .final-score-label {
     margin-top: 0.4rem;
     font-size: 0.72rem;

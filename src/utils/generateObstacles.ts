@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { randomInRange2 } from './utils';
 import {
+    OBSTACLE_BASE_RADIUS,
     FIELD_WIDTH,
     SECTION_LENGTH,
     BAND_DEPTH,
@@ -25,11 +26,20 @@ import {
  * see bench/fairness.mjs, which walks the lane geometrically rather than
  * trying to infer fairness from playtests.
  */
+export interface Obstacle {
+    position: THREE.Vector3;
+    /** Non-uniform, so no two pylons are the same block. */
+    scale: THREE.Vector3;
+    rotationY: number;
+    /** Footprint used for collision, derived from this one's own width. */
+    radius: number;
+}
+
 export const generateSectionObstacles = (
     section: number,
     playerX = 0,
-): THREE.Vector3[] => {
-    const positions: THREE.Vector3[] = [];
+): Obstacle[] => {
+    const positions: Obstacle[] = [];
 
     const sectionStartZ = section === 0 ? -250 : -section * SECTION_LENGTH;
     const sectionEndZ =
@@ -71,9 +81,28 @@ export const generateSectionObstacles = (
             }
             if (!placed) continue;
 
-            positions.push(
-                new THREE.Vector3(x, 1, randomInRange2(bandStartZ, bandEndZ)),
-            );
+            // Sizes vary a lot: squat wide slabs, thin tall spires, and
+            // everything between. A field of identical blocks reads as a
+            // pattern rather than a place.
+            const wide = Math.random() < 0.35;
+            const width = wide
+                ? randomInRange2(1.6, 2.8)
+                : randomInRange2(0.55, 1.3);
+            const height = wide
+                ? randomInRange2(0.5, 1.1)
+                : randomInRange2(1.1, 2.6);
+            const depth = randomInRange2(0.6, 1.6);
+
+            positions.push({
+                position: new THREE.Vector3(
+                    x,
+                    0,
+                    randomInRange2(bandStartZ, bandEndZ),
+                ),
+                scale: new THREE.Vector3(width, height, depth),
+                rotationY: randomInRange2(-0.5, 0.5),
+                radius: OBSTACLE_BASE_RADIUS * width,
+            });
         }
     }
 

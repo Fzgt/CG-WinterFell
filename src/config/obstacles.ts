@@ -27,6 +27,13 @@ export const SECTION_LENGTH = 2000;
  * Density then ramps with distance, so the opening is readable and the late
  * game is as dense as it always was.
  */
+/**
+ * Collision footprint of an obstacle at scale 1. Each one multiplies this by
+ * its own width, so a wide slab is genuinely harder to squeeze past than a
+ * thin spire — the hitbox follows what is drawn.
+ */
+export const OBSTACLE_BASE_RADIUS = 4.6;
+
 export const BAND_DEPTH = 100;
 export const LANE_HALF_WIDTH = 17;
 /** How far a band's clear lane may move from the previous band's. */

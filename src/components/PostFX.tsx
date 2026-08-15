@@ -27,9 +27,9 @@ interface PostFXProps {
 }
 
 const PostFX = ({
-    strength = 0.6,
+    strength = 0.52,
     radius = 0.55,
-    threshold = 0.55,
+    threshold = 0.72,
 }: PostFXProps) => {
     const gl = useThree(state => state.gl);
     const scene = useThree(state => state.scene);

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import type { Obstacle } from './generateObstacles';
 
 /**
  * Where each section's pumpkins ended up, so collectibles can be scattered
@@ -15,16 +15,16 @@ import * as THREE from 'three';
  * graph (see Game.tsx). A missing entry is not fatal — collectibles simply
  * scatter without avoiding anything.
  */
-const sections = new Map<number, THREE.Vector3[]>();
+const sections = new Map<number, Obstacle[]>();
 
 export const publishSectionObstacles = (
     sectionIndex: number,
-    positions: THREE.Vector3[],
+    positions: Obstacle[],
 ) => {
     sections.set(sectionIndex, positions);
 };
 
-export const getSectionObstacles = (sectionIndex: number): THREE.Vector3[] =>
+export const getSectionObstacles = (sectionIndex: number): Obstacle[] =>
     sections.get(sectionIndex) ?? [];
 
 export const releaseSectionObstacles = (sectionIndex: number) => {

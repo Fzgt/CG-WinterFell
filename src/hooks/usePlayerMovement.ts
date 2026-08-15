@@ -28,9 +28,11 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
      * fifth of the configured speed and never quite reached the edge of the
      * track — crossing it took the better part of ten seconds. The target is
      * now a lane position that moves at this speed outright, with the craft
-     * easing onto it, so the number means what it says.
+     * easing onto it, so the number means what it says. Tuned down from the
+     * first corrected value, which overshot the other way: a brief press threw
+     * the craft most of the way across the track.
      */
-    const LATERAL_SPEED = 78;
+    const LATERAL_SPEED = 44;
     /** Longest frame allowed to drive movement, in seconds (~3 frames at 60fps). */
     const MAX_FRAME_DELTA = 1 / 20;
 

@@ -7,6 +7,7 @@ import { SECTION_LENGTH, VISIBLE_SECTIONS } from '../config/obstacles';
 import { benchFlags } from '../utils/bench';
 import { paletteFor } from '../config/levels';
 import { playCrash } from '../utils/audio';
+import type { Obstacle } from '../utils/generateObstacles';
 
 /**
  * Obstacles: glowing pylons the player has to weave through.
@@ -15,6 +16,7 @@ import { playCrash } from '../utils/audio';
  * colours. Generated geometry costs no download, takes its colour from the
  * level, and — being emissive — is what the bloom pass turns into light.
  */
+/** Unit block; each instance scales it into its own silhouette. */
 export const OBSTACLE_SIZE = { width: 7, height: 13, depth: 7 };
 
 const ObstacleField = () => {
@@ -35,20 +37,22 @@ const ObstacleField = () => {
         const material = new THREE.MeshStandardMaterial({
             color: '#05040a',
             emissive: new THREE.Color(paletteFor(level).neon),
-            emissiveIntensity: 1.15,
+            emissiveIntensity: 0.75,
             roughness: 0.35,
             metalness: 0.1,
         });
         return { geometry, material };
     }, [level]);
 
-    const checkCollision = (position: THREE.Vector3): boolean => {
+    const checkCollision = (obstacle: Obstacle): boolean => {
         if (gameOver) return false;
 
         const [px, , pz] = playerPosition;
-        const dx = position.x - px;
-        const dz = position.z - pz;
-        if (Math.sqrt(dx * dx + dz * dz) >= 5.2) return false;
+        const dx = obstacle.position.x - px;
+        const dz = obstacle.position.z - pz;
+        // Each obstacle carries its own footprint, so a wide slab is genuinely
+        // harder to slip past than a thin spire.
+        if (Math.sqrt(dx * dx + dz * dz) >= obstacle.radius) return false;
 
         if (benchFlags.immortal) return false;
         setGameOver(true);

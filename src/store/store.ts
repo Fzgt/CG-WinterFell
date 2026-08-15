@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { GameStore, ScoreEvent } from '../types/store';
+import { GameStore } from '../types/store';
 
 export const useStore = create<GameStore>(set => ({
     playerSpeed: 12,
-    // Speed is a property of the level now, not something accumulated by
-    // passing colour thresholds, so the director sets it outright.
+    // Speed is a property of the level, not something accumulated by passing
+    // thresholds, so the director sets it outright.
     setPlayerSpeed: speed => set({ playerSpeed: speed }),
 
     gameStarted: false,
@@ -13,82 +13,30 @@ export const useStore = create<GameStore>(set => ({
     gameOver: false,
     setGameOver: over => set({ gameOver: over }),
 
-    // Bumping this remounts the scene (see Game.tsx), which resets every
-    // section, the player and the physics world without reloading the page —
-    // restarting used to be window.location.reload(), which meant sitting
-    // through a full asset load between two-second runs.
     level: 0,
     setLevel: level => set({ level }),
 
+    // Bumping this remounts the scene (see Game.tsx), which resets every
+    // section, the craft and the physics world without reloading the page —
+    // restarting used to be window.location.reload(), which meant sitting
+    // through a full asset load between two-second runs.
     runId: 0,
     restart: () =>
         set(state => ({
             runId: state.runId + 1,
-            score: 0,
             gameOver: false,
             gamePaused: false,
             playerSpeed: 12,
             level: 0,
-            scoreEvents: [],
             playerPosition: [0, 1, -20],
         })),
 
     gamePaused: false,
     togglePause: () => set(state => ({ gamePaused: !state.gamePaused })),
 
-    score: 0,
-    addScore: points =>
-        set(state => {
-            if (!state.gameOver && !state.gamePaused) {
-                return { score: state.score + points };
-            }
-            return state;
-        }),
-    
-    reduceScore: points =>
-        set(state => {
-            if (!state.gameOver && !state.gamePaused) {
-                return { score: state.score - points };
-            }
-            return state;
-        }),    
-
-    scoreEvents: [] as ScoreEvent[],
-    addScoreEvent: (position, points) =>
-        set(state => {
-            if (!state.gameOver && !state.gamePaused) {
-                const newEvent: ScoreEvent = {
-                    id: Date.now(),
-                    position,
-                    points
-                };
-                return { scoreEvents: [...state.scoreEvents, newEvent] };
-            }
-            return state;
-        }),
-    reduceScoreEvent: (position, points) =>
-        set(state => {
-            if (!state.gameOver && !state.gamePaused) {
-                const newEvent: ScoreEvent = {
-                    id: Date.now(),
-                    position,
-                    points
-                };
-                return { scoreEvents: [...state.scoreEvents, newEvent] };
-            }
-            return state;
-        }),
-    clearScoreEvent: (id) =>
-        set(state => ({
-            scoreEvents: state.scoreEvents.filter(event => event.id !== id)
-        })),
-
-    playerPosition: [0, 1, -20], // player initial position
+    playerPosition: [0, 1, -20],
     setPlayerPosition: position => set({ playerPosition: position }),
 
     isMusicPlaying: true,
     toggleMusic: () => set(state => ({ isMusicPlaying: !state.isMusicPlaying })),
-
-    playCollectSound: () => {},
-    playNegativeSound: () => {}, 
 }));

@@ -27,8 +27,15 @@ export const LEVELS: Level[] = [
     { name: 'Nova', neon: '#ff2d55', accent: '#ffffff', fog: '#170410', speed: 27 },
 ];
 
-/** World units before the next level. */
-export const LEVEL_DISTANCE = 2500;
+/**
+ * World units before the next level.
+ *
+ * This was 2500, which at the opening speed is the better part of half a
+ * minute on the same palette — long enough that a first-time player can
+ * reasonably conclude the game has nothing else to show them and leave. The
+ * first colour change now lands inside the first ten seconds or so.
+ */
+export const LEVEL_DISTANCE = 1300;
 
 /**
  * Levels repeat once the list runs out, but keep getting faster, so the run

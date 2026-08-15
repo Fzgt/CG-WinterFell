@@ -4,26 +4,27 @@ import '../styles/score.css';
 import { updateHighScores } from '../utils/utils';
 
 const Score = () => {
-    const score = useStore(state => state.score);
     const gameOver = useStore(state => state.gameOver);
     const playerPosition = useStore(state => state.playerPosition);
+    const level = useStore(state => state.level);
     const restart = useStore(state => state.restart);
     const [highScores, setHighScores] = useState<number[]>([]);
     const [finalScore, setFinalScore] = useState(0);
-    const [finalDistance, setFinalDistance] = useState(0);
+    const [finalLevel, setFinalLevel] = useState(0);
 
-    // Distance is what an endless runner is actually about, and unlike the
-    // speed readout the HUD used to show, it is something the player is
-    // trying to push. Metres, not raw world units.
+    // The score is the distance survived. Collectibles used to supply it,
+    // which meant a run could end on a negative number after clipping a few
+    // hazards — a strange thing to show someone who just travelled a mile.
+    // Metres, not raw world units.
     const distance = Math.max(0, Math.round(Math.abs(playerPosition[2]) / 10));
 
     useEffect(() => {
         if (!gameOver) return;
         // Freeze the run's figures: the scene keeps ticking underneath the
         // modal, so reading live state here would let them drift.
-        setFinalScore(score);
-        setFinalDistance(distance);
-        setHighScores(updateHighScores(score));
+        setFinalScore(distance);
+        setFinalLevel(level);
+        setHighScores(updateHighScores(distance));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameOver]);
 
@@ -39,18 +40,19 @@ const Score = () => {
 
                     <div className="final-score">
                         {finalScore.toLocaleString()}
+                        <span className="final-score-unit">m</span>
                     </div>
-                    <div className="final-score-label">Score</div>
+                    <div className="final-score-label">Distance</div>
 
                     <div className="run-stats">
                         <div>
-                            Distance
-                            <strong>{finalDistance.toLocaleString()} m</strong>
+                            Sector
+                            <strong>{finalLevel + 1}</strong>
                         </div>
                         <div>
                             Best
                             <strong>
-                                {(highScores[0] ?? 0).toLocaleString()}
+                                {(highScores[0] ?? 0).toLocaleString()} m
                             </strong>
                         </div>
                     </div>
@@ -71,7 +73,7 @@ const Score = () => {
                                         #{index + 1}
                                     </span>
                                     <span className="best-score-value">
-                                        {highScore.toLocaleString()}
+                                        {highScore.toLocaleString()} m
                                     </span>
                                 </div>
                             ))
@@ -98,14 +100,12 @@ const Score = () => {
         <div className="hud">
             <div className="hud-score">
                 <span className="hud-score-value">
-                    {score.toLocaleString()}
+                    {distance.toLocaleString()}
                 </span>
-                <span className="hud-score-label">Score</span>
+                <span className="hud-score-label">m</span>
             </div>
             <div className="hud-meta">
-                <span>
-                    <strong>{distance.toLocaleString()}</strong> m
-                </span>
+                <span>Sector {level + 1}</span>
             </div>
         </div>
     );
