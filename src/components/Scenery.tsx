@@ -625,7 +625,7 @@ const ocean: Builder = (z0, z1, spec) => {
         const z = z0 - ((i + 0.5) / 5) * span;
         const x = side * (INNER + rand(80, 240));
         const base = trackHeight(z) - 14;
-        const h = rand(200, 360);
+        const h = rand(120, 200);
         const segs = 9;
         white.push(at(new THREE.ConeGeometry(24, 26, 6), x, base + 8, z));
         for (let seg = 0; seg < segs; seg++) {
@@ -642,7 +642,7 @@ const ocean: Builder = (z0, z1, spec) => {
         }
         lamp.push(at(box(9, 7, 9), x, base + 18 + h + 3.5, z));
         // The light column: a beam driven straight up into the sky.
-        pillar.push(at(box(3.2, 300, 3.2), x, base + h + 170, z));
+        pillar.push(at(box(3.2, 170, 3.2), x, base + h + 100, z));
         build.beams.push({
             x: x + trackCurve(z), y: base + 18 + h + 3.5, z,
             speed: rand(0.7, 1.1), phase: i * 2.1,
@@ -952,7 +952,7 @@ const colossi: Builder = (z0, z1, spec) => {
     // of giants the run passes down the middle of.
     for (let i = 0; i < 3; i++) {
         const z = z0 - ((i + 0.5) / 3) * span;
-        const H = rand(300, 400);
+        const H = rand(200, 260);
         for (const side of [-1, 1]) {
             const x = side * (INNER + 90);
             const base = shoulder(z) - 8;
@@ -970,7 +970,7 @@ const colossi: Builder = (z0, z1, spec) => {
             body.push(at(box(wBody * 0.22, H * 0.45, wBody * 0.22), armX, base + H * 0.98, z));
             torch.push(at(box(wBody * 0.32, H * 0.06, wBody * 0.32), armX, base + H * 1.22, z));
             // ...and its light: a column driven into the sky.
-            pillarGlow.push(at(box(wBody * 0.2, 260, wBody * 0.2), armX, base + H * 1.25 + 130, z));
+            pillarGlow.push(at(box(wBody * 0.2, 150, wBody * 0.2), armX, base + H * 1.25 + 75, z));
         }
     }
     emit(build, body, dark('#141a2c'));
@@ -1366,11 +1366,8 @@ const ribcage: Builder = (z0, _z1) => {
         const arch = new THREE.TorusGeometry(R, 7.5, 6, 34, Math.PI);
         arch.translate(trackCurve(z), trackHeight(z) + 2, z);
         bone.push(arch);
-        // Vertebra riding the crown, and a green witch-light between ribs.
+        // Vertebra riding the crown.
         bone.push(at(box(22, 16, 30), 0, trackHeight(z) + R + 10, z));
-        if (r % 3 === 1) {
-            mist.push(at(box(2, 2, 2), rand(-70, 70), trackHeight(z) + rand(20, 90), z - 25));
-        }
     }
     // The skull. Not a lantern — a face. A vast cranium looming over the
     // track's exit, deep black sockets with green fire burning inside,
@@ -1389,27 +1386,23 @@ const ribcage: Builder = (z0, _z1) => {
             jaw.rotateZ(side * 0.1);
             bone.push(at(jaw, side * 86, y + 60, z + 30));
         }
-        // Fangs over the lane, upper and lower.
-        for (let f = -3; f <= 3; f++) {
-            const fang = new THREE.ConeGeometry(7, 34, 5);
+        // Fangs over the lane — a few, spaced, readable.
+        for (let f = -2; f <= 2; f++) {
+            const fang = new THREE.ConeGeometry(8, 36, 5);
             fang.rotateX(Math.PI);
-            bone.push(at(fang, f * 24, y + 112, z + 58));
-            if (Math.abs(f) < 3) {
-                bone.push(at(new THREE.ConeGeometry(5, 22, 5), f * 24 + 12, y + 26, z + 54));
-            }
+            bone.push(at(fang, f * 34, y + 112, z + 58));
         }
-        // The sockets: recessed voids, then the green fire inside them.
+        // The sockets: recessed voids, then the green fire inside them —
+        // kept at clearly separated depths so nothing z-fights.
         for (const side of [-1, 1]) {
-            dark0.push(at(box(46, 34, 10), side * 48, y + 178, z + 62));
-            glow.push(at(box(30, 18, 6), side * 48, y + 178, z + 66));
-            glow.push(at(box(10, 6, 4), side * 48, y + 166, z + 68)); // underglow slit
+            dark0.push(at(box(46, 34, 8), side * 48, y + 178, z + 58));
+            glow.push(at(box(28, 16, 4), side * 48, y + 178, z + 67));
         }
         // Nasal void.
-        dark0.push(at(box(16, 26, 8), 0, y + 150, z + 64));
-        // Grave-light pooling under the skull and drifting wisps.
-        mist.push(at(new THREE.CylinderGeometry(120, 140, 3, 12), 0, y + 8, z + 10));
-        for (let w = 0; w < 12; w++) {
-            mist.push(at(box(1.6, 1.6, 1.6), rand(-140, 140), y + rand(15, 140), z + rand(-60, 80)));
+        dark0.push(at(box(16, 26, 6), 0, y + 150, z + 60));
+        // A few drifting grave-lights; the face carries the scene alone.
+        for (let w = 0; w < 5; w++) {
+            mist.push(at(box(1.8, 1.8, 1.8), rand(-120, 120), y + rand(30, 130), z + rand(-40, 70)));
         }
     }
     // A flank skeleton collapsed on one side, half sunk.
@@ -1583,7 +1576,10 @@ const finale: Builder = (z0, z1, spec) => {
     const glass: THREE.BufferGeometry[] = [];
     const bands: THREE.BufferGeometry[] = [];
     const signs: THREE.BufferGeometry[] = [];
-    const posts: THREE.BufferGeometry[] = [];
+    const trunks: THREE.BufferGeometry[] = [];
+    const canopies: THREE.BufferGeometry[] = [];
+    const seams: THREE.BufferGeometry[] = [];
+    const lanterns: THREE.BufferGeometry[] = [];
     const portal: THREE.BufferGeometry[] = [];
 
     // Lawns flanking the final approach, the campus green at night.
@@ -1594,12 +1590,34 @@ const finale: Builder = (z0, z1, spec) => {
         }
     }
 
-    // The lit walkway: paired light posts guiding the last kilometre in.
-    for (let z = z0 - 30; z > z1; z -= 60) {
+    // The approach is an avenue, not runway lights: a thin light seam
+    // along each edge of the road, ranks of slender pale trees on the
+    // lawns, and soft lantern orbs floating between them. Deliberately
+    // quieter and warmer than every sector before it.
+    for (let z = z0 - 25; z > z1; z -= 50) {
         if (z > -34350 || z < -35690) continue;
         for (const side of [-1, 1]) {
-            posts.push(at(box(1.6, 10, 1.6), side * 72, trackHeight(z) + 5, z));
-            posts.push(at(box(3, 1.6, 3), side * 72, trackHeight(z) + 11, z));
+            seams.push(at(box(1.1, 0.6, 52), side * 68, trackHeight(z) + 0.4, z));
+        }
+    }
+    for (let z = z0 - 60; z > z1; z -= 120) {
+        if (z > -34400 || z < -35650) continue;
+        for (const side of [-1, 1]) {
+            const x = side * rand(95, 130);
+            const h = rand(26, 38);
+            const base = trackHeight(z) - 4;
+            trunks.push(at(new THREE.CylinderGeometry(1, 1.6, h, 5), x, base + h / 2, z));
+            canopies.push(at(new THREE.SphereGeometry(h * 0.42, 8, 6), x, base + h + 4, z));
+            lanterns.push(at(new THREE.SphereGeometry(1.6, 6, 5), side * 78, base + 12, z - 60));
+        }
+    }
+    // A single slim arc marks the campus threshold.
+    {
+        const zArc = -34420;
+        if (z0 >= zArc && z1 <= zArc) {
+            const arc = new THREE.TorusGeometry(96, 1.8, 5, 40, Math.PI);
+            arc.translate(trackCurve(zArc), trackHeight(zArc) + 2, zArc);
+            seams.push(arc);
         }
     }
 
@@ -1664,11 +1682,14 @@ const finale: Builder = (z0, z1, spec) => {
         }
     }
 
-    emit(build, lawn, dark('#0c2416'));
+    emit(build, lawn, dark('#0b2018'));
     emit(build, glass, dark('#141a2c'));
     emit(build, bands, basic('#e8f4ff', { transparent: true, opacity: 0.8 }));
     emit(build, signs, basic(spec.a));
-    emit(build, posts, basic(spec.b, { transparent: true, opacity: 0.85 }));
+    emit(build, trunks, dark('#232a3c'));
+    emit(build, canopies, basic('#cfd9ee', { transparent: true, opacity: 0.34 }));
+    emit(build, seams, basic('#ffe9c4', { transparent: true, opacity: 0.8 }));
+    emit(build, lanterns, basic('#ffe9c4'));
     emit(build, portal, basic('#ffe9c4'));
     return build;
 };

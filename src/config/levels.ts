@@ -45,7 +45,21 @@ export const LEVEL_DISTANCE = 1800;
 export const levelAt = (distance: number) =>
     Math.floor(Math.abs(distance) / LEVEL_DISTANCE);
 
+/**
+ * The final sector's own look: campus at night. Deep indigo air, silver
+ * rails, champagne accents — deliberately apart from the neon cycle, so the
+ * approach to UTS reads as arriving somewhere, not one more lap.
+ */
+const TERMINUS: Level = {
+    name: 'Terminus',
+    neon: '#cfd9ee',
+    accent: '#ffe9c4',
+    fog: '#090b16',
+    speed: 24,
+};
+
 export const paletteFor = (level: number): Level => {
+    if (level >= 19) return TERMINUS;
     const base = LEVELS[level % LEVELS.length];
     const laps = Math.floor(level / LEVELS.length);
     return laps === 0
