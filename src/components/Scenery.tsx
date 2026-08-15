@@ -476,6 +476,85 @@ const spinnerRingGeometry = () => {
     return ring;
 };
 
+/** A sentinel-class war machine: legs, torso, shoulders, head, visor. */
+const warMachine = (
+    steel: THREE.BufferGeometry[],
+    glow: THREE.BufferGeometry[],
+    x: number,
+    z: number,
+    H: number,
+    lean = 0,
+    core = true,
+) => {
+    const part = (g: THREE.BufferGeometry, px: number, py: number) => {
+        if (lean) g.rotateZ(lean);
+        // Lean rotates around the feet, so shift accordingly.
+        const dx = lean ? py * Math.sin(lean) : 0;
+        g.translate(0, 0, 0);
+        at(g, x + px + dx, py * Math.cos(lean || 0) + shoulder(z) - 6, z);
+    };
+    for (const lx of [-0.11, 0.11]) {
+        const leg = box(H * 0.09, H * 0.42, H * 0.11);
+        part(leg, lx * H, H * 0.21);
+        steel.push(leg);
+    }
+    const hip = box(H * 0.3, H * 0.1, H * 0.14);
+    part(hip, 0, H * 0.45);
+    steel.push(hip);
+    const chest = box(H * 0.26, H * 0.3, H * 0.16);
+    part(chest, 0, H * 0.63);
+    steel.push(chest);
+    for (const sx of [-0.2, 0.2]) {
+        const pauldron = box(H * 0.12, H * 0.1, H * 0.14);
+        part(pauldron, sx * H, H * 0.75);
+        steel.push(pauldron);
+        const arm = box(H * 0.06, H * 0.26, H * 0.08);
+        part(arm, sx * H * 1.15, H * 0.58);
+        steel.push(arm);
+    }
+    const head = box(H * 0.1, H * 0.08, H * 0.09);
+    part(head, 0, H * 0.83);
+    steel.push(head);
+    if (core) {
+        const coreBox = box(H * 0.06, H * 0.06, 4);
+        part(coreBox, -H * 0.02, H * 0.66);
+        glow.push(coreBox);
+        const visor = box(H * 0.07, H * 0.016, 3);
+        part(visor, 0, H * 0.845);
+        glow.push(visor);
+    }
+};
+
+/** Glowing letterform boxes for a sign; supports U, T, S. */
+const glyph = (
+    out: THREE.BufferGeometry[],
+    letter: 'U' | 'T' | 'S',
+    x: number,
+    y: number,
+    z: number,
+    u: number,
+) => {
+    const bar = (bx: number, by: number, w: number, h: number) => {
+        const g = box(w * u, h * u, 2);
+        g.translate(x + bx * u, y + by * u, z);
+        out.push(g);
+    };
+    if (letter === 'U') {
+        bar(-1, 0.5, 1, 4); // left
+        bar(1, 0.5, 1, 4); // right
+        bar(0, -1.5, 3, 1); // bottom
+    } else if (letter === 'T') {
+        bar(0, 2, 3, 1); // top
+        bar(0, -0.5, 1, 4); // stem
+    } else {
+        bar(0, 2, 3, 1); // top
+        bar(-1, 1, 1, 1); // upper left
+        bar(0, 0, 3, 1); // middle
+        bar(1, -1, 1, 1); // lower right
+        bar(0, -2, 3, 1); // bottom
+    }
+};
+
 /* ---------------------------------------------------------------- scenes -- */
 
 type Builder = (z0: number, z1: number, spec: SceneSpec) => TileBuild;
@@ -1114,6 +1193,17 @@ const ruins: Builder = (z0, z1, spec) => {
         }
     }
 
+    // The dead gods of this place: sentinel-class machines, one still on
+    // its feet with its core faintly burning, one caught mid-fall against
+    // the sky — the pacing sentries below read as their surviving children.
+    {
+        const z = z0 - rand(300, 700);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        warMachine(wreck, glow, side * (INNER + rand(180, 300)), z, rand(320, 400));
+        const z2 = z0 - rand(900, 1500);
+        warMachine(wreck, glow, -side * (INNER + rand(160, 280)), z2, rand(260, 340), -side * 0.28, false);
+    }
+
     // And the ones still walking: sentries pacing their patrol lines.
     const walkers: ActorSpec[] = [];
     for (const side of [-1, 1]) {
@@ -1258,10 +1348,12 @@ const arches: Builder = (z0, z1, spec) => {
 };
 
 /* 16 ─ Leviathan Graveyard: drive through the skeleton -------------------- */
-const ribcage: Builder = (z0, _z1, spec) => {
+const ribcage: Builder = (z0, _z1) => {
     const build = emptyBuild();
     const bone: THREE.BufferGeometry[] = [];
     const glow: THREE.BufferGeometry[] = [];
+    const dark0: THREE.BufferGeometry[] = [];
+    const mist: THREE.BufferGeometry[] = [];
 
     // The centrepiece: a whole leviathan skeleton lying along the track —
     // ribs arch OVER the run, vertebrae ride the crown, and the run exits
@@ -1270,30 +1362,55 @@ const ribcage: Builder = (z0, _z1, spec) => {
     const ribCount = 12;
     for (let r = 0; r < ribCount; r++) {
         const z = spineStart - r * 55;
-        const R = 95 - Math.abs(r - ribCount / 2) * 4;
-        const arch = new THREE.TorusGeometry(R, 5.5, 6, 34, Math.PI);
+        const R = 118 - Math.abs(r - ribCount / 2) * 5;
+        const arch = new THREE.TorusGeometry(R, 7.5, 6, 34, Math.PI);
         arch.translate(trackCurve(z), trackHeight(z) + 2, z);
         bone.push(arch);
-        // Vertebra riding the crown.
-        bone.push(at(box(16, 12, 26), 0, trackHeight(z) + R + 8, z));
-    }
-    // The skull: a vast box head straddling high over the track's exit,
-    // held up by its own jawbones, eye sockets burning.
-    {
-        const z = spineStart - ribCount * 55 - 70;
-        const y = trackHeight(z);
-        bone.push(at(box(150, 70, 90), 0, y + 130, z));
-        bone.push(at(box(120, 26, 60), 0, y + 86, z + 20));
-        for (const side of [-1, 1]) {
-            const jaw = box(18, 110, 22);
-            jaw.rotateZ(side * 0.12);
-            bone.push(at(jaw, side * 78, y + 55, z));
-            const fang = new THREE.ConeGeometry(6, 26, 5);
-            fang.rotateX(Math.PI);
-            bone.push(at(fang, side * 40, y + 88, z + 42));
+        // Vertebra riding the crown, and a green witch-light between ribs.
+        bone.push(at(box(22, 16, 30), 0, trackHeight(z) + R + 10, z));
+        if (r % 3 === 1) {
+            mist.push(at(box(2, 2, 2), rand(-70, 70), trackHeight(z) + rand(20, 90), z - 25));
         }
-        glow.push(at(box(26, 12, 4), -38, y + 140, z + 46));
-        glow.push(at(box(26, 12, 4), 38, y + 140, z + 46));
+    }
+    // The skull. Not a lantern — a face. A vast cranium looming over the
+    // track's exit, deep black sockets with green fire burning inside,
+    // fangs hanging over the lane, sick green light pooling underneath:
+    // the dead cousin of the whale that glides past the abyss tunnel.
+    {
+        const z = spineStart - ribCount * 55 - 80;
+        const y = trackHeight(z);
+        // Cranium, brow, cheeks.
+        bone.push(at(box(190, 100, 130), 0, y + 165, z));
+        bone.push(at(box(200, 22, 40), 0, y + 208, z + 52));
+        for (const side of [-1, 1]) {
+            bone.push(at(box(34, 60, 50), side * 96, y + 130, z + 20));
+            // Jawbones down to the ground, gate-like.
+            const jaw = box(24, 130, 26);
+            jaw.rotateZ(side * 0.1);
+            bone.push(at(jaw, side * 86, y + 60, z + 30));
+        }
+        // Fangs over the lane, upper and lower.
+        for (let f = -3; f <= 3; f++) {
+            const fang = new THREE.ConeGeometry(7, 34, 5);
+            fang.rotateX(Math.PI);
+            bone.push(at(fang, f * 24, y + 112, z + 58));
+            if (Math.abs(f) < 3) {
+                bone.push(at(new THREE.ConeGeometry(5, 22, 5), f * 24 + 12, y + 26, z + 54));
+            }
+        }
+        // The sockets: recessed voids, then the green fire inside them.
+        for (const side of [-1, 1]) {
+            dark0.push(at(box(46, 34, 10), side * 48, y + 178, z + 62));
+            glow.push(at(box(30, 18, 6), side * 48, y + 178, z + 66));
+            glow.push(at(box(10, 6, 4), side * 48, y + 166, z + 68)); // underglow slit
+        }
+        // Nasal void.
+        dark0.push(at(box(16, 26, 8), 0, y + 150, z + 64));
+        // Grave-light pooling under the skull and drifting wisps.
+        mist.push(at(new THREE.CylinderGeometry(120, 140, 3, 12), 0, y + 8, z + 10));
+        for (let w = 0; w < 12; w++) {
+            mist.push(at(box(1.6, 1.6, 1.6), rand(-140, 140), y + rand(15, 140), z + rand(-60, 80)));
+        }
     }
     // A flank skeleton collapsed on one side, half sunk.
     {
@@ -1309,8 +1426,10 @@ const ribcage: Builder = (z0, _z1, spec) => {
             bone.push(arc);
         }
     }
-    emit(build, bone, dark('#494d63'));
-    emit(build, glow, basic(spec.b));
+    emit(build, bone, dark('#5a5f78'));
+    emit(build, dark0, basic('#020403'));
+    emit(build, glow, basic('#4dff88'));
+    emit(build, mist, basic('#39ff77', { transparent: true, opacity: 0.3 }));
     return build;
 };
 
@@ -1457,92 +1576,100 @@ const mushroom: Builder = (z0, z1, spec) => {
     return build;
 };
 
-/* 20 ─ The Terminus: the finale ------------------------------------------- */
+/* 20 ─ The Terminus: the run ends at UTS ---------------------------------- */
 const finale: Builder = (z0, z1, spec) => {
     const build = emptyBuild();
-    sea(build, z0, z1, '#05131f');
-    const glow: THREE.BufferGeometry[] = [];
-    const steel: THREE.BufferGeometry[] = [];
-    const light: THREE.BufferGeometry[] = [];
+    const lawn: THREE.BufferGeometry[] = [];
+    const glass: THREE.BufferGeometry[] = [];
+    const bands: THREE.BufferGeometry[] = [];
+    const signs: THREE.BufferGeometry[] = [];
+    const posts: THREE.BufferGeometry[] = [];
+    const portal: THREE.BufferGeometry[] = [];
 
-    // The afterglow zone past the set pieces stays calm sea and moon.
-    const zMid = (z0 + z1) / 2;
-    const moonZ = zMid - 200;
-    const moonDisc = new THREE.CylinderGeometry(150, 150, 2, 32);
-    moonDisc.rotateX(Math.PI / 2);
-    glow.push(at(moonDisc, 0, trackHeight(moonZ) + 320, moonZ));
-
-    const isSetPiece = z0 > -36800;
-    if (isSetPiece) {
-        // The Sentinel: a 420-unit war machine standing waist-deep in the
-        // sea beside the run, chest core burning, visor watching you pass.
-        {
-            const z = z0 - 600;
-            const x = INNER + 240;
-            const base = trackHeight(z) - 60;
-            const H = 420;
-            for (const lx of [-0.11, 0.11]) {
-                steel.push(at(box(H * 0.09, H * 0.42, H * 0.11), x + lx * H, base + H * 0.21, z));
-            }
-            steel.push(at(box(H * 0.3, H * 0.1, H * 0.14), x, base + H * 0.45, z));
-            steel.push(at(box(H * 0.26, H * 0.3, H * 0.16), x, base + H * 0.63, z));
-            for (const sx of [-0.2, 0.2]) {
-                steel.push(at(box(H * 0.12, H * 0.1, H * 0.14), x + sx * H, base + H * 0.75, z));
-                steel.push(at(box(H * 0.06, H * 0.26, H * 0.08), x + sx * H * 1.15, base + H * 0.58, z));
-            }
-            steel.push(at(box(H * 0.1, H * 0.08, H * 0.09), x, base + H * 0.83, z));
-            // Chest core and visor, facing the track.
-            glow.push(at(box(H * 0.06, H * 0.06, 4), x - H * 0.13, base + H * 0.66, z));
-            glow.push(at(box(H * 0.07, H * 0.016, 3), x - H * 0.05, base + H * 0.84, z));
-            // Warning lights up one shoulder.
-            for (let i = 0; i < 4; i++) {
-                light.push(at(box(3, 3, 3), x - H * 0.2, base + H * (0.72 + i * 0.05), z));
-            }
-        }
-        // The carrier: half a kilometre of flight deck on the other side.
-        {
-            const z = z0 - 900;
-            const x = -(INNER + 260);
-            const level = trackHeight(z) - 16;
-            const L = 520;
-            steel.push(at(box(110, 16, L), x, level + 26, z - L / 2 + 300));
-            steel.push(at(box(84, 26, L * 0.9), x, level + 6, z - L / 2 + 300));
-            // Island tower with radar.
-            steel.push(at(box(26, 44, 40), x + 34, level + 56, z + 60));
-            steel.push(at(box(3, 26, 3), x + 34, level + 90, z + 60));
-            // Deck centreline and edge lights.
-            glow.push(at(box(3, 1.4, L * 0.94), x, level + 35, z - L / 2 + 300));
-            for (let d = 0; d < 10; d++) {
-                light.push(at(box(2, 2, 2), x - 52, level + 35, z + 240 - d * (L / 10)));
-                light.push(at(box(2, 2, 2), x + 52, level + 35, z + 240 - d * (L / 10)));
-            }
-            // Parked wedges on deck.
-            for (let j = 0; j < 4; j++) {
-                const jet = new THREE.ConeGeometry(7, 22, 4);
-                jet.rotateX(-Math.PI / 2);
-                steel.push(at(jet, x - 20 + j * 14, level + 38, z - 40 - j * 40));
-            }
-        }
-        // The mothership: a hovering wedge over the end of the road,
-        // pinning the sea with columns of light.
-        {
-            const z = z0 - 1400;
-            const y = trackHeight(z) + 330;
-            const hull = box(340, 34, 150);
-            steel.push(at(hull, 0, y, z));
-            steel.push(at(box(220, 22, 100), 0, y + 26, z));
-            const rimGlow = box(344, 4, 154);
-            glow.push(at(rimGlow, 0, y - 17, z));
-            for (const bx of [-110, 0, 110]) {
-                const beamCone = new THREE.ConeGeometry(26, 300, 8, 1, true);
-                light.push(at(beamCone, bx, y - 165, z));
-            }
+    // Lawns flanking the final approach, the campus green at night.
+    for (let z = z0; z > z1 && z > -37800; z -= 250) {
+        const zc = z - 125;
+        for (const side of [-1, 1]) {
+            lawn.push(at(box(420, 1.2, 252), side * (INNER + 190), trackHeight(zc) - 6, zc));
         }
     }
 
-    emit(build, steel, dark('#1a2130'));
-    emit(build, glow, basic(spec.a, { transparent: true, opacity: 0.85 }));
-    emit(build, light, basic(spec.b, { transparent: true, opacity: 0.3 }));
+    // The lit walkway: paired light posts guiding the last kilometre in.
+    for (let z = z0 - 30; z > z1; z -= 60) {
+        if (z > -34350 || z < -35690) continue;
+        for (const side of [-1, 1]) {
+            posts.push(at(box(1.6, 10, 1.6), side * 72, trackHeight(z) + 5, z));
+            posts.push(at(box(3, 1.6, 3), side * 72, trackHeight(z) + 11, z));
+        }
+    }
+
+    // The complex itself, straddling the end of the road.
+    const zB = -35800;
+    if (z0 >= zB && z1 <= zB) {
+        const y = trackHeight(zB);
+
+        // Podium: a glass hall of luminous floor plates, with the great
+        // door the track runs into. The photo's white wave-floors become
+        // full-width light bands.
+        glass.push(at(box(150, 110, 120), -175, y + 55, zB)); // left wing
+        glass.push(at(box(150, 110, 120), 175, y + 55, zB)); // right wing
+        glass.push(at(box(500, 34, 120), 0, y + 93, zB)); // spanning storey
+        for (const by of [30, 58, 84]) {
+            bands.push(at(box(496, 4, 124), 0, y + by, zB));
+        }
+        // The door: legs, lintel, and the warm lit interior you stop inside.
+        for (const side of [-1, 1]) {
+            glass.push(at(box(30, 76, 44), side * 85, y + 38, zB + 40));
+        }
+        glass.push(at(box(200, 18, 44), 0, y + 85, zB + 40));
+        portal.push(at(box(136, 66, 4), 0, y + 38, zB + 6)); // glowing hall
+        bands.push(at(box(140, 3, 44), 0, y + 74, zB + 40)); // lintel light
+
+        // The tower above: stacked, slightly wandering glass storeys — the
+        // Gehry-adjacent curve, in this world's language.
+        let ty = y + 110;
+        for (let f = 0; f < 6; f++) {
+            const w = 200 - f * 14;
+            const wobble = Math.sin(f * 1.7) * 16;
+            const storey = box(w, 34, 96 - f * 6);
+            storey.rotateY(Math.sin(f * 2.1) * 0.06);
+            glass.push(at(storey, wobble, ty + 17, zB - 10));
+            bands.push(at(box(w * 0.96, 3, (96 - f * 6) * 1.02), wobble, ty + 33, zB - 10));
+            ty += 34;
+        }
+        // The UTS sign on the tower's crown, facing the run.
+        {
+            const u = 7;
+            const sy = ty + 24;
+            glyph(signs, 'U', -30 + trackCurve(zB), sy, zB + 44, u);
+            glyph(signs, 'T', 0 + trackCurve(zB), sy, zB + 44, u);
+            glyph(signs, 'S', 30 + trackCurve(zB), sy, zB + 44, u);
+        }
+
+        // The old brutalist tower keeping watch to the left, its own sign lit.
+        glass.push(at(box(95, 280, 85), -300, y + 140, zB - 60));
+        for (let f = 0; f < 7; f++) {
+            bands.push(at(box(80, 1.6, 87), -300, y + 40 + f * 34, zB - 60));
+        }
+        {
+            const u = 3.4;
+            glyph(signs, 'U', -314 + trackCurve(zB), y + 262, zB - 15, u);
+            glyph(signs, 'T', -300 + trackCurve(zB), y + 262, zB - 15, u);
+            glyph(signs, 'S', -286 + trackCurve(zB), y + 262, zB - 15, u);
+        }
+        // A quieter glass sibling to the right, for the skyline's balance.
+        glass.push(at(box(110, 190, 90), 315, y + 95, zB - 80));
+        for (let f = 0; f < 5; f++) {
+            bands.push(at(box(100, 1.6, 92), 315, y + 30 + f * 36, zB - 80));
+        }
+    }
+
+    emit(build, lawn, dark('#0c2416'));
+    emit(build, glass, dark('#141a2c'));
+    emit(build, bands, basic('#e8f4ff', { transparent: true, opacity: 0.8 }));
+    emit(build, signs, basic(spec.a));
+    emit(build, posts, basic(spec.b, { transparent: true, opacity: 0.85 }));
+    emit(build, portal, basic('#ffe9c4'));
     return build;
 };
 

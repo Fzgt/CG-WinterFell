@@ -22,13 +22,16 @@ import SectorBanner from './components/SectorBanner';
 /** Shown once the run crosses into the final scene: no loop past here. */
 const FinaleBanner = () => {
     const arrived = useStore(
-        state => Math.abs(state.playerPosition[2]) > 35000,
+        state => Math.abs(state.playerPosition[2]) > 35350,
     );
     if (!arrived) return null;
     return (
         <div className="finale-banner">
-            <h2>THE TERMINUS</h2>
-            <p>All 20 scenes cleared — welcome to the end of the grid.</p>
+            <h2>WELCOME TO UTS</h2>
+            <p>
+                Run complete — all 20 scenes cleared. The grid ends where it
+                all began.
+            </p>
         </div>
     );
 };

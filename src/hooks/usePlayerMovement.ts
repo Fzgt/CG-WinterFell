@@ -111,7 +111,12 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         }
         xPosition.current.setTarget(laneX.current);
 
-        zPosition.current.setTarget(zPosition.current.getValue() - forwardSpeed);
+        // The run ends at the doors of UTS: forward motion clamps at the
+        // threshold and the craft glides to a stop inside the lit hall.
+        const FINAL_Z = -35720;
+        zPosition.current.setTarget(
+            Math.max(zPosition.current.getValue() - forwardSpeed, FINAL_Z),
+        );
 
         const newX = xPosition.current.update();
         const newZ = zPosition.current.update();

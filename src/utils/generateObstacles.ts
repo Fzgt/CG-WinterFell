@@ -237,6 +237,9 @@ export const generateSectionObstacles = (
     playerX = 0,
 ): Obstacle[] => {
     const [startZ, endZ] = sectionBounds(section);
+    // The final scene is a victory lap: the last stretch runs clean into
+    // the doors of UTS, no obstacles on campus.
+    if (startZ <= -34200) return [];
     const ramp = rampFor(section);
 
     switch (formationFor(section)) {
