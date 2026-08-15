@@ -25,6 +25,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     const MAX_FRAME_DELTA = 1 / 20;
 
     const xPosition = useRef(new MotionController(0, 0.2));
+    // The camera chases the player's lane rather than sitting at a fraction of
+    // it. Smoothing here is what gives the turn some weight; a fixed fraction
+    // just leaves the player stranded off to one side.
+    const cameraX = useRef(new MotionController(0, 0.09));
     const zPosition = useRef(new MotionController(-20, 0.15));
     const rotationZ = useRef(new MotionController(0, 0.2));
 
@@ -97,13 +101,19 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
 
         if (cameraRef.current) {
             // High and well back, aimed down the trail rather than level with
-            // it. At the old eye height of 6 units the grid collapsed into a
-            // few horizontal lines on the horizon and half the frame was empty
-            // floor; from up here the lines converge and the run reads as
-            // depth. The camera also lags the player's steering (0.5x) so
-            // moving sideways swings the view instead of gluing it to them.
-            cameraRef.current.position.set(newX * 0.55, 11, newZ + 20);
-            cameraRef.current.lookAt(newX * 0.35, 2, newZ - 55);
+            // it: at the old eye height of 6 units the grid collapsed into a
+            // few horizontal lines and half the frame was empty floor.
+            //
+            // The camera follows the player's lane, easing into it rather than
+            // snapping. It used to sit at a fixed 0.55x of the player's offset
+            // — a leftover from when the corridor was ±500 units wide — which
+            // after the corridor was narrowed left the player able to steer 25
+            // units away from where the camera was pointing, i.e. off to the
+            // edge of the screen while the view stayed put.
+            cameraX.current.setTarget(newX);
+            const camX = cameraX.current.update();
+            cameraRef.current.position.set(camX, 11, newZ + 20);
+            cameraRef.current.lookAt(camX, 2, newZ - 55);
         }
     });
 };
