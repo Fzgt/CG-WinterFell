@@ -10,10 +10,6 @@ import { paletteFor } from '../config/levels';
  * It used to be a downloaded cartoon cyclist, which in a world made of light
  * was the one object still belonging to a different game. Built from
  * primitives, coloured by the level.
- *
- * The wake is a separate component (CraftTrail) rendered at the scene root,
- * because it has to be laid down in world space — parented here it would move
- * with the craft and never trail anything.
  */
 const PlayerCraft = () => {
     const level = useStore(state => state.level);

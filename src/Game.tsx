@@ -4,7 +4,6 @@ import Skybox from './components/Skybox';
 import Ground from './components/Ground';
 import Player from './components/Player';
 import ObstacleField from './components/ObstacleField';
-import CraftTrail from './components/CraftTrail';
 import LevelDirector from './components/LevelDirector';
 import Score from './components/Score';
 import Pause from './utils/Pause';
@@ -84,7 +83,6 @@ const Game = ({ onStart }: GameProps) => {
                     <Ground />
                     <Cityscape />
                     {onStart && <Player />}
-                    {onStart && <CraftTrail />}
                     {onStart && <LevelDirector />}
                     <ObstacleField />
                 </Physics>
