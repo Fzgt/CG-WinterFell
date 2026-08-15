@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store/store';
@@ -28,28 +28,39 @@ const ObstacleField = () => {
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
 
+    /**
+     * Built once for the life of the field, never rebuilt per level.
+     *
+     * These used to be recreated whenever the level changed, which changed the
+     * `args` of every section's instancedMesh and made react-three-fiber tear
+     * down and rebuild each one. All three sections share this single geometry
+     * and material, so the first teardown disposed the pair out from under the
+     * other two: obstacles appeared for the opening stretch, then vanished for
+     * good at the first level change. Colour is a property to mutate, not a
+     * reason to rebuild the mesh.
+     *
+     * The base colour carries most of the read, with emissive on top, so a
+     * backend that treats emissive differently cannot hide them.
+     */
     const meshData = useMemo(() => {
         const { width, height, depth } = OBSTACLE_SIZE;
         const geometry = new THREE.BoxGeometry(width, height, depth);
         // Origin at the base, so a pylon stands on the grid rather than
         // sinking half of itself into it.
         geometry.translate(0, height / 2, 0);
-        // The base colour carries most of the read, with emissive on top.
-        // These used to be near-black and rely on emissive alone, which meant
-        // anything that dimmed or ignored emissive — a different renderer
-        // backend, a lower bloom threshold — left them invisible against a
-        // black sky. Lit colour and emissive now both point the same way, so
-        // no single mechanism failing can hide them.
-        const neon = new THREE.Color(paletteFor(level).neon);
         const material = new THREE.MeshStandardMaterial({
-            color: neon.clone().multiplyScalar(0.5),
-            emissive: neon,
             emissiveIntensity: 0.6,
             roughness: 0.4,
             metalness: 0.1,
         });
         return { geometry, material };
-    }, [level]);
+    }, []);
+
+    useEffect(() => {
+        const neon = new THREE.Color(paletteFor(level).neon);
+        meshData.material.color.copy(neon).multiplyScalar(0.5);
+        meshData.material.emissive.copy(neon);
+    }, [level, meshData]);
 
     const checkCollision = (obstacle: Obstacle): boolean => {
         if (gameOver) return false;
