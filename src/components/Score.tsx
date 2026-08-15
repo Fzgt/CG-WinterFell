@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../store/store';
 import '../styles/score.css';
 import { updateHighScores } from '../utils/utils';
+import { playMilestone } from '../utils/audio';
 
 const Score = () => {
     const gameOver = useStore(state => state.gameOver);
@@ -11,6 +12,7 @@ const Score = () => {
     const [highScores, setHighScores] = useState<number[]>([]);
     const [finalScore, setFinalScore] = useState(0);
     const [finalLevel, setFinalLevel] = useState(0);
+    const [pop, setPop] = useState(false);
 
     // The score is the distance survived. Collectibles used to supply it,
     // which meant a run could end on a negative number after clipping a few
@@ -27,6 +29,17 @@ const Score = () => {
         setHighScores(updateHighScores(distance));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameOver]);
+
+    // Every hundred metres the counter pops and ticks. The number climbing on
+    // its own reads as a clock; a beat every 100m makes it a reward.
+    const milestone = Math.floor(distance / 100);
+    useEffect(() => {
+        if (milestone === 0 || gameOver) return;
+        setPop(true);
+        playMilestone();
+        const timer = setTimeout(() => setPop(false), 450);
+        return () => clearTimeout(timer);
+    }, [milestone, gameOver]);
 
     if (gameOver) {
         // Only the first row matching this run is highlighted, so two equal
@@ -99,7 +112,7 @@ const Score = () => {
     return (
         <div className="hud">
             <div className="hud-score">
-                <span className="hud-score-value">
+                <span className={`hud-score-value${pop ? ' pop' : ''}`}>
                     {distance.toLocaleString()}
                 </span>
                 <span className="hud-score-label">m</span>

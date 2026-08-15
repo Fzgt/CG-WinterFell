@@ -54,8 +54,12 @@ const PlayerCraft = () => {
             bevelSize: 0.22,
             bevelSegments: 1,
         });
-        // Lay the profile flat and point the nose down -Z.
+        // Lay the profile flat. rotateX alone leaves the nose pointing +Z —
+        // at the camera — so the ship read as a heart with its point facing
+        // the player and its wings sweeping forwards. The extra half-turn
+        // points the nose down the track and sweeps the wings back.
         geometry.rotateX(-Math.PI / 2);
+        geometry.rotateY(Math.PI);
         geometry.center();
         return geometry;
     }, []);

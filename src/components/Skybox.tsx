@@ -109,6 +109,11 @@ const Skybox = () => {
     const starsRef = useRef<THREE.InstancedMesh>(null);
     const streaksRef = useRef<THREE.InstancedMesh>(null);
     const laidOut = useRef(false);
+    /** Per-streak travel offset; each one races past and wraps around. */
+    const streakOffsets = useRef(
+        Float32Array.from({ length: STREAK_COUNT }, () => Math.random() * 1600),
+    );
+    const streakDummy = useMemo(() => new THREE.Object3D(), []);
 
     // The level decides the horizon and streak colour; geometry never changes.
     useEffect(() => {
@@ -123,8 +128,8 @@ const Skybox = () => {
         groupRef.current?.position.set(...playerPosition);
         if (spinRef.current) spinRef.current.rotation.y += delta * 0.012;
 
-        // Lay out instances once, first frame both refs exist.
-        if (!laidOut.current && starsRef.current && streaksRef.current) {
+        // Stars are laid out once; streaks are re-laid every frame below.
+        if (!laidOut.current && starsRef.current) {
             const dummy = new THREE.Object3D();
             stars.forEach((star, i) => {
                 dummy.position.copy(star.position);
@@ -134,17 +139,26 @@ const Skybox = () => {
                 dummy.updateMatrix();
                 starsRef.current!.setMatrixAt(i, dummy.matrix);
             });
-            streaks.forEach((streak, i) => {
-                dummy.position.copy(streak.position);
-                // All streaks run with the track (-z), stretched by their seed.
-                dummy.rotation.set(0, 0, 0);
-                dummy.scale.set(1, 1, 0.5 + streak.seed * 1.8);
-                dummy.updateMatrix();
-                streaksRef.current!.setMatrixAt(i, dummy.matrix);
-            });
             starsRef.current.instanceMatrix.needsUpdate = true;
-            streaksRef.current.instanceMatrix.needsUpdate = true;
             laidOut.current = true;
+        }
+
+        // Streaks flow: each races backwards past the player at its own
+        // speed and wraps to the far distance, so the sky itself is moving —
+        // hanging still they read as scratches, not light.
+        const mesh = streaksRef.current;
+        if (mesh) {
+            const offsets = streakOffsets.current;
+            streaks.forEach((streak, i) => {
+                offsets[i] += delta * (260 + streak.seed * 420);
+                if (offsets[i] > 1600) offsets[i] -= 1600;
+                streakDummy.position.copy(streak.position);
+                streakDummy.position.z += offsets[i] - 800;
+                streakDummy.scale.set(1, 1, 0.5 + streak.seed * 1.8);
+                streakDummy.updateMatrix();
+                mesh.setMatrixAt(i, streakDummy.matrix);
+            });
+            mesh.instanceMatrix.needsUpdate = true;
         }
     });
 

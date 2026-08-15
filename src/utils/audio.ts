@@ -78,18 +78,35 @@ const tone = ({
     osc.stop(start + duration + 0.02);
 };
 
-/** Rising arpeggio, a step higher with each level, so progress is audible. */
+/**
+ * Sector fanfare: a quick pentatonic sparkle up two octaves into a held major
+ * chord with a slight detune shimmer. The first version was four slow square
+ * waves — accurate, but it sounded like an appliance acknowledging an input
+ * rather than the game celebrating anything.
+ */
 export const playLevelCue = (level: number) => {
-    const root = 220 * Math.pow(2, (level % 6) / 6);
-    [0, 4, 7, 12].forEach((semitone, i) => {
+    const root = 330 * Math.pow(2, (level % 6) / 12);
+    [0, 4, 7, 12, 16, 19].forEach((semitone, i) => {
         tone({
             freq: root * Math.pow(2, semitone / 12),
-            duration: 0.5,
-            delay: i * 0.075,
-            type: i === 3 ? 'sawtooth' : 'square',
-            gain: 0.32,
+            duration: 0.16,
+            delay: i * 0.05,
+            type: 'triangle',
+            gain: 0.3 - i * 0.02,
         });
     });
+    // The landing chord, two voices slightly detuned so it rings.
+    [12, 16, 19, 24].forEach(semitone => {
+        const freq = root * Math.pow(2, semitone / 12);
+        tone({ freq, duration: 0.6, delay: 0.32, type: 'triangle', gain: 0.15 });
+        tone({ freq: freq * 1.006, duration: 0.6, delay: 0.32, type: 'sine', gain: 0.1 });
+    });
+};
+
+/** Every hundred metres: a tiny two-note tick, reward without interruption. */
+export const playMilestone = () => {
+    tone({ freq: 1320, duration: 0.08, type: 'triangle', gain: 0.2 });
+    tone({ freq: 1760, duration: 0.12, delay: 0.055, type: 'triangle', gain: 0.18 });
 };
 
 export const playPickup = () => {

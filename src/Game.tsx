@@ -17,6 +17,8 @@ import { paletteFor } from './config/levels';
 import PerfProbe from './utils/PerfProbe';
 import PostFX from './components/PostFX';
 import Warmup from './components/Warmup';
+import Cityscape from './components/Cityscape';
+import SectorBanner from './components/SectorBanner';
 
 
 interface GameProps {
@@ -80,6 +82,7 @@ const Game = ({ onStart }: GameProps) => {
 
                 <Physics key={runId}>
                     <Ground />
+                    <Cityscape />
                     {onStart && <Player />}
                     {onStart && <CraftTrail />}
                     {onStart && <LevelDirector />}
@@ -87,6 +90,7 @@ const Game = ({ onStart }: GameProps) => {
                 </Physics>
             </Canvas>
             {onStart && <Score />}
+            {onStart && <SectorBanner />}
             {onStart && !gameOver && <Pause />}
         </>
     );
