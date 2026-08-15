@@ -7,77 +7,63 @@ import { useStore } from '../store/store';
 import { paletteFor } from '../config/levels';
 
 /**
- * The floor: a dark plane with a glowing grid over it, recycled ahead of the
- * player in two tiles.
+ * The floor: glowing rails running away from the player, converging on the
+ * horizon, recycled ahead of them in two tiles.
  *
  * It used to be a photographic rock texture with normal, roughness, ao and
- * displacement maps — five downloads to render a flat grey field that swallowed
- * the light. Lines take their colour from the level and are what the bloom pass
- * has to bite on.
+ * displacement maps — five downloads for a flat grey field that swallowed the
+ * light.
  *
- * The grid is built by hand rather than with GridHelper because the two
- * directions want different treatment: rails running away from the player are
- * what convey depth, so they are bright and widely spaced, while the rungs
- * streaming towards them convey speed and would fight the rails for attention
- * at the same brightness.
+ * The rails are thin boxes rather than lines. WebGL ignores line width, so a
+ * LineSegments grid is always one pixel wide, and one-pixel geometry does not
+ * survive the bloom pass: the grid rendered perfectly with post-processing off
+ * and disappeared with it on. Geometry with actual width both survives and can
+ * be made genuinely bright.
  */
-const RAIL_SPACING = 12;
-const RUNG_SPACING = 18;
-/** Rails only cover the playable corridor; past it the floor just goes dark. */
-const RAIL_HALF_WIDTH = FIELD_WIDTH / 2 + 36;
+const RAIL_SPACING = 9;
+const RAIL_WIDTH = 0.5;
+/** Rails cover the corridor plus a margin; past that the floor goes dark. */
+const RAIL_HALF_WIDTH = FIELD_WIDTH / 2 + 40;
 
-const buildGrid = (depth: number) => {
-    const rails: number[] = [];
-    const rungs: number[] = [];
-
-    for (let x = -RAIL_HALF_WIDTH; x <= RAIL_HALF_WIDTH; x += RAIL_SPACING) {
-        rails.push(x, 0, -depth / 2, x, 0, depth / 2);
-    }
-    for (let z = -depth / 2; z <= depth / 2; z += RUNG_SPACING) {
-        rungs.push(-RAIL_HALF_WIDTH, 0, z, RAIL_HALF_WIDTH, 0, z);
-    }
-
-    const make = (points: number[]) => {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute(
-            'position',
-            new THREE.BufferAttribute(new Float32Array(points), 3),
-        );
-        return geometry;
-    };
-
-    return { rails: make(rails), rungs: make(rungs) };
-};
-
-const GridTile = ({
+const RailTile = ({
     tileRef,
-    z,
     color,
 }: {
     tileRef: React.RefObject<THREE.Group>;
-    z: number;
     color: THREE.Color;
 }) => {
-    const { rails, rungs } = useMemo(() => buildGrid(planeSize), []);
+    const count = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
+    const meshRef = useRef<THREE.InstancedMesh>(null);
+
+    const geometry = useMemo(
+        () => new THREE.BoxGeometry(RAIL_WIDTH, 0.1, planeSize),
+        [],
+    );
+
+    // Laid out once, on the first frame after the ref is attached; only the
+    // tile's own position moves after that.
+    useFrame(() => {
+        const mesh = meshRef.current;
+        if (!mesh || mesh.userData.laidOut) return;
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < count; i++) {
+            dummy.position.set(-RAIL_HALF_WIDTH + i * RAIL_SPACING, 0, 0);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.userData.laidOut = true;
+    });
 
     return (
-        <group ref={tileRef} position={[0, 0, z]}>
-            <lineSegments geometry={rails}>
-                <lineBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.95}
-                    depthWrite={false}
-                />
-            </lineSegments>
-            <lineSegments geometry={rungs}>
-                <lineBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.32}
-                    depthWrite={false}
-                />
-            </lineSegments>
+        <group ref={tileRef}>
+            <instancedMesh
+                ref={meshRef}
+                args={[geometry, undefined, count]}
+                frustumCulled={false}
+            >
+                <meshBasicMaterial color={color} toneMapped={false} />
+            </instancedMesh>
         </group>
     );
 };
@@ -97,25 +83,21 @@ const Ground = () => {
         const [, , playerZ] = playerPosition;
         if (!ground1Ref.current || !ground2Ref.current) return;
 
-        const g1Z = ground1Ref.current.position.z;
-        const g2Z = ground2Ref.current.position.z;
-
-        if (playerZ < g1Z - planeSize) {
-            ground1Ref.current.position.z = g2Z - planeSize;
-        }
-        if (playerZ < g2Z - planeSize) {
-            ground2Ref.current.position.z = g1Z - planeSize;
-        }
+        // Snap both tiles to a lattice derived from the player's position
+        // rather than leapfrogging them past each other: the leapfrog read one
+        // tile's position, moved it, then placed the other from that same stale
+        // value, so the pair drifted apart over a long run and left gaps.
+        // ceil, not floor — travel is toward -Z, so the tile the player stands
+        // on starts at the boundary behind them.
+        const base = Math.ceil(playerZ / planeSize) * planeSize;
+        ground1Ref.current.position.z = base - planeSize / 2;
+        ground2Ref.current.position.z = base - planeSize * 1.5;
     });
 
     return (
         <>
-            <GridTile tileRef={ground1Ref} z={-planeSize / 2} color={color} />
-            <GridTile
-                tileRef={ground2Ref}
-                z={-planeSize - planeSize / 2}
-                color={color}
-            />
+            <RailTile tileRef={ground1Ref} color={color} />
+            <RailTile tileRef={ground2Ref} color={color} />
         </>
     );
 };

@@ -5,6 +5,7 @@ import Ground from './components/Ground';
 import Player from './components/Player';
 import ObstacleField from './components/ObstacleField';
 import PickupField from './components/PickupField';
+import CraftTrail from './components/CraftTrail';
 import LevelDirector from './components/LevelDirector';
 import Score from './components/Score';
 import FloatingScoreManager from './components/FloatingScoreManager';
@@ -77,6 +78,7 @@ const Game = ({ onStart }: GameProps) => {
                 <Physics key={runId}>
                     <Ground />
                     {onStart && <Player />}
+                    {onStart && <CraftTrail />}
                     {onStart && <LevelDirector />}
                     <ObstacleField />
                     <PickupField />

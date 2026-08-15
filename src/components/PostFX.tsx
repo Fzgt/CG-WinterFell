@@ -34,7 +34,6 @@ const PostFX = ({
     const gl = useThree(state => state.gl);
     const scene = useThree(state => state.scene);
     const camera = useThree(state => state.camera);
-    const size = useThree(state => state.size);
 
     const post = useMemo(() => {
         const scenePass = pass(scene, camera);
@@ -53,11 +52,6 @@ const PostFX = ({
         },
         [post],
     );
-
-    // Keep the composed target in step with the canvas.
-    useEffect(() => {
-        gl.setSize(size.width, size.height, false);
-    }, [gl, size.width, size.height]);
 
     useFrame(() => {
         post.render();

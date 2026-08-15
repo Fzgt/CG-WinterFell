@@ -41,7 +41,7 @@ const Embers = () => {
 
 const WelcomePage = ({ onStart }: WelcomePageProps) => {
     const { progress, loaded, total } = useProgress();
-    const isLoading = progress < 100;
+    const isLoading = total > 0 && progress < 100;
 
     return (
         <div className="welcome-container">

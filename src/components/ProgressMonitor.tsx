@@ -6,14 +6,15 @@ interface ProgressMonitorProps {
 }
 
 const ProgressMonitor = ({ onProgress }: ProgressMonitorProps) => {
-    console.log('progress-monitor triggered');
-    const { progress } = useProgress();
+    const { progress, total } = useProgress();
 
+    // With nothing queued, progress sits at 0 forever rather than reporting
+    // completion, so an empty manifest counts as loaded.
     useEffect(() => {
-        if (progress >= 100) {
+        if (total === 0 || progress >= 100) {
             onProgress(true);
         }
-    }, [progress, onProgress]);
+    }, [progress, total, onProgress]);
 
     return null;
 };
