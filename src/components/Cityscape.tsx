@@ -5,152 +5,236 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { planeSize } from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
-import { paletteFor } from '../config/levels';
 
 /**
- * A skyline flanking the track.
+ * The skyline flanking the track.
  *
- * Past the playable corridor the world used to be nothing at all, which made
- * the track feel like it was suspended in a void. Two strips of dark towers
- * with lit edges now run along both sides — silhouettes only, well outside
- * the reachable width, recycled ahead of the player on the same lattice as
- * the ground tiles. Distance fog fades them into the horizon glow, which is
- * where the city look comes from.
+ * The first version dressed the buildings in the obstacles' own language —
+ * dark body, neon edge frame — and at speed the two were indistinguishable:
+ * the scenery looked like the danger. The city now speaks skyscraper instead:
+ * tall black towers full of lit windows, stepped crowns, antennas, and red
+ * aviation beacons blinking on the tallest roofs. Warm window light against
+ * the track's cold neon, so what glows in the level colour is a threat and
+ * what glows warm is backdrop.
+ *
+ * Each tile's towers are merged into a single geometry (one draw call per
+ * tile), with each box's UVs scaled by its own dimensions so the window grid
+ * keeps its density on every size of tower instead of stretching.
  */
-const BUILDINGS_PER_SIDE = 22;
-/** Clear margin between the track edge and the nearest tower. */
-const CITY_INNER = FIELD_WIDTH / 2 + 24;
-const CITY_OUTER = CITY_INNER + 150;
-const EDGE = 0.05;
+const NEAR_PER_SIDE = 18;
+const FAR_PER_SIDE = 10;
+/** Clear dark gap between the grid's edge and the first tower. */
+const CITY_INNER = FIELD_WIDTH / 2 + 34;
+const CITY_NEAR_OUTER = CITY_INNER + 130;
+const CITY_FAR_INNER = CITY_NEAR_OUTER + 40;
+const CITY_FAR_OUTER = CITY_FAR_INNER + 170;
+/** World units covered by one repeat of the window texture (u, v). */
+const WINDOW_TILE_U = 14;
+const WINDOW_TILE_V = 20;
 
-/** Unit box, origin at the base, plus its 12-edge frame. */
-const buildUnitFrame = () => {
-    const parts: THREE.BufferGeometry[] = [];
-    const beam = (
-        sx: number, sy: number, sz: number,
-        x: number, y: number, z: number,
-    ) => {
-        const g = new THREE.BoxGeometry(sx, sy, sz);
-        g.translate(x, y, z);
-        parts.push(g);
-    };
-    for (const x of [-0.5, 0.5])
-        for (const z of [-0.5, 0.5]) beam(EDGE, 1, EDGE, x, 0.5, z);
-    for (const y of [0, 1]) {
-        for (const z of [-0.5, 0.5]) beam(1, EDGE, EDGE, 0, y, z);
-        for (const x of [-0.5, 0.5]) beam(EDGE, EDGE, 1, x, y, 0);
-    }
-    return mergeGeometries(parts);
-};
+/** A tile of windows: mostly dark, some lit warm, a few lit cool. */
+const buildWindowTexture = () => {
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#04050c';
+    ctx.fillRect(0, 0, size, size);
 
-interface Building {
-    x: number;
-    z: number;
-    width: number;
-    height: number;
-    depth: number;
-}
-
-const buildingsForTile = (): Building[] => {
-    const out: Building[] = [];
-    for (const side of [-1, 1]) {
-        for (let i = 0; i < BUILDINGS_PER_SIDE; i++) {
-            out.push({
-                x: side * (CITY_INNER + Math.random() * (CITY_OUTER - CITY_INNER)),
-                z: -planeSize / 2 + (i / BUILDINGS_PER_SIDE) * planeSize +
-                    Math.random() * 24,
-                width: 12 + Math.random() * 20,
-                height: 22 + Math.random() * 75,
-                depth: 12 + Math.random() * 20,
-            });
+    const cols = 5;
+    const rows = 7;
+    const cellW = size / cols;
+    const cellH = size / rows;
+    for (let col = 0; col < cols; col++) {
+        for (let row = 0; row < rows; row++) {
+            const roll = Math.random();
+            if (roll < 0.55) continue; // dark window
+            ctx.fillStyle =
+                roll < 0.88
+                    ? `rgba(255, 214, 165, ${0.5 + Math.random() * 0.5})` // warm
+                    : `rgba(150, 200, 255, ${0.4 + Math.random() * 0.4})`; // cool
+            ctx.fillRect(
+                col * cellW + cellW * 0.22,
+                row * cellH + cellH * 0.24,
+                cellW * 0.56,
+                cellH * 0.5,
+            );
         }
     }
-    return out;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    return texture;
+};
+
+/** Scale a box's UVs so the window grid keeps its world-space density. */
+const scaleBoxUVs = (
+    geometry: THREE.BoxGeometry,
+    w: number,
+    h: number,
+    d: number,
+) => {
+    const uv = geometry.attributes.uv as THREE.BufferAttribute;
+    // BoxGeometry face order: +x, -x, +y, -y, +z, -z; four vertices each.
+    const faceDims: [number, number][] = [
+        [d, h], [d, h], [w, d], [w, d], [w, h], [w, h],
+    ];
+    faceDims.forEach(([du, dv], face) => {
+        for (let i = face * 4; i < face * 4 + 4; i++) {
+            uv.setXY(
+                i,
+                uv.getX(i) * (du / WINDOW_TILE_U),
+                uv.getY(i) * (dv / WINDOW_TILE_V),
+            );
+        }
+    });
+};
+
+interface TileBuild {
+    geometry: THREE.BufferGeometry;
+    /** Roof positions of the tallest towers, for the beacons. */
+    beacons: THREE.Vector3[];
+}
+
+const tower = (
+    parts: THREE.BufferGeometry[],
+    x: number,
+    z: number,
+    w: number,
+    h: number,
+    d: number,
+) => {
+    const box = new THREE.BoxGeometry(w, h, d);
+    scaleBoxUVs(box, w, h, d);
+    box.translate(x, h / 2, z);
+    parts.push(box);
+};
+
+const buildTile = (): TileBuild => {
+    const parts: THREE.BufferGeometry[] = [];
+    const beacons: THREE.Vector3[] = [];
+
+    for (const side of [-1, 1]) {
+        // Near row: tall towers with detail.
+        for (let i = 0; i < NEAR_PER_SIDE; i++) {
+            const x =
+                side *
+                (CITY_INNER + Math.random() * (CITY_NEAR_OUTER - CITY_INNER));
+            const z =
+                -planeSize / 2 +
+                (i / NEAR_PER_SIDE) * planeSize +
+                Math.random() * 30;
+            const w = 16 + Math.random() * 22;
+            const d = 16 + Math.random() * 22;
+            const h = 45 + Math.random() * 110;
+            tower(parts, x, z, w, h, d);
+
+            // A stepped crown on some, an antenna on others: a skyline is
+            // silhouettes, and identical boxes have none.
+            const roll = Math.random();
+            if (roll < 0.4) {
+                tower(parts, x, z, w * 0.55, h * 1.22, d * 0.55);
+            } else if (roll < 0.7) {
+                tower(parts, x, z, 1.2, h * 1.4, 1.2);
+            }
+            if (h > 110) beacons.push(new THREE.Vector3(x, h * 1.02, z));
+        }
+
+        // Far row: mega-towers, pure silhouette against the horizon glow.
+        for (let i = 0; i < FAR_PER_SIDE; i++) {
+            const x =
+                side *
+                (CITY_FAR_INNER +
+                    Math.random() * (CITY_FAR_OUTER - CITY_FAR_INNER));
+            const z =
+                -planeSize / 2 +
+                (i / FAR_PER_SIDE) * planeSize +
+                Math.random() * 60;
+            const w = 30 + Math.random() * 40;
+            const d = 30 + Math.random() * 40;
+            const h = 120 + Math.random() * 180;
+            tower(parts, x, z, w, h, d);
+            if (h > 220) beacons.push(new THREE.Vector3(x, h * 1.01, z));
+        }
+    }
+
+    return { geometry: mergeGeometries(parts), beacons };
 };
 
 const CityTile = ({
     tileRef,
-    buildings,
-    bodyMaterial,
-    frameMaterial,
-    bodyGeometry,
-    frameGeometry,
+    build,
+    material,
+    beaconMaterial,
 }: {
     tileRef: React.RefObject<THREE.Group>;
-    buildings: Building[];
-    bodyMaterial: THREE.MeshBasicMaterial;
-    frameMaterial: THREE.MeshBasicMaterial;
-    bodyGeometry: THREE.BufferGeometry;
-    frameGeometry: THREE.BufferGeometry;
+    build: TileBuild;
+    material: THREE.MeshBasicMaterial;
+    beaconMaterial: THREE.MeshBasicMaterial;
 }) => {
-    const bodyRef = useRef<THREE.InstancedMesh>(null);
-    const frameRef = useRef<THREE.InstancedMesh>(null);
+    const beaconRef = useRef<THREE.InstancedMesh>(null);
+    const beaconGeometry = useMemo(() => new THREE.BoxGeometry(2.4, 2.4, 2.4), []);
 
     useFrame(() => {
-        const body = bodyRef.current;
-        const frame = frameRef.current;
-        if (!body || !frame || body.userData.laidOut) return;
-
+        const mesh = beaconRef.current;
+        if (!mesh || mesh.userData.laidOut) return;
         const dummy = new THREE.Object3D();
-        buildings.forEach((b, i) => {
-            dummy.position.set(b.x, 0, b.z);
-            dummy.scale.set(b.width, b.height, b.depth);
+        build.beacons.forEach((p, i) => {
+            dummy.position.copy(p);
             dummy.updateMatrix();
-            body.setMatrixAt(i, dummy.matrix);
-            frame.setMatrixAt(i, dummy.matrix);
+            mesh.setMatrixAt(i, dummy.matrix);
         });
-        body.instanceMatrix.needsUpdate = true;
-        frame.instanceMatrix.needsUpdate = true;
-        body.userData.laidOut = true;
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.userData.laidOut = true;
     });
 
     return (
         <group ref={tileRef}>
-            <instancedMesh
-                ref={bodyRef}
-                args={[bodyGeometry, bodyMaterial, buildings.length]}
-                frustumCulled={false}
-            />
-            <instancedMesh
-                ref={frameRef}
-                args={[frameGeometry, frameMaterial, buildings.length]}
-                frustumCulled={false}
-            />
+            <mesh geometry={build.geometry} material={material} />
+            {build.beacons.length > 0 && (
+                <instancedMesh
+                    ref={beaconRef}
+                    args={[beaconGeometry, beaconMaterial, build.beacons.length]}
+                    frustumCulled={false}
+                />
+            )}
         </group>
     );
 };
 
 const Cityscape = () => {
     const playerPosition = useStore(state => state.playerPosition);
-    const level = useStore(state => state.level);
     const tile1 = useRef<THREE.Group>(null);
     const tile2 = useRef<THREE.Group>(null);
-    const palette = paletteFor(level);
 
-    const bodyGeometry = useMemo(() => {
-        const g = new THREE.BoxGeometry(1, 1, 1);
-        g.translate(0, 0.5, 0); // origin at the base
-        return g;
-    }, []);
-    const frameGeometry = useMemo(buildUnitFrame, []);
-    const bodyMaterial = useMemo(
-        () => new THREE.MeshBasicMaterial(),
+    const material = useMemo(
+        () =>
+            new THREE.MeshBasicMaterial({
+                map: buildWindowTexture(),
+                // Deliberately not tinted by the level: the city stays warm
+                // and neutral so it can never be mistaken for the neon that
+                // marks the actual danger.
+            }),
         [],
     );
-    const frameMaterial = useMemo(
-        () => new THREE.MeshBasicMaterial({ toneMapped: false }),
+    const beaconMaterial = useMemo(
+        () =>
+            new THREE.MeshBasicMaterial({
+                color: '#ff3b4d',
+                toneMapped: false,
+                transparent: true,
+            }),
         [],
     );
 
-    // Two different skylines, so the repeat is not obvious.
-    const buildings1 = useMemo(buildingsForTile, []);
-    const buildings2 = useMemo(buildingsForTile, []);
+    const build1 = useMemo(buildTile, []);
+    const build2 = useMemo(buildTile, []);
 
-    useFrame(() => {
-        // Skyline sits back from the neon: dark silhouettes, dim lit edges.
-        const neon = new THREE.Color(palette.neon);
-        bodyMaterial.color.copy(neon).multiplyScalar(0.05);
-        frameMaterial.color.copy(neon).multiplyScalar(0.42);
+    useFrame(({ clock }) => {
+        // Aviation beacons blink slowly, all in phase — a city rhythm.
+        beaconMaterial.opacity = 0.25 + 0.75 * Math.abs(Math.sin(clock.elapsedTime * 1.6));
 
         const [, , playerZ] = playerPosition;
         if (!tile1.current || !tile2.current) return;
@@ -164,19 +248,15 @@ const Cityscape = () => {
         <>
             <CityTile
                 tileRef={tile1}
-                buildings={buildings1}
-                bodyGeometry={bodyGeometry}
-                frameGeometry={frameGeometry}
-                bodyMaterial={bodyMaterial}
-                frameMaterial={frameMaterial}
+                build={build1}
+                material={material}
+                beaconMaterial={beaconMaterial}
             />
             <CityTile
                 tileRef={tile2}
-                buildings={buildings2}
-                bodyGeometry={bodyGeometry}
-                frameGeometry={frameGeometry}
-                bodyMaterial={bodyMaterial}
-                frameMaterial={frameMaterial}
+                build={build2}
+                material={material}
+                beaconMaterial={beaconMaterial}
             />
         </>
     );
