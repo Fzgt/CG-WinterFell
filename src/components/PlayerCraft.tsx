@@ -64,6 +64,13 @@ const PlayerCraft = () => {
     // dark track, and the edges are what bloom picks up.
     const outline = useMemo(() => new THREE.EdgesGeometry(hull, 25), [hull]);
 
+    // Same reasoning as the obstacles: readable from lit colour alone, with
+    // emissive as an addition rather than the only thing holding it up.
+    const hullColor = useMemo(
+        () => new THREE.Color(palette.neon).multiplyScalar(0.32),
+        [palette.neon],
+    );
+
     useFrame((_, delta) => {
         clock.current += Math.min(delta, 1 / 20);
         const beat = Math.sin(clock.current * (8 + playerSpeed * 0.4));
@@ -83,9 +90,9 @@ const PlayerCraft = () => {
         <group>
             <mesh geometry={hull}>
                 <meshStandardMaterial
-                    color="#0a0a18"
+                    color={hullColor}
                     emissive={palette.neon}
-                    emissiveIntensity={0.28}
+                    emissiveIntensity={0.35}
                     roughness={0.3}
                     metalness={0.5}
                     flatShading

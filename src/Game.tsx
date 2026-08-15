@@ -13,6 +13,7 @@ import { ACESFilmicToneMapping } from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
 import { benchFlags } from './utils/bench';
+import { paletteFor } from './config/levels';
 import PerfProbe from './utils/PerfProbe';
 import PostFX from './components/PostFX';
 import Warmup from './components/Warmup';
@@ -29,6 +30,8 @@ const Game = ({ onStart }: GameProps) => {
     const isWebGPUSupported = webGPUAvailable && !benchFlags.forceWebGL;
     const gameOver = useStore(state => state.gameOver);
     const runId = useStore(state => state.runId);
+    const level = useStore(state => state.level);
+    const palette = paletteFor(level);
 
     return (
         <>
@@ -57,7 +60,7 @@ const Game = ({ onStart }: GameProps) => {
                     into view at the far plane with nothing to soften them;
                     now the trail fades out ahead, which both hides the seam
                     and gives the night some depth. */}
-                <fog attach="fog" args={['#1b1830', 260, 900]} />
+                <fog attach="fog" args={[palette.fog, 300, 1000]} />
                 <ambientLight intensity={0.55} color="#93a7ff" />
                 <directionalLight
                     castShadow

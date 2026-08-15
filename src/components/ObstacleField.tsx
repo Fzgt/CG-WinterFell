@@ -34,11 +34,18 @@ const ObstacleField = () => {
         // Origin at the base, so a pylon stands on the grid rather than
         // sinking half of itself into it.
         geometry.translate(0, height / 2, 0);
+        // The base colour carries most of the read, with emissive on top.
+        // These used to be near-black and rely on emissive alone, which meant
+        // anything that dimmed or ignored emissive — a different renderer
+        // backend, a lower bloom threshold — left them invisible against a
+        // black sky. Lit colour and emissive now both point the same way, so
+        // no single mechanism failing can hide them.
+        const neon = new THREE.Color(paletteFor(level).neon);
         const material = new THREE.MeshStandardMaterial({
-            color: '#05040a',
-            emissive: new THREE.Color(paletteFor(level).neon),
-            emissiveIntensity: 0.75,
-            roughness: 0.35,
+            color: neon.clone().multiplyScalar(0.5),
+            emissive: neon,
+            emissiveIntensity: 0.6,
+            roughness: 0.4,
             metalness: 0.1,
         });
         return { geometry, material };
