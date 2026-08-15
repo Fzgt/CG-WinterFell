@@ -16,7 +16,7 @@ import { paletteFor } from './config/levels';
 import PerfProbe from './utils/PerfProbe';
 import PostFX from './components/PostFX';
 import Warmup from './components/Warmup';
-import Cityscape from './components/Cityscape';
+import Scenery from './components/Scenery';
 import SectorBanner from './components/SectorBanner';
 
 
@@ -81,7 +81,7 @@ const Game = ({ onStart }: GameProps) => {
 
                 <Physics key={runId}>
                     <Ground />
-                    <Cityscape />
+                    <Scenery />
                     {onStart && <Player />}
                     {onStart && <LevelDirector />}
                     <ObstacleField />

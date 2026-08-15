@@ -1,6 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { leftBound, rightBound, trackCurve, trackCurveSlope } from '../config/constants';
+import {
+    leftBound,
+    rightBound,
+    trackCurve,
+    trackCurveSlope,
+    trackHeight,
+    trackHeightSlope,
+} from '../config/constants';
 import useKeyboardControls from './useKeyboardControls';
 import { useStore } from '../store/store';
 import { MotionController } from '../utils/MotionController';
@@ -114,10 +121,13 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // the straight logical coordinates that collisions and the lane
         // generator reason in.
         const bendX = trackCurve(newZ);
-        physicsRef.current.position.set(newX + bendX, 2, newZ);
+        const bendY = trackHeight(newZ);
+        const pitch = -Math.atan(trackHeightSlope(newZ));
+        physicsRef.current.position.set(newX + bendX, 2 + bendY, newZ);
         playerGroupRef.current.rotation.z = newRotZ;
         playerGroupRef.current.rotation.y = bendYaw;
-        playerGroupRef.current.position.set(newX + bendX, 1.5, newZ);
+        playerGroupRef.current.rotation.x = pitch;
+        playerGroupRef.current.position.set(newX + bendX, 1.5 + bendY, newZ);
 
         setPlayerPosition([newX, 2, newZ]);
         // console.log('Player Position:', Math.abs(Math.round(newZ)));
@@ -139,10 +149,16 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             // swings through the bend and looks down the road, not across it.
             cameraRef.current.position.set(
                 camX + trackCurve(newZ + 20),
-                11,
+                11 + trackHeight(newZ + 20),
                 newZ + 20,
             );
-            cameraRef.current.lookAt(camX + trackCurve(newZ - 55), 2, newZ - 55);
+            // Aim at the road ahead in full 3D: cresting a hill points the
+            // view down into the valley, a dip aims it up at the sky road.
+            cameraRef.current.lookAt(
+                camX + trackCurve(newZ - 55),
+                2 + trackHeight(newZ - 55),
+                newZ - 55,
+            );
         }
     });
 };

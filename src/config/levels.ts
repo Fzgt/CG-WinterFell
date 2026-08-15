@@ -6,8 +6,12 @@
  * long run visible chapters — you can tell someone you died on the red one —
  * without needing separate handcrafted stages.
  */
+export type Biome = 'city' | 'mountains' | 'water' | 'plains';
+
 export interface Level {
     name: string;
+    /** What flanks the track for this stretch of the run. */
+    biome: Biome;
     /** Grid, horizon and obstacle glow. */
     neon: string;
     /** Pickups, so they never blend into the obstacles. */
@@ -19,12 +23,12 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-    { name: 'Signal', neon: '#00e5ff', accent: '#ffe066', fog: '#04121a', speed: 15 },
-    { name: 'Vapour', neon: '#ff3ea5', accent: '#67ffe0', fog: '#170618', speed: 18 },
-    { name: 'Circuit', neon: '#8b5cff', accent: '#ffd166', fog: '#0d0722', speed: 21 },
-    { name: 'Ember', neon: '#ff7a1a', accent: '#7ae7ff', fog: '#190a04', speed: 24 },
-    { name: 'Toxic', neon: '#7cff4d', accent: '#ff5fd2', fog: '#08160a', speed: 27 },
-    { name: 'Nova', neon: '#ff2d55', accent: '#ffffff', fog: '#170410', speed: 30 },
+    { name: 'Signal', biome: 'city', neon: '#00e5ff', accent: '#ffe066', fog: '#04121a', speed: 15 },
+    { name: 'Vapour', biome: 'water', neon: '#ff3ea5', accent: '#67ffe0', fog: '#170618', speed: 18 },
+    { name: 'Circuit', biome: 'mountains', neon: '#8b5cff', accent: '#ffd166', fog: '#0d0722', speed: 21 },
+    { name: 'Ember', biome: 'plains', neon: '#ff7a1a', accent: '#7ae7ff', fog: '#190a04', speed: 24 },
+    { name: 'Toxic', biome: 'mountains', neon: '#7cff4d', accent: '#ff5fd2', fog: '#08160a', speed: 27 },
+    { name: 'Nova', biome: 'city', neon: '#ff2d55', accent: '#ffffff', fog: '#170410', speed: 30 },
 ];
 
 /**

@@ -1,7 +1,13 @@
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { planeSize, trackCurve, trackCurveSlope } from '../config/constants';
+import {
+    planeSize,
+    trackCurve,
+    trackCurveSlope,
+    trackHeight,
+    trackHeightSlope,
+} from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
 import { paletteFor } from '../config/levels';
@@ -90,10 +96,14 @@ const RailTile = ({
                 const worldZ = tileZ + localZ;
                 dummy.position.set(
                     -RAIL_HALF_WIDTH + i * RAIL_SPACING + trackCurve(worldZ),
-                    0.02,
+                    0.02 + trackHeight(worldZ),
                     localZ,
                 );
-                dummy.rotation.set(0, Math.atan(trackCurveSlope(worldZ)), 0);
+                dummy.rotation.set(
+                    -Math.atan(trackHeightSlope(worldZ)),
+                    Math.atan(trackCurveSlope(worldZ)),
+                    0,
+                );
                 dummy.updateMatrix();
                 rails.setMatrixAt(index++, dummy.matrix);
             }
@@ -101,8 +111,16 @@ const RailTile = ({
         for (let i = 0; i < rungCount; i++) {
             const localZ = -planeSize / 2 + i * RUNG_SPACING;
             const worldZ = tileZ + localZ;
-            dummy.position.set(trackCurve(worldZ), -0.09, localZ);
-            dummy.rotation.set(0, Math.atan(trackCurveSlope(worldZ)), 0);
+            dummy.position.set(
+                trackCurve(worldZ),
+                -0.09 + trackHeight(worldZ),
+                localZ,
+            );
+            dummy.rotation.set(
+                -Math.atan(trackHeightSlope(worldZ)),
+                Math.atan(trackCurveSlope(worldZ)),
+                0,
+            );
             dummy.updateMatrix();
             rungs.setMatrixAt(i, dummy.matrix);
         }
@@ -124,8 +142,10 @@ const RailTile = ({
                 rather than competing with them for the eye. */}
             {/* A dark floor under the grid, so looking down shows ground
                 rather than the inside of the sky dome. */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-                <planeGeometry args={[planeSize * 1.4, planeSize]} />
+            {/* The abyss floor: far below the deepest valley the height
+                curve can dig, so dips read as real drops. */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -110, 0]}>
+                <planeGeometry args={[planeSize * 1.6, planeSize]} />
                 <meshBasicMaterial color="#04030a" />
             </mesh>
             <instancedMesh

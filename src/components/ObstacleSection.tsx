@@ -10,7 +10,7 @@ import {
     publishSectionObstacles,
     releaseSectionObstacles,
 } from '../utils/obstacleRegistry';
-import { trackCurve } from '../config/constants';
+import { trackCurve, trackHeight } from '../config/constants';
 
 interface ObstacleSectionProps {
     sectionIndex: number;
@@ -62,9 +62,11 @@ const ObstacleSection = ({
 
         obstacles.forEach((obstacle, i) => {
             dummy.position.copy(obstacle.position);
-            // The winding is applied here, at render, so collision logic and
-            // the fairness sweep keep working in straight logical space.
+            // The winding and the hills are applied here, at render, so
+            // collision logic and the fairness sweep keep working in straight
+            // flat logical space.
             dummy.position.x += trackCurve(obstacle.position.z);
+            dummy.position.y += trackHeight(obstacle.position.z);
             dummy.scale.copy(obstacle.scale);
             dummy.rotation.set(0, obstacle.rotationY, 0);
             dummy.updateMatrix();
@@ -100,7 +102,8 @@ const ObstacleSection = ({
                         position={[
                             obstacle.position.x +
                                 trackCurve(obstacle.position.z),
-                            obstacle.position.y,
+                            obstacle.position.y +
+                                trackHeight(obstacle.position.z),
                             obstacle.position.z,
                         ]}
                         scale={obstacle.scale}

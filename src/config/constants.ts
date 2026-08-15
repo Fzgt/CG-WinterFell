@@ -3,21 +3,36 @@ import { FIELD_WIDTH } from './obstacles';
 export const planeSize = 1000;
 
 /**
- * The track's winding centreline, purely visual.
+ * The journey, as two centreline functions of world z — one lateral, one
+ * vertical. Purely visual: gameplay happens in a straight, flat logical
+ * space, and everything on the track (rails, obstacles, craft, camera,
+ * scenery) is shifted by these at render time, so relative positions are
+ * exact and the fairness sweep is untouched by construction.
  *
- * Gameplay happens in a straight logical space — lanes, collisions and the
- * fairness sweep are untouched. At render time everything on the track
- * (rails, rungs, obstacles, craft, camera) shifts sideways by this curve at
- * its own z, so the whole world snakes together and relative positions are
- * preserved exactly. Amplitude keeps the track's far edge inside the city
- * setback; slope tops out around 8 degrees.
+ * Each is a gentle base wave plus a rare, large event gated by `surge` — a
+ * long-period envelope raised to a power so it is quiet most of the time and
+ * then opens into one sweeping bend, a climb toward the sky, or a dive to a
+ * valley floor.
  */
-export const trackCurve = (z: number) =>
-    22 * Math.sin(z * 0.0033) + 8 * Math.sin(z * 0.008);
+const surge = (z: number, freq: number, phase: number) =>
+    Math.pow(0.5 + 0.5 * Math.sin(z * freq + phase), 4);
 
-/** d(trackCurve)/dz, for yawing geometry along the bend. */
+export const trackCurve = (z: number) =>
+    18 * Math.sin(z * 0.0033) +
+    8 * Math.sin(z * 0.008) +
+    55 * Math.sin(z * 0.0012) * surge(z, 0.00021, 0);
+
+export const trackHeight = (z: number) =>
+    16 * Math.sin(z * 0.0019) +
+    7 * Math.sin(z * 0.0046) +
+    48 * Math.sin(z * 0.0009) * surge(z, 0.00017, 2.1);
+
+/** Numeric d/dz — the surge product makes analytic derivatives noise-prone. */
 export const trackCurveSlope = (z: number) =>
-    22 * 0.0033 * Math.cos(z * 0.0033) + 8 * 0.008 * Math.cos(z * 0.008);
+    trackCurve(z + 0.5) - trackCurve(z - 0.5);
+
+export const trackHeightSlope = (z: number) =>
+    trackHeight(z + 0.5) - trackHeight(z - 0.5);
 export const leftBound = -FIELD_WIDTH / 2;
 export const rightBound = FIELD_WIDTH / 2;
 
