@@ -24,9 +24,16 @@ import { paletteFor } from '../config/levels';
  * see is what you can use.
  */
 const RAIL_SPACING = 10;
-const RAIL_WIDTH = 0.55;
+const RAIL_WIDTH = 0.65;
 const RUNG_SPACING = 26;
-const RUNG_WIDTH = 0.35;
+/**
+ * Deep enough to survive a grazing view. At 0.35 units a rung was well under
+ * a pixel once it was any distance ahead, and sub-pixel geometry sweeping
+ * toward the camera lands on different pixels every frame — the shimmer on
+ * the bars nearest the craft. The extra depth is traded against opacity so
+ * the visual weight stays the same.
+ */
+const RUNG_WIDTH = 1.15;
 const RAIL_HALF_WIDTH = FIELD_WIDTH / 2;
 
 const RailTile = ({
@@ -102,7 +109,7 @@ const RailTile = ({
                     color={color}
                     toneMapped={false}
                     transparent
-                    opacity={0.38}
+                    opacity={0.28}
                 />
             </instancedMesh>
         </group>
