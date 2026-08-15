@@ -32,6 +32,7 @@ const Game = ({ onStart }: GameProps) => {
     const gameOver = useStore(state => state.gameOver);
     const runId = useStore(state => state.runId);
     const level = useStore(state => state.level);
+    const scenic = useStore(state => state.scenic);
     const palette = paletteFor(level);
 
     return (
@@ -87,6 +88,8 @@ const Game = ({ onStart }: GameProps) => {
                     <ObstacleField />
                 </Physics>
             </Canvas>
+            {/* DEV ONLY: scenic badge. */}
+            {onStart && scenic && <div className="scenic-badge">SCENIC</div>}
             {onStart && <Score />}
             {onStart && <SectorBanner />}
             {onStart && !gameOver && <Pause />}

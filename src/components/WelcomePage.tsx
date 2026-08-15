@@ -4,6 +4,8 @@ import '../styles/welcome.css';
 
 interface WelcomePageProps {
     onStart: () => void;
+    /** DEV ONLY: start with no obstacles, to review the scenery. */
+    onScenicStart?: () => void;
 }
 
 const EMBER_COUNT = 28;
@@ -39,7 +41,7 @@ const Embers = () => {
     );
 };
 
-const WelcomePage = ({ onStart }: WelcomePageProps) => {
+const WelcomePage = ({ onStart, onScenicStart }: WelcomePageProps) => {
     const { progress, loaded, total } = useProgress();
     const isLoading = total > 0 && progress < 100;
 
@@ -84,12 +86,27 @@ const WelcomePage = ({ onStart }: WelcomePageProps) => {
                             </div>
                         </>
                     ) : (
-                        <button
-                            className="btn btn-primary start-button"
-                            onClick={onStart}
-                        >
-                            Start Run
-                        </button>
+                        <div className="start-row">
+                            <button
+                                className="btn btn-primary start-button"
+                                onClick={onStart}
+                            >
+                                Start Run
+                            </button>
+                            {/* ── DEV ONLY: scenic mode ───────────────────
+                                No obstacles, no crashes: a free cruise for
+                                reviewing the twenty scenes. Comment this
+                                block out before pushing to the remote. */}
+                            {onScenicStart && (
+                                <button
+                                    className="btn start-button scenic-button"
+                                    onClick={onScenicStart}
+                                >
+                                    Scenic Run
+                                </button>
+                            )}
+                            {/* ── end DEV ONLY ─────────────────────────── */}
+                        </div>
                     )}
                 </div>
 

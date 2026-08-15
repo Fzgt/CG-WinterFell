@@ -57,6 +57,9 @@ const ObstacleField = () => {
     const gameOver = useStore(state => state.gameOver);
     const setGameOver = useStore(state => state.setGameOver);
     const level = useStore(state => state.level);
+    // DEV ONLY: scenic mode drops the whole field — and with it every
+    // collision, since the collision check lives here too.
+    const scenic = useStore(state => state.scenic);
 
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [visibleSections, setVisibleSections] = useState<number[]>([0, 1, 2]);
@@ -121,6 +124,8 @@ const ObstacleField = () => {
             );
         }
     });
+
+    if (scenic) return null; // DEV ONLY
 
     return (
         <>

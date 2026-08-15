@@ -37,6 +37,12 @@ export const useStore = create<GameStore>(set => ({
     playerPosition: [0, 1, -20],
     setPlayerPosition: position => set({ playerPosition: position }),
 
+    // DEV ONLY: scenic mode — no obstacles, no collisions, just the ride,
+    // for reviewing the twenty scenes. Comment out before pushing, together
+    // with the WelcomePage button.
+    scenic: false,
+    setScenic: on => set({ scenic: on }),
+
     isMusicPlaying: true,
     toggleMusic: () => set(state => ({ isMusicPlaying: !state.isMusicPlaying })),
 }));

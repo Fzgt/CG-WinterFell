@@ -189,3 +189,16 @@
         opacity: 0.35;
     }
 }
+
+/* DEV ONLY: the Scenic Run button beside Start Run. */
+.start-row {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    align-items: center;
+}
+.scenic-button {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.75);
+}

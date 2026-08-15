@@ -11,8 +11,17 @@ const App = () => {
     const [showWelcome, setShowWelcome] = useState(true);
     const [staticLoaded, setStaticLoaded] = useState(false);
     const setGameStarted = useStore(state => state.setGameStarted);
+    const setScenic = useStore(state => state.setScenic);
 
     const handleStartGame = () => {
+        setScenic(false);
+        setShowWelcome(false);
+        setGameStarted(true);
+    };
+
+    // DEV ONLY: comment out with the WelcomePage button before pushing.
+    const handleScenicStart = () => {
+        setScenic(true);
         setShowWelcome(false);
         setGameStarted(true);
     };
@@ -29,7 +38,12 @@ const App = () => {
             </div>
 
             <div className="app-container">
-                {showWelcome && <WelcomePage onStart={handleStartGame} />}
+                {showWelcome && (
+                    <WelcomePage
+                        onStart={handleStartGame}
+                        onScenicStart={handleScenicStart}
+                    />
+                )}
                 <div className="game-container">
                     {staticLoaded && <Game onStart={!showWelcome} />}
                 </div>

@@ -22,6 +22,10 @@ export interface GameStore {
     playerPosition: Triplet;
     setPlayerPosition: (position: Triplet) => void;
 
+    /** DEV ONLY: scenic mode (no obstacles). */
+    scenic: boolean;
+    setScenic: (on: boolean) => void;
+
     isMusicPlaying: boolean;
     toggleMusic: () => void;
 }
