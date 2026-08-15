@@ -44,11 +44,14 @@ const CraftTrail = () => {
 
         points.current.forEach((p, i) => {
             const age = i / SEGMENTS;
-            const fade = Math.pow(1 - age, 1.6);
+            // Steep falloff: the wake should be gone in a breath. At the old
+            // curve the newest dozen segments were all near full width and
+            // full colour, and drawn opaque they merged into one solid slab —
+            // it read as a ribbon of carpet dragged behind the ship, not
+            // light.
+            const fade = Math.pow(1 - age, 2.4);
             dummy.position.copy(p);
-            // Tapers to a point behind, so it reads as a wake and not a row of
-            // identical blocks.
-            dummy.scale.set(1.5 * fade + 0.08, 0.34 * fade + 0.04, 3.2);
+            dummy.scale.set(0.9 * fade + 0.06, 0.2 * fade + 0.03, 3.0);
             dummy.updateMatrix();
             mesh.setMatrixAt(i, dummy.matrix);
             tint.set(palette.neon).multiplyScalar(fade);
@@ -67,7 +70,15 @@ const CraftTrail = () => {
             frustumCulled={false}
         >
             <boxGeometry args={[1, 1, 1]} />
-            <meshBasicMaterial transparent opacity={0.8} toneMapped={false} />
+            {/* Additive, so overlapping segments build up glow the way light
+                does, instead of stacking into an opaque strip. */}
+            <meshBasicMaterial
+                transparent
+                opacity={0.5}
+                toneMapped={false}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+            />
         </instancedMesh>
     );
 };
