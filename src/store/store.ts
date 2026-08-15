@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameStore } from '../types/store';
 
 export const useStore = create<GameStore>(set => ({
-    playerSpeed: 12,
+    playerSpeed: 15,
     // Speed is a property of the level, not something accumulated by passing
     // thresholds, so the director sets it outright.
     setPlayerSpeed: speed => set({ playerSpeed: speed }),
@@ -26,7 +26,7 @@ export const useStore = create<GameStore>(set => ({
             runId: state.runId + 1,
             gameOver: false,
             gamePaused: false,
-            playerSpeed: 12,
+            playerSpeed: 15,
             level: 0,
             playerPosition: [0, 1, -20],
         })),

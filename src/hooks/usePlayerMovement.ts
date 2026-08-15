@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { leftBound, rightBound } from '../config/constants';
+import { leftBound, rightBound, trackCurve, trackCurveSlope } from '../config/constants';
 import useKeyboardControls from './useKeyboardControls';
 import { useStore } from '../store/store';
 import { MotionController } from '../utils/MotionController';
@@ -86,14 +86,21 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         const lateralStep = LATERAL_SPEED * delta;
         const forwardSpeed = playerSpeed * delta * 60;
 
+        // The craft banks into the track's own bends on top of the lean
+        // from steering input; positive slope curves the road toward -x,
+        // matching the negative (leftward) roll.
+        const bendYaw = Math.atan(
+            trackCurveSlope(zPosition.current.getValue()),
+        );
+        const bank = -bendYaw * 0.8;
         if (left) {
-            rotationZ.current.setTarget(-Math.PI / 7);
+            rotationZ.current.setTarget(-Math.PI / 7 + bank);
             laneX.current = Math.max(laneX.current - lateralStep, leftBound);
         } else if (right) {
-            rotationZ.current.setTarget(Math.PI / 7);
+            rotationZ.current.setTarget(Math.PI / 7 + bank);
             laneX.current = Math.min(laneX.current + lateralStep, rightBound);
         } else {
-            rotationZ.current.setTarget(0);
+            rotationZ.current.setTarget(bank);
         }
         xPosition.current.setTarget(laneX.current);
 
@@ -103,9 +110,14 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         const newZ = zPosition.current.update();
         const newRotZ = rotationZ.current.update();
 
-        physicsRef.current.position.set(newX, 2, newZ);
+        // Rendered positions ride the winding centreline; the store keeps
+        // the straight logical coordinates that collisions and the lane
+        // generator reason in.
+        const bendX = trackCurve(newZ);
+        physicsRef.current.position.set(newX + bendX, 2, newZ);
         playerGroupRef.current.rotation.z = newRotZ;
-        playerGroupRef.current.position.set(newX, 1.5, newZ);
+        playerGroupRef.current.rotation.y = bendYaw;
+        playerGroupRef.current.position.set(newX + bendX, 1.5, newZ);
 
         setPlayerPosition([newX, 2, newZ]);
         // console.log('Player Position:', Math.abs(Math.round(newZ)));
@@ -123,8 +135,14 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             // edge of the screen while the view stayed put.
             cameraX.current.setTarget(newX);
             const camX = cameraX.current.update();
-            cameraRef.current.position.set(camX, 11, newZ + 20);
-            cameraRef.current.lookAt(camX, 2, newZ - 55);
+            // Eye and aim each take the curve at their own z, so the camera
+            // swings through the bend and looks down the road, not across it.
+            cameraRef.current.position.set(
+                camX + trackCurve(newZ + 20),
+                11,
+                newZ + 20,
+            );
+            cameraRef.current.lookAt(camX + trackCurve(newZ - 55), 2, newZ - 55);
         }
     });
 };

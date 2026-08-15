@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { planeSize } from '../config/constants';
+import { planeSize, trackCurve, trackCurveSlope } from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
 import { paletteFor } from '../config/levels';
@@ -36,6 +36,14 @@ const RUNG_SPACING = 26;
 const RUNG_WIDTH = 1.15;
 const RAIL_HALF_WIDTH = FIELD_WIDTH / 2;
 
+/**
+ * Rails are chopped into short segments so they can follow the winding
+ * centreline: each segment sits at the curve's offset for its own world z
+ * and yaws along the local slope. Long single boxes could only ever be
+ * straight.
+ */
+const RAIL_SEGMENT = 25;
+
 const RailTile = ({
     tileRef,
     color,
@@ -44,12 +52,15 @@ const RailTile = ({
     color: THREE.Color;
 }) => {
     const railCount = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
+    const segsPerRail = Math.ceil(planeSize / RAIL_SEGMENT);
     const rungCount = Math.floor(planeSize / RUNG_SPACING) + 1;
     const railsRef = useRef<THREE.InstancedMesh>(null);
     const rungsRef = useRef<THREE.InstancedMesh>(null);
 
     const railGeometry = useMemo(
-        () => new THREE.BoxGeometry(RAIL_WIDTH, 0.1, planeSize),
+        // A hair longer than the step, so yawed neighbours overlap instead of
+        // opening gaps on the outside of a bend.
+        () => new THREE.BoxGeometry(RAIL_WIDTH, 0.1, RAIL_SEGMENT * 1.12),
         [],
     );
     const rungGeometry = useMemo(
@@ -57,37 +68,54 @@ const RailTile = ({
         [],
     );
 
-    // Laid out once, on the first frame after the refs attach; only the tile's
-    // own position moves after that.
+    // Re-baked whenever the tile snaps to a new lattice position: the curve
+    // is a function of world z, and a recycled tile lands on a new stretch
+    // of it. Between snaps the matrices are static.
     useFrame(() => {
         const rails = railsRef.current;
         const rungs = rungsRef.current;
-        if (!rails || !rungs || rails.userData.laidOut) return;
+        const group = tileRef.current;
+        if (!rails || !rungs || !group) return;
+        const tileZ = group.position.z;
+        if (rails.userData.bakedAt === tileZ) return;
 
         const dummy = new THREE.Object3D();
         // Rails ride a touch above the rungs. Both used to sit at exactly
         // y=0, and coplanar boxes z-fight where they cross — a shimmer that
         // reads as clipping, worst in the tiles nearest the camera.
+        let index = 0;
         for (let i = 0; i < railCount; i++) {
-            dummy.position.set(-RAIL_HALF_WIDTH + i * RAIL_SPACING, 0.02, 0);
-            dummy.updateMatrix();
-            rails.setMatrixAt(i, dummy.matrix);
+            for (let seg = 0; seg < segsPerRail; seg++) {
+                const localZ = -planeSize / 2 + (seg + 0.5) * RAIL_SEGMENT;
+                const worldZ = tileZ + localZ;
+                dummy.position.set(
+                    -RAIL_HALF_WIDTH + i * RAIL_SPACING + trackCurve(worldZ),
+                    0.02,
+                    localZ,
+                );
+                dummy.rotation.set(0, Math.atan(trackCurveSlope(worldZ)), 0);
+                dummy.updateMatrix();
+                rails.setMatrixAt(index++, dummy.matrix);
+            }
         }
         for (let i = 0; i < rungCount; i++) {
-            dummy.position.set(0, -0.09, -planeSize / 2 + i * RUNG_SPACING);
+            const localZ = -planeSize / 2 + i * RUNG_SPACING;
+            const worldZ = tileZ + localZ;
+            dummy.position.set(trackCurve(worldZ), -0.09, localZ);
+            dummy.rotation.set(0, Math.atan(trackCurveSlope(worldZ)), 0);
             dummy.updateMatrix();
             rungs.setMatrixAt(i, dummy.matrix);
         }
         rails.instanceMatrix.needsUpdate = true;
         rungs.instanceMatrix.needsUpdate = true;
-        rails.userData.laidOut = true;
+        rails.userData.bakedAt = tileZ;
     });
 
     return (
         <group ref={tileRef}>
             <instancedMesh
                 ref={railsRef}
-                args={[railGeometry, undefined, railCount]}
+                args={[railGeometry, undefined, railCount * segsPerRail]}
                 frustumCulled={false}
             >
                 <meshBasicMaterial color={color} toneMapped={false} />

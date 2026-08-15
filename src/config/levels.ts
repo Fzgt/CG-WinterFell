@@ -19,12 +19,12 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-    { name: 'Signal', neon: '#00e5ff', accent: '#ffe066', fog: '#04121a', speed: 12 },
-    { name: 'Vapour', neon: '#ff3ea5', accent: '#67ffe0', fog: '#170618', speed: 15 },
-    { name: 'Circuit', neon: '#8b5cff', accent: '#ffd166', fog: '#0d0722', speed: 18 },
-    { name: 'Ember', neon: '#ff7a1a', accent: '#7ae7ff', fog: '#190a04', speed: 21 },
-    { name: 'Toxic', neon: '#7cff4d', accent: '#ff5fd2', fog: '#08160a', speed: 24 },
-    { name: 'Nova', neon: '#ff2d55', accent: '#ffffff', fog: '#170410', speed: 27 },
+    { name: 'Signal', neon: '#00e5ff', accent: '#ffe066', fog: '#04121a', speed: 15 },
+    { name: 'Vapour', neon: '#ff3ea5', accent: '#67ffe0', fog: '#170618', speed: 18 },
+    { name: 'Circuit', neon: '#8b5cff', accent: '#ffd166', fog: '#0d0722', speed: 21 },
+    { name: 'Ember', neon: '#ff7a1a', accent: '#7ae7ff', fog: '#190a04', speed: 24 },
+    { name: 'Toxic', neon: '#7cff4d', accent: '#ff5fd2', fog: '#08160a', speed: 27 },
+    { name: 'Nova', neon: '#ff2d55', accent: '#ffffff', fog: '#170410', speed: 30 },
 ];
 
 /**
