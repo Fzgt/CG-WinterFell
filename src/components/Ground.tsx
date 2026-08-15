@@ -58,13 +58,16 @@ const RailTile = ({
         if (!rails || !rungs || rails.userData.laidOut) return;
 
         const dummy = new THREE.Object3D();
+        // Rails ride a touch above the rungs. Both used to sit at exactly
+        // y=0, and coplanar boxes z-fight where they cross — a shimmer that
+        // reads as clipping, worst in the tiles nearest the camera.
         for (let i = 0; i < railCount; i++) {
-            dummy.position.set(-RAIL_HALF_WIDTH + i * RAIL_SPACING, 0, 0);
+            dummy.position.set(-RAIL_HALF_WIDTH + i * RAIL_SPACING, 0.02, 0);
             dummy.updateMatrix();
             rails.setMatrixAt(i, dummy.matrix);
         }
         for (let i = 0; i < rungCount; i++) {
-            dummy.position.set(0, 0, -planeSize / 2 + i * RUNG_SPACING);
+            dummy.position.set(0, -0.09, -planeSize / 2 + i * RUNG_SPACING);
             dummy.updateMatrix();
             rungs.setMatrixAt(i, dummy.matrix);
         }
@@ -84,6 +87,12 @@ const RailTile = ({
             </instancedMesh>
             {/* Cross lines, dimmer so they read as ties between the rails
                 rather than competing with them for the eye. */}
+            {/* A dark floor under the grid, so looking down shows ground
+                rather than the inside of the sky dome. */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+                <planeGeometry args={[planeSize * 1.4, planeSize]} />
+                <meshBasicMaterial color="#04030a" />
+            </mesh>
             <instancedMesh
                 ref={rungsRef}
                 args={[rungGeometry, undefined, rungCount]}

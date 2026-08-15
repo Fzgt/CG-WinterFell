@@ -34,7 +34,7 @@ const CraftTrail = () => {
         if (!mesh) return;
 
         const [x, , z] = playerPosition;
-        const here = new THREE.Vector3(x, 2.2, z + 3);
+        const here = new THREE.Vector3(x, 2.1, z + 5.5);
 
         if (!gameOver && (!points.current.length || last.current.distanceTo(here) > SPACING)) {
             points.current.unshift(here);

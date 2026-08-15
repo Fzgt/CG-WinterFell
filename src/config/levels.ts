@@ -30,12 +30,13 @@ export const LEVELS: Level[] = [
 /**
  * World units before the next level.
  *
- * This was 2500, which at the opening speed is the better part of half a
- * minute on the same palette — long enough that a first-time player can
- * reasonably conclude the game has nothing else to show them and leave. The
- * first colour change now lands inside the first ten seconds or so.
+ * Tuned twice: 2500 made the opening sector most of half a minute — long
+ * enough for a first-time player to conclude the game had nothing else to
+ * show them — and the 1300 that replaced it swung too far, changing palette
+ * before a sector could establish itself. 1800 lands the first change around
+ * the fifteen-second mark.
  */
-export const LEVEL_DISTANCE = 1300;
+export const LEVEL_DISTANCE = 1800;
 
 /**
  * Levels repeat once the list runs out, but keep getting faster, so the run

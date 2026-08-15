@@ -14,8 +14,10 @@ import {
 interface ObstacleSectionProps {
     sectionIndex: number;
     meshData: {
-        geometry: THREE.BufferGeometry;
-        material: THREE.MeshStandardMaterial;
+        bodyGeometry: THREE.BufferGeometry;
+        frameGeometry: THREE.BufferGeometry;
+        bodyMaterial: THREE.MeshStandardMaterial;
+        frameMaterial: THREE.MeshBasicMaterial;
     };
     playerPosition: [number, number, number];
     checkCollision: (obstacle: Obstacle) => boolean;
@@ -29,7 +31,8 @@ const ObstacleSection = ({
     checkCollision,
     visible = true,
 }: ObstacleSectionProps) => {
-    const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
+    const bodyRef = useRef<THREE.InstancedMesh>(null);
+    const frameRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
     const [obstacles] = useState(() => {
         const generated = generateSectionObstacles(
@@ -50,24 +53,27 @@ const ObstacleSection = ({
     // Layout effect, not a passive one: an InstancedMesh starts with an
     // all-zero matrix buffer, and r3f's render loop runs on its own rAF, so a
     // passive effect could land after a frame had already been drawn from the
-    // zeroed matrices.
+    // zeroed matrices. Body and frame share the same matrices.
     useLayoutEffect(() => {
-        const mesh = instancedMeshRef.current;
-        if (!mesh || !meshData.geometry || !meshData.material) return;
+        const body = bodyRef.current;
+        const frame = frameRef.current;
+        if (!body || !frame) return;
 
         obstacles.forEach((obstacle, i) => {
             dummy.position.copy(obstacle.position);
             dummy.scale.copy(obstacle.scale);
             dummy.rotation.set(0, obstacle.rotationY, 0);
             dummy.updateMatrix();
-            mesh.setMatrixAt(i, dummy.matrix);
+            body.setMatrixAt(i, dummy.matrix);
+            frame.setMatrixAt(i, dummy.matrix);
         });
 
-        mesh.instanceMatrix.needsUpdate = true;
-    }, [meshData.geometry, meshData.material, obstacles, dummy]);
+        body.instanceMatrix.needsUpdate = true;
+        frame.instanceMatrix.needsUpdate = true;
+    }, [obstacles, dummy]);
 
     useFrame(() => {
-        if (!visible || !instancedMeshRef.current) return;
+        if (!visible) return;
 
         for (const obstacle of obstacles) {
             if (checkCollision(obstacle)) break;
@@ -78,15 +84,15 @@ const ObstacleSection = ({
 
     // Naive baseline for benchmarking (?instancing=off): one mesh per
     // obstacle, i.e. one draw call each. Only used to measure what instancing
-    // buys.
+    // buys, so the body alone is enough.
     if (!benchFlags.instancing) {
         return (
             <group>
                 {obstacles.map((obstacle, i) => (
                     <mesh
                         key={i}
-                        geometry={meshData.geometry}
-                        material={meshData.material}
+                        geometry={meshData.bodyGeometry}
+                        material={meshData.bodyMaterial}
                         position={obstacle.position}
                         scale={obstacle.scale}
                         rotation={[0, obstacle.rotationY, 0]}
@@ -96,25 +102,25 @@ const ObstacleSection = ({
         );
     }
 
+    // Never frustum-culled. An InstancedMesh computes its bounding sphere
+    // from the instance matrices the first time it is tested and caches it;
+    // if that test races ahead of the effect that writes the matrices, the
+    // sphere is a single point at the world origin and the whole section is
+    // culled the moment the camera flies past — obstacles flash, then vanish
+    // for good. The three live sections are always near the camera anyway.
     return (
-        <instancedMesh
-            ref={instancedMeshRef}
-            args={[meshData.geometry, meshData.material, obstacles.length]}
-            // Never frustum-culled. An InstancedMesh computes its bounding
-            // sphere from the instance matrices the first time it is tested
-            // and caches it; if that test races ahead of the effect that
-            // writes the matrices, the sphere is computed from the zeroed
-            // buffer as a single point at the world origin — and the whole
-            // section is culled the moment the camera flies past the origin.
-            // That is exactly the reported symptom: obstacles flash while the
-            // origin is still in view, then vanish for good. Whether the race
-            // is lost depends on frame timing, which is why WebGL captures
-            // kept showing them while Chrome sessions did not. Every other
-            // instanced mesh here (rails, trail) already opts out of culling;
-            // the three visible sections are always near the camera anyway,
-            // so culling them bought nothing.
-            frustumCulled={false}
-        />
+        <>
+            <instancedMesh
+                ref={bodyRef}
+                args={[meshData.bodyGeometry, meshData.bodyMaterial, obstacles.length]}
+                frustumCulled={false}
+            />
+            <instancedMesh
+                ref={frameRef}
+                args={[meshData.frameGeometry, meshData.frameMaterial, obstacles.length]}
+                frustumCulled={false}
+            />
+        </>
     );
 };
 
