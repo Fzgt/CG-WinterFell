@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { randomInRange2 } from './utils';
+import { levelAt, paletteFor } from '../config/levels';
+import { bpmFor } from './music';
 import {
     OBSTACLE_BASE_RADIUS,
     FIELD_WIDTH,
@@ -44,6 +46,21 @@ export const formationFor = (section: number): Formation =>
 
 const HALF_WIDTH = FIELD_WIDTH / 2;
 const LANE_LIMIT = HALF_WIDTH - LANE_HALF_WIDTH;
+
+/**
+ * How far the craft travels in one beat of this section's music. Formations
+ * are spaced in beat-lengths, so gates arrive on the kick and the slalom
+ * sways with the bar — the field is laid out to the same clock the soundtrack
+ * plays and the visuals pulse on.
+ */
+const beatDistanceFor = (section: number) => {
+    const level = levelAt(section * SECTION_LENGTH);
+    const unitsPerSecond = paletteFor(level).speed * 60;
+    return unitsPerSecond * (60 / bpmFor(level));
+};
+
+/** The clear lane narrows as the run ramps: same layouts, less forgiveness. */
+const laneHalfFor = (ramp: number) => LANE_HALF_WIDTH * (1 - 0.22 * ramp);
 
 const sectionBounds = (section: number): [number, number] =>
     section === 0
@@ -95,12 +112,13 @@ const scatter = (
             LANE_LIMIT,
         );
 
+        const laneHalf = laneHalfFor(ramp);
         for (let i = 0; i < perBand; i++) {
             let x = 0;
             let placed = false;
             for (let attempt = 0; attempt < 12 && !placed; attempt++) {
                 x = randomInRange2(-HALF_WIDTH, HALF_WIDTH);
-                placed = Math.abs(x - laneX) > LANE_HALF_WIDTH;
+                placed = Math.abs(x - laneX) > laneHalf;
             }
             if (!placed) continue;
 
@@ -127,11 +145,11 @@ const gates = (
     endZ: number,
     ramp: number,
     playerX: number,
+    section: number,
 ): Obstacle[] => {
     const out: Obstacle[] = [];
-    // Rows get a little closer as the run ramps, never closer than the craft
-    // can re-steer between (drift below stays inside lateral reach).
-    const spacing = 300 - ramp * 60;
+    // One wall per beat: threading a gate lands on the kick.
+    const spacing = Math.max(240, beatDistanceFor(section));
     let laneX = THREE.MathUtils.clamp(playerX, -LANE_LIMIT, LANE_LIMIT);
 
     for (let z = startZ - spacing / 2; z > endZ; z -= spacing) {
@@ -145,7 +163,7 @@ const gates = (
         const slabWidth = 2.3; // ×7 units
         const step = slabWidth * 7 + 2;
         for (let x = -HALF_WIDTH + step / 2; x < HALF_WIDTH; x += step) {
-            if (Math.abs(x - laneX) < LANE_HALF_WIDTH + 8) continue;
+            if (Math.abs(x - laneX) < laneHalfFor(ramp) + 8) continue;
             out.push(
                 block(
                     x,
@@ -162,12 +180,25 @@ const gates = (
 
 /* -------------------------------------------------------------- slalom -- */
 
-const slalom = (startZ: number, endZ: number, ramp: number): Obstacle[] => {
+const slalom = (
+    startZ: number,
+    endZ: number,
+    ramp: number,
+    section: number,
+): Obstacle[] => {
     const out: Obstacle[] = [];
-    // Lane swings as a sine of absolute z: slope stays well inside the
-    // craft's lateral reach (amplitude · ω < LATERAL_SPEED / forward speed).
-    const amplitude = LANE_LIMIT * (0.55 + ramp * 0.3);
-    const omega = 0.0011;
+    // One full sway per two bars, and the slope is clamped against what the
+    // craft can actually steer (44 units/s lateral against this section's
+    // forward speed) with room to spare — the fairness sweep holds whatever
+    // the tempo does.
+    const level = levelAt(section * SECTION_LENGTH);
+    const unitsPerSecond = paletteFor(level).speed * 60;
+    const omega = (2 * Math.PI) / (8 * beatDistanceFor(section));
+    const maxSlope = (44 / unitsPerSecond) * 0.8;
+    const amplitude = Math.min(
+        LANE_LIMIT * (0.55 + ramp * 0.3),
+        maxSlope / omega,
+    );
     const laneAt = (z: number) => amplitude * Math.sin(Math.abs(z) * omega);
 
     const step = 70;
@@ -194,9 +225,15 @@ const slalom = (startZ: number, endZ: number, ramp: number): Obstacle[] => {
 
 /* ------------------------------------------------------------- pillars -- */
 
-const pillars = (startZ: number, endZ: number, ramp: number): Obstacle[] => {
+const pillars = (
+    startZ: number,
+    endZ: number,
+    ramp: number,
+    section: number,
+): Obstacle[] => {
     const out: Obstacle[] = [];
-    const rowSpacing = 150 - ramp * 20;
+    // A row every half-beat.
+    const rowSpacing = Math.max(110, beatDistanceFor(section) / 2);
     const colSpacing = 30;
     let laneX = 0;
     let row = 0;
@@ -214,7 +251,7 @@ const pillars = (startZ: number, endZ: number, ramp: number): Obstacle[] => {
             x <= HALF_WIDTH;
             x += colSpacing
         ) {
-            if (Math.abs(x - laneX) < LANE_HALF_WIDTH) continue;
+            if (Math.abs(x - laneX) < laneHalfFor(ramp)) continue;
             out.push(
                 block(
                     x,
@@ -241,11 +278,11 @@ export const generateSectionObstacles = (
 
     switch (formationFor(section)) {
         case 'gates':
-            return gates(startZ, endZ, ramp, playerX);
+            return gates(startZ, endZ, ramp, playerX, section);
         case 'slalom':
-            return slalom(startZ, endZ, ramp);
+            return slalom(startZ, endZ, ramp, section);
         case 'pillars':
-            return pillars(startZ, endZ, ramp);
+            return pillars(startZ, endZ, ramp, section);
         default:
             return scatter(startZ, endZ, ramp, playerX);
     }

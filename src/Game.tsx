@@ -18,6 +18,7 @@ import PostFX from './components/PostFX';
 import Warmup from './components/Warmup';
 import Cityscape from './components/Cityscape';
 import SectorBanner from './components/SectorBanner';
+import MusicDirector from './components/MusicDirector';
 
 
 interface GameProps {
@@ -89,6 +90,7 @@ const Game = ({ onStart }: GameProps) => {
             </Canvas>
             {onStart && <Score />}
             {onStart && <SectorBanner />}
+            {onStart && <MusicDirector />}
             {onStart && !gameOver && <Pause />}
         </>
     );
