@@ -28,36 +28,49 @@ const CITY_INNER = FIELD_WIDTH / 2 + 34;
 const CITY_NEAR_OUTER = CITY_INNER + 130;
 const CITY_FAR_INNER = CITY_NEAR_OUTER + 40;
 const CITY_FAR_OUTER = CITY_FAR_INNER + 170;
-/** World units covered by one repeat of the window texture (u, v). */
-const WINDOW_TILE_U = 14;
-const WINDOW_TILE_V = 20;
+/**
+ * World units covered by one repeat of the window texture (u, v).
+ *
+ * The first pass packed a window into every ~2.8 units, and with nearly half
+ * of them lit a 300-unit tower became thousands of uniform dots — dense
+ * enough to trip the same response as a lotus pod. Windows are now ~8 units,
+ * far fewer are lit, and lighting clusters by floor.
+ */
+const WINDOW_TILE_U = 48;
+const WINDOW_TILE_V = 80;
 
-/** A tile of windows: mostly dark, some lit warm, a few lit cool. */
+/**
+ * A tile of windows. Night towers are mostly dark: lighting is decided per
+ * floor first — a few floors awake, most asleep — and only then per window,
+ * so lights arrive in horizontal runs with the odd loner, instead of an even
+ * speckle across the whole face.
+ */
 const buildWindowTexture = () => {
-    const size = 128;
+    const size = 256;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = size;
     const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = '#04050c';
     ctx.fillRect(0, 0, size, size);
 
-    const cols = 5;
-    const rows = 7;
+    const cols = 6;
+    const rows = 10;
     const cellW = size / cols;
     const cellH = size / rows;
-    for (let col = 0; col < cols; col++) {
-        for (let row = 0; row < rows; row++) {
-            const roll = Math.random();
-            if (roll < 0.55) continue; // dark window
-            ctx.fillStyle =
-                roll < 0.88
-                    ? `rgba(255, 214, 165, ${0.5 + Math.random() * 0.5})` // warm
-                    : `rgba(150, 200, 255, ${0.4 + Math.random() * 0.4})`; // cool
+    for (let row = 0; row < rows; row++) {
+        // Is this floor awake? Most are not.
+        const floorActivity = Math.random() < 0.22 ? 0.55 : 0.06;
+        for (let col = 0; col < cols; col++) {
+            if (Math.random() > floorActivity) continue;
+            const cool = Math.random() > 0.85;
+            ctx.fillStyle = cool
+                ? `rgba(150, 200, 255, ${0.35 + Math.random() * 0.35})`
+                : `rgba(255, 214, 165, ${0.4 + Math.random() * 0.45})`;
             ctx.fillRect(
-                col * cellW + cellW * 0.22,
-                row * cellH + cellH * 0.24,
-                cellW * 0.56,
-                cellH * 0.5,
+                col * cellW + cellW * 0.24,
+                row * cellH + cellH * 0.28,
+                cellW * 0.52,
+                cellH * 0.44,
             );
         }
     }
