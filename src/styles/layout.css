@@ -49,3 +49,32 @@
     letter-spacing: 0.2em;
     pointer-events: none;
 }
+
+/* The finale banner, at the end of the run. */
+.finale-banner {
+    position: fixed;
+    top: 16%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    text-align: center;
+    pointer-events: none;
+    animation: finale-in 1.6s ease both;
+}
+.finale-banner h2 {
+    margin: 0;
+    font-size: 3rem;
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
+    color: var(--level-neon, #00e5ff);
+    text-shadow: 0 0 30px var(--level-neon, #00e5ff);
+}
+.finale-banner p {
+    margin: 0.6rem 0 0;
+    color: rgba(232, 244, 255, 0.85);
+    letter-spacing: 0.08em;
+}
+@keyframes finale-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-14px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
