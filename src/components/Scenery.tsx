@@ -1806,10 +1806,19 @@ const finale: Builder = (z0, z1, spec) => {
             glass.push(at(box(230, 62, 8), 0, wy, zB + 30));
             // The crest itself renders as the live CrestEmblem component —
             // its texture decodes async, so it cannot be baked here.
+            // The wordmark beside the crest is painted signage, not light:
+            // tone-mapped white that stays out of the bloom pass, so the
+            // crest is the only thing on this wall that glows.
+            const wallText: THREE.BufferGeometry[] = [];
             const u = 4.2;
-            glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
-            glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
-            glyph(signs, 'S', 46 + trackCurve(zB), wy, zB + 35, u);
+            glyph(wallText, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
+            glyph(wallText, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
+            glyph(wallText, 'S', 46 + trackCurve(zB), wy, zB + 35, u);
+            emit(
+                build,
+                wallText,
+                new THREE.MeshBasicMaterial({ color: '#c3cee2' }),
+            );
         }
 
         // ── The tower: wandering glass storeys with hairline light plates
@@ -1969,7 +1978,7 @@ const CrestEmblem = () => {
     const zB = -35800;
     const y = trackHeight(zB);
     return (
-        <mesh position={[trackCurve(zB) - 12, y + 130, zB + 35.5]}>
+        <mesh position={[trackCurve(zB) - 26, y + 130, zB + 35.5]}>
             {/* Letters are 4.5u tall at u=4.2, i.e. ~19 units; the lockup
                 sets the crest near 1.35x that. */}
             <planeGeometry args={[26 * crestAspect, 26]} />
