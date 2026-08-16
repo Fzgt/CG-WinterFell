@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { randomInRange2 } from './utils';
-import { CAMPUS_Z, LATERAL_SPEED } from '../config/constants';
+import { LATERAL_SPEED, OBSTACLES_END_Z } from '../config/constants';
 import { levelAt, paletteFor } from '../config/levels';
 import {
     OBSTACLE_BASE_RADIUS,
@@ -301,7 +301,7 @@ export const generateSectionObstacles = (
     playerX = 0,
 ): Obstacle[] => {
     const [startZ, endZ] = sectionBounds(section);
-    if (startZ <= CAMPUS_Z) return [];
+    if (startZ <= OBSTACLES_END_Z) return [];
     const ramp = rampFor(section);
     const reach = reachFor(section);
 
@@ -315,8 +315,8 @@ export const generateSectionObstacles = (
                 ? pillars(startZ, endZ, ramp, reach)
                 : scatter(startZ, endZ, ramp, playerX, reach);
 
-    // The final scene is a victory lap: clip per obstacle, because the
-    // section straddling the boundary starts before the campus and ends
-    // well past where the craft comes to rest.
-    return obstacles.filter(o => o.position.z > CAMPUS_Z);
+    // The finish is a victory lap: clip per obstacle, because the section
+    // straddling the boundary starts before it and ends well past where the
+    // craft comes to rest.
+    return obstacles.filter(o => o.position.z > OBSTACLES_END_Z);
 };

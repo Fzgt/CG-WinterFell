@@ -19,6 +19,14 @@ export const LATERAL_SPEED = 44;
  * point the craft stops at.
  */
 export const CAMPUS_Z = -34200;
+/**
+ * Where the last obstacle may stand. Earlier than the campus edge on
+ * purpose: a gate wall at the threshold means the run's final act is a
+ * coin flip after twenty sectors of work, and dying there reads as being
+ * blocked rather than beaten. The stretch between here and the campus is
+ * the run-in — you can see the lights before you have to stop fighting.
+ */
+export const OBSTACLES_END_Z = -33600;
 export const FINISH_Z = -35360;
 
 /**
