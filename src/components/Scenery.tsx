@@ -1687,6 +1687,14 @@ const finale: Builder = (z0, z1, spec) => {
                 if (rot) m.rotateZ(rot);
                 signs.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.4));
             };
+            // The shield itself glows as an outline — the dark plate reads
+            // as nothing against the dark wall, so the border carries the
+            // crest's silhouette: three straight edges and the pointed foot.
+            mark(0, 27, 44, 2.4); // top edge
+            mark(-21, 0, 2.4, 52); // left edge
+            mark(21, 0, 2.4, 52); // right edge
+            mark(-10.5, -32, 26, 2.4, -0.59); // foot, left slope
+            mark(10.5, -32, 26, 2.4, 0.59); // foot, right slope
             mark(0, 19, 7, 7, Math.PI / 4); // diamond
             mark(0, 10, 25, 4.8); // tee bar
             mark(0, 4.5, 4.8, 6.5); // tee stem
@@ -1750,7 +1758,9 @@ const finale: Builder = (z0, z1, spec) => {
                 glyph(parts, l, 0, 0, 0, u);
                 for (const g of parts) {
                     g.rotateY(-Math.PI / 2);
-                    g.translate(wallX, y + 138, zB - 48 + lz);
+                    // Centred on the wall's own midpoint — anchored off the
+                    // door position it slid past the corner.
+                    g.translate(wallX, y + 128, zB - 85 + lz);
                     signs.push(g);
                 }
             };
@@ -1764,7 +1774,7 @@ const finale: Builder = (z0, z1, spec) => {
             build,
             green,
             new THREE.MeshBasicMaterial({
-                color: new THREE.Color('#4dff88').multiplyScalar(2.2),
+                color: new THREE.Color('#4dff88').multiplyScalar(1.25),
                 toneMapped: false,
             }),
         );
