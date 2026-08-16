@@ -129,7 +129,7 @@ const scatter = (
             // carries a 12.9 radius, so one placed just outside the nominal
             // lane reached 13 units into it — the lane looked 34 wide and
             // played 8 wide, which is what "that one was impossible" was.
-            const wide = Math.random() < 0.35;
+            const wide = Math.random() < 0.45;
             const width = wide
                 ? randomInRange2(1.6, 2.8)
                 : randomInRange2(0.55, 1.3);
@@ -169,8 +169,11 @@ const gates = (
 ): Obstacle[] => {
     const out: Obstacle[] = [];
     // Rows get a little closer as the run ramps, never closer than the craft
-    // can re-steer between (drift below stays inside lateral reach).
-    const spacing = 300 - ramp * 60;
+    // can re-steer between (drift below stays inside lateral reach). At the
+    // old 300–240 a wall arrived every four seconds and the gap between two
+    // of them had usually not moved far enough to need a correction; this
+    // puts them close enough together to read as a sequence.
+    const spacing = 235 - ramp * 55;
     let laneX = THREE.MathUtils.clamp(playerX, -LANE_LIMIT, LANE_LIMIT);
 
     // The gap may only move between walls as far as the craft can follow.
@@ -220,29 +223,40 @@ const slalom = (
     const omega = Math.min(0.0011, (reach * FOLLOW) / amplitude);
     const laneAt = (z: number) => amplitude * Math.sin(Math.abs(z) * omega);
 
-    const step = 70;
+    const step = 60;
+    /**
+     * Each wall runs from the edge of the lane all the way out to the edge of
+     * the field.
+     *
+     * It used to be one spire per side — two thin posts on a 120-wide track,
+     * with the whole outfield behind them empty. The lane was decoration: you
+     * could sit at either boundary and fly the entire section in a straight
+     * line without ever entering the canyon, which is what the fairness sweep
+     * was reporting when it measured a 75-unit free corridor on a formation
+     * whose whole point is that it is narrow. The slabs are wide enough that
+     * consecutive footprints overlap, so the wall has no seam to slip through.
+     */
+    const WALL_WIDTH = 1.8;
+    const slabRadius = OBSTACLE_BASE_RADIUS * WALL_WIDTH;
+    const wallStep = slabRadius * 1.7;
+
     for (let z = startZ; z > endZ; z -= step) {
         const laneX = laneAt(z);
-        // Canyon walls hugging both sides of the lane.
         for (const side of [-1, 1]) {
-            // Wall spires run to 1.0 wide; clear their footprint as well,
-            // or the canyon is narrower to fly than it is to look at.
-            const x =
-                laneX +
-                side *
-                    (LANE_HALF_WIDTH +
-                        OBSTACLE_BASE_RADIUS +
-                        Math.random() * 8);
-            if (Math.abs(x) > HALF_WIDTH) continue;
-            out.push(
-                block(
-                    x,
-                    z + randomInRange2(-8, 8),
-                    randomInRange2(0.6, 1.0),
-                    randomInRange2(1.4, 2.6),
-                    randomInRange2(0.8, 1.4),
-                ),
-            );
+            // The innermost slab clears its own footprint, so the canyon is
+            // as wide to fly as it is to look at.
+            let x = laneX + side * (LANE_HALF_WIDTH + slabRadius);
+            for (; Math.abs(x) <= HALF_WIDTH; x += side * wallStep) {
+                out.push(
+                    block(
+                        x,
+                        z + randomInRange2(-6, 6),
+                        WALL_WIDTH,
+                        randomInRange2(1.4, 2.6),
+                        randomInRange2(0.8, 1.4),
+                    ),
+                );
+            }
         }
     }
     return out;
@@ -257,8 +271,8 @@ const pillars = (
     reach: number,
 ): Obstacle[] => {
     const out: Obstacle[] = [];
-    const rowSpacing = 150 - ramp * 20;
-    const colSpacing = 30;
+    const rowSpacing = 118 - ramp * 18;
+    const colSpacing = 24;
     const rowDrift = Math.min(8, rowSpacing * reach * FOLLOW);
     // Spires run to 0.8 wide, so the lane clears their footprint too.
     const pillarClear = LANE_HALF_WIDTH + OBSTACLE_BASE_RADIUS * 0.8;

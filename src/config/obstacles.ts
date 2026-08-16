@@ -35,12 +35,28 @@ export const SECTION_LENGTH = 2000;
 export const OBSTACLE_BASE_RADIUS = 4.6;
 
 export const BAND_DEPTH = 100;
-export const LANE_HALF_WIDTH = 17;
+/**
+ * Half-width of the lane every formation keeps clear.
+ *
+ * This is the single number that decides how hard the route plays. At 17 the
+ * fairness sweep measured its tightest passage anywhere on the route at 35
+ * units — six craft widths — so nothing on the track ever asked for a line,
+ * only for a direction. 12 lands those same passages around 24: still twice
+ * what the sweep needs to call a section survivable, and now narrow enough
+ * that a gate has to be aimed at.
+ */
+export const LANE_HALF_WIDTH = 12;
 /** How far a band's clear lane may move from the previous band's. */
 export const LANE_MAX_DRIFT = 26;
-export const OBSTACLES_PER_BAND_START = 3;
+export const OBSTACLES_PER_BAND_START = 4;
 export const OBSTACLES_PER_BAND_MAX = Math.round(
     OBSTACLES_PER_SECTION / (SECTION_LENGTH / BAND_DEPTH),
 );
-/** Sections taken to ramp from the opening density to the full one. */
-export const DIFFICULTY_RAMP_SECTIONS = 6;
+/**
+ * Sections taken to ramp from the opening density to the full one.
+ *
+ * Six meant the field was still thinning itself out a third of the way into a
+ * twenty-sector route. Four keeps the opening readable and has the track at
+ * full density by the time the second palette arrives.
+ */
+export const DIFFICULTY_RAMP_SECTIONS = 4;
