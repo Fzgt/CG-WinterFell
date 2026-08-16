@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -6,6 +6,7 @@ import { planeSize, trackCurve, trackHeight } from '../config/constants';
 import { FIELD_WIDTH } from '../config/obstacles';
 import { useStore } from '../store/store';
 import { sceneAt, type SceneSpec } from '../config/scenes';
+import emblemUrl from './emblem.png';
 
 /**
  * The world beside the track: twenty scenes, each rebuilt per world tile.
@@ -80,6 +81,80 @@ const buildWindowTexture = () => {
 
 let windowTexture: THREE.CanvasTexture | null = null;
 const getWindowTexture = () => (windowTexture ??= buildWindowTexture());
+
+/**
+ * The UTS crest, the way dolos already solved it: the official emblem PNG,
+ * luminance turned into alpha so the shield is solid and the marks are cut
+ * out, tinted, glow layered on with shadowBlur, drawn additively. No more
+ * trying to sculpt a trademark out of primitives.
+ */
+let crestTexture: THREE.CanvasTexture | null = null;
+let crestLoading = false;
+
+const buildCrestFromImage = (img: HTMLImageElement) => {
+    const size = 512;
+    const pad = Math.round(size * 0.22); // roomier than the widest blur
+    const full = size + pad * 2;
+
+    const a = document.createElement('canvas');
+    a.width = size;
+    a.height = size;
+    const ga = a.getContext('2d')!;
+    ga.drawImage(img, 0, 0, size, size);
+    const data = ga.getImageData(0, 0, size, size);
+    const px = data.data;
+    const tint = new THREE.Color('#dfe9ff');
+    const cr = Math.round(tint.r * 255);
+    const cg = Math.round(tint.g * 255);
+    const cb = Math.round(tint.b * 255);
+    for (let i = 0; i < px.length; i += 4) {
+        const lum =
+            (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
+        const alpha = (px[i + 3] / 255) * (1 - lum);
+        px[i] = cr;
+        px[i + 1] = cg;
+        px[i + 2] = cb;
+        px[i + 3] = Math.round(alpha * 255);
+    }
+    ga.putImageData(data, 0, 0);
+
+    const b = document.createElement('canvas');
+    b.width = full;
+    b.height = full;
+    const gb = b.getContext('2d')!;
+    gb.shadowColor = '#dfe9ff';
+    for (const [blur, alpha] of [
+        [size * 0.16, 0.55],
+        [size * 0.07, 0.75],
+    ] as const) {
+        gb.shadowBlur = blur;
+        gb.globalAlpha = alpha;
+        gb.drawImage(a, pad, pad);
+    }
+    gb.shadowBlur = 0;
+    gb.globalAlpha = 1;
+    gb.drawImage(a, pad, pad);
+
+    const texture = new THREE.CanvasTexture(b);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    return texture;
+};
+
+const getCrestTexture = (): THREE.CanvasTexture | null => {
+    if (crestTexture) return crestTexture;
+    if (!crestLoading) {
+        crestLoading = true;
+        const img = new Image();
+        img.src = emblemUrl;
+        const done = () => {
+            crestTexture = buildCrestFromImage(img);
+        };
+        if (img.complete) done();
+        else img.onload = done;
+    }
+    return crestTexture;
+};
 
 const scaleBoxUVs = (
     geometry: THREE.BoxGeometry,
@@ -1667,41 +1742,8 @@ const finale: Builder = (z0, z1, spec) => {
         {
             const wy = y + 130;
             glass.push(at(box(230, 62, 8), 0, wy, zB + 30));
-            // The shield, left of the letters: the crest proper — a dark
-            // pointed shield carrying white marks: diamond, tee, the
-            // interlocking weave, chevrons below.
-            // The crest, done as the real one reads: a solid glowing
-            // shield with the marks as dark negative space cut into it —
-            // white light, matching the letters beside it.
-            const sx0 = -42;
-            const crestGlow: THREE.BufferGeometry[] = [];
-            const crestCut: THREE.BufferGeometry[] = [];
-            crestGlow.push(at(box(42, 52, 2), sx0, wy + 2, zB + 34));
-            const tip = new THREE.ConeGeometry(21.5, 15, 4);
-            tip.rotateX(Math.PI);
-            tip.rotateY(Math.PI / 4);
-            crestGlow.push(at(tip, sx0, wy - 27, zB + 34));
-            const mark = (
-                mx: number,
-                my: number,
-                w: number,
-                h: number,
-                rot = 0,
-            ) => {
-                const m = box(w, h, 1.4);
-                if (rot) m.rotateZ(rot);
-                crestCut.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.6));
-            };
-            mark(0, 17, 7, 7, Math.PI / 4); // diamond
-            mark(0, 8.5, 25, 4.8); // tee bar
-            mark(0, 3.2, 4.8, 6.5); // tee stem
-            mark(-4.3, -5.5, 21, 4.8, Math.PI / 4); // weave /
-            mark(4.3, -5.5, 21, 4.8, -Math.PI / 4); // weave \
-            mark(-7.5, -16.5, 11, 3.8, Math.PI / 4); // chevrons
-            mark(0, -16.5, 11, 3.8, -Math.PI / 4);
-            mark(7.5, -16.5, 11, 3.8, Math.PI / 4);
-            emit(build, crestGlow, basic('#e8f4ff'));
-            emit(build, crestCut, basic('#0a1420'));
+            // The crest itself renders as the live CrestEmblem component —
+            // its texture decodes async, so it cannot be baked here.
             const u = 4.2;
             glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
             glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
@@ -1845,6 +1887,40 @@ const SceneryTile = ({ index }: { index: number }) => {
     );
 };
 
+/** The emblem, dolos-style: async texture, additive glow, one quad. */
+const CrestEmblem = () => {
+    const [tex, setTex] = useState<THREE.CanvasTexture | null>(
+        getCrestTexture(),
+    );
+    useEffect(() => {
+        if (tex) return;
+        const timer = setInterval(() => {
+            const ready = getCrestTexture();
+            if (ready) {
+                setTex(ready);
+                clearInterval(timer);
+            }
+        }, 200);
+        return () => clearInterval(timer);
+    }, [tex]);
+    if (!tex) return null;
+    const zB = -35800;
+    const y = trackHeight(zB);
+    return (
+        <mesh position={[trackCurve(zB) - 42, y + 132, zB + 35.5]}>
+            <planeGeometry args={[62, 62]} />
+            <meshBasicMaterial
+                map={tex}
+                transparent
+                opacity={0.85}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+            />
+        </mesh>
+    );
+};
+
 const Scenery = () => {
     const playerPosition = useStore(state => state.playerPosition);
     const [anchor, setAnchor] = useState(0);
@@ -1858,6 +1934,7 @@ const Scenery = () => {
         <>
             <SceneryTile index={anchor} />
             <SceneryTile index={anchor + 1} />
+            {anchor >= 33 && <CrestEmblem />}
         </>
     );
 };
