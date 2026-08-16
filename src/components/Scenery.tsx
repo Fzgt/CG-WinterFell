@@ -1956,20 +1956,19 @@ const CrestEmblem = () => {
     const zB = -35800;
     const y = trackHeight(zB);
     return (
-        <mesh position={[trackCurve(zB) - 24, y + 132, zB + 35.5]}>
-            {/* Sized to the mark's real proportions — a square quad made it
-                small and squat beside the letters. */}
-            <planeGeometry args={[38 * crestAspect, 38]} />
-            {/* Just above unit: enough to sit in the letters' bloom range,
-                not so hot that the weave's gaps blow shut. */}
+        <mesh position={[trackCurve(zB) - 22, y + 132, zB + 35.5]}>
+            {/* The mark's real proportions, about 1.8x the letters' cap
+                height — the lockup's own ratio. */}
+            <planeGeometry args={[34 * crestAspect, 34]} />
+            {/* Same treatment as the letters: an opaque emissive surface
+                with a hard alpha edge. Additive blending let the bloom
+                pass eat the thin strokes, so the mark read as haze next to
+                the solid glyph boxes. */}
             <meshBasicMaterial
                 map={tex}
-                color={[1.15, 1.2, 1.35]}
-                transparent
-                opacity={1}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
+                alphaTest={0.4}
                 toneMapped={false}
+                side={THREE.DoubleSide}
             />
         </mesh>
     );
