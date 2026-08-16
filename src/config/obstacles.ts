@@ -38,35 +38,31 @@ export const BAND_DEPTH = 100;
 /**
  * Half-width of the lane every formation keeps clear.
  *
- * This is the single number that decides how hard the route plays. At 17 the
- * fairness sweep measured its tightest passage anywhere on the route at 35
- * units — six craft widths — so nothing on the track ever asked for a line,
- * only for a direction. 12 lands those same passages around 24: still twice
- * what the sweep needs to call a section survivable, and now narrow enough
- * that a gate has to be aimed at.
+ * The single number that decides how hard the route plays, and the one worth
+ * moving before any other. Difficulty bought here is free: the field keeps
+ * exactly the number of blocks it had, they just leave a line that has to be
+ * aimed at rather than a direction to hold. Difficulty bought by adding blocks
+ * costs the view, the frame budget, and eventually the game — a field dense
+ * enough to be interesting to look at is one nobody can fly.
  */
-export const LANE_HALF_WIDTH = 12;
+export const LANE_HALF_WIDTH = 15;
 /** How far a band's clear lane may move from the previous band's. */
 export const LANE_MAX_DRIFT = 26;
+export const OBSTACLES_PER_BAND_START = 3;
+export const OBSTACLES_PER_BAND_MAX = Math.round(
+    OBSTACLES_PER_SECTION / (SECTION_LENGTH / BAND_DEPTH),
+);
+/** Sections taken to ramp from the opening density to the full one. */
+export const DIFFICULTY_RAMP_SECTIONS = 5;
+
 /**
- * Width of one placement column.
+ * How tall a block may stand, as a multiple of the 13-unit base block.
  *
- * A band is filled column by column rather than by dropping n blocks anywhere
- * across it: uniform random placement leaves holes, and holes that line up
- * from band to band are a free run down a single x. At 19 the field is six
- * columns wide, so a band still looks scattered — the blocks sit anywhere
- * inside their column and plenty of columns stay empty — but no x is empty
- * for a whole section by accident.
+ * The camera's eye sits at y = 11 and every piece of scenery — ridges, arches,
+ * spires, the lot — lives beyond x = 94, so anything both tall and broad is a
+ * hoarding pulled across the horizon. Two silhouettes are allowed and only
+ * two: a slab that stays near the eye line, so you see over it, and a spire
+ * narrow enough that you see past it. Nothing may be both.
  */
-export const COLUMN_WIDTH = 19;
-/** Chance a column is occupied, at the start of the run and at full density. */
-export const FILL_START = 0.5;
-export const FILL_MAX = 0.86;
-/**
- * Sections taken to ramp from the opening density to the full one.
- *
- * Six meant the field was still thinning itself out a third of the way into a
- * twenty-sector route. Four keeps the opening readable and has the track at
- * full density by the time the second palette arrives.
- */
-export const DIFFICULTY_RAMP_SECTIONS = 4;
+export const SLAB_HEIGHT = { min: 0.45, max: 0.85 };
+export const SPIRE_HEIGHT = { min: 1.2, max: 2.4 };
