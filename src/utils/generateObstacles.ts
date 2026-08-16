@@ -240,19 +240,41 @@ const slalom = (
     const slabRadius = OBSTACLE_BASE_RADIUS * WALL_WIDTH;
     const wallStep = slabRadius * 1.7;
 
+    /**
+     * The wall sinks as it runs away from the lane.
+     *
+     * Collision is a distance test in x/z — an obstacle's height is not part
+     * of it — so the outfield slabs can be any height at all without changing
+     * what the section asks of the player. Left at canyon height they were
+     * a 34-unit hoarding standing between the camera (eye at 11) and every
+     * piece of scenery, which all lives beyond x = 94. Tapering to roughly
+     * 8 puts the far end of the wall under the eye line: the canyon still
+     * reads as walls where the player is flying, and the ridges, arches and
+     * spires either side stay visible over the top of the rest.
+     */
+    const innerX = LANE_HALF_WIDTH + slabRadius;
+    const outfield = Math.max(1, HALF_WIDTH - innerX);
+
     for (let z = startZ; z > endZ; z -= step) {
         const laneX = laneAt(z);
         for (const side of [-1, 1]) {
             // The innermost slab clears its own footprint, so the canyon is
             // as wide to fly as it is to look at.
-            let x = laneX + side * (LANE_HALF_WIDTH + slabRadius);
+            let x = laneX + side * innerX;
             for (; Math.abs(x) <= HALF_WIDTH; x += side * wallStep) {
+                const fromLane = Math.abs(x - laneX) - innerX;
+                const away = THREE.MathUtils.clamp(fromLane / outfield, 0, 1);
+                // Cubic, so the drop happens across the outfield rather than
+                // immediately outside the lane, where the wall still has to
+                // look like a wall.
+                const fall = 1 - away * away * away;
                 out.push(
                     block(
                         x,
                         z + randomInRange2(-6, 6),
                         WALL_WIDTH,
-                        randomInRange2(1.4, 2.6),
+                        randomInRange2(0.5, 0.62) +
+                            randomInRange2(0.9, 2.0) * fall,
                         randomInRange2(0.8, 1.4),
                     ),
                 );
