@@ -92,6 +92,47 @@ const hash2 = (a: number, b: number) => {
 };
 
 /**
+ * What kind of route this run is, as opposed to which blocks it got.
+ *
+ * Reseeding the streams gives every run its own arrangement, and an
+ * arrangement is not what a player notices: two draws from the same
+ * distribution look alike from inside the cockpit, because the thing the eye
+ * reports is the distribution. Same swing of density, same mix of slabs and
+ * spires, same corridor, different blocks — which is a fair description of a
+ * shuffled deck, and reads as the same deck.
+ *
+ * So a handful of the constants that were the route's personality become this
+ * run's personality. Each is one roll off the run seed, held for the whole
+ * route so it reads as a property of the place rather than as more noise:
+ *
+ *  - the periods:  how long a stretch of one character lasts, ±40%, so one run
+ *                  changes its mind every few hundred units and another
+ *                  commits to a mood for most of a sector
+ *  - the mix:      whether this route is built of slabs you look over or
+ *                  spires you look past
+ *  - the corridor: where between the two lane widths this run generally sits
+ *  - the railing:  how much of the route is walled along the lane rather than
+ *                  scattered around it
+ *  - the crossing: how far the lane commits to one direction before turning
+ *
+ * All of them move inside the ranges the tuned constants already allowed, and
+ * none of them touches what the route may ask of the craft: the lane's step is
+ * still capped by reach, the corridor is still capped by the sweep, the block
+ * rate is untouched. The sweep now draws a fresh route per trial, so these
+ * roll under it too.
+ */
+const runRoll = (k: number) => hash2(k, 0x5eed);
+
+/** Symmetric 0..1 roll about the middle, scaled to `spread`. */
+const runBias = (k: number, spread: number) => (runRoll(k) - 0.5) * 2 * spread;
+
+const periodScale = () => 0.6 + 0.85 * runRoll(1);
+const mixBias = () => runBias(2, 0.22);
+const corridorBias = () => runBias(3, 0.3);
+const railBias = () => runBias(4, 0.12);
+const crossingScale = () => 0.75 + 0.75 * runRoll(5);
+
+/**
  * Smooth 0..1 value noise along the track.
  *
  * Smooth rather than per-slice random on purpose: a field whose density is
@@ -244,7 +285,11 @@ const laneHalfAt = (z: number) => {
     const wanted = THREE.MathUtils.lerp(
         LANE_HALF.min,
         LANE_HALF.max,
-        layered(z, 430, 41),
+        THREE.MathUtils.clamp(
+            layered(z, 430 * periodScale(), 41) + corridorBias(),
+            0,
+            1,
+        ),
     );
     return THREE.MathUtils.clamp(
         Math.min(wanted, cap),
@@ -287,7 +332,8 @@ const extendLaneTo = (index: number) => {
         // stride. Every run therefore commits to at least one full corridor
         // width, and often two.
         const crossing =
-            ((1.2 + 0.9 * hash2(i, 13)) * LANE_HALF.max * 2) / (0.8 * maxStep);
+            (crossingScale() * (1.2 + 0.9 * hash2(i, 13)) * LANE_HALF.max * 2) /
+            (0.8 * maxStep);
         if (laneHold <= 0) {
             laneHold = Math.ceil((0.75 + 0.5 * hash2(i, 7)) * crossing);
             laneDir = hash2(i, 8) < 0.5 ? -1 : 1;
@@ -371,7 +417,12 @@ const blockShape = (tall: number): Shape => {
  * no difficulty in them. Difficulty in a low stretch is bought with count;
  * in a tall stretch it is bought with placement, and the count comes down.
  */
-const lownessAt = (z: number) => 0.15 + 0.75 * layered(z, 880, 17);
+const lownessAt = (z: number) =>
+    THREE.MathUtils.clamp(
+        0.15 + 0.75 * layered(z, 880 * periodScale(), 17) + mixBias(),
+        0.05,
+        0.95,
+    );
 
 const tallnessRoll = (lowness: number) =>
     Math.pow(Math.random(), 0.55 + 2.6 * lowness);
@@ -724,7 +775,7 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
         const laneX = laneAt(z);
         lane.push({ z, x: laneX });
         const lowness = lownessAt(z);
-        const pressure = layered(z, 620, 3);
+        const pressure = layered(z, 620 * periodScale(), 3);
 
         // Low stretches carry more blocks than tall ones: see lownessAt.
         const rate =
@@ -744,7 +795,10 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
         // Railed in stretches, and always where the lane has stopped moving:
         // that is the one place a corridor left unmarked becomes a place to
         // park, and it is also the cheapest difficulty on the route.
-        const rail = layered(z, 340, 29) + 0.4 * (1 - laneSweepOver(z, 400));
+        const rail =
+            layered(z, 340 * periodScale(), 29) +
+            0.4 * (1 - laneSweepOver(z, 400)) +
+            railBias();
         if (rail > 0.42 && Math.random() < shareOf(SHOULDER, budget)) {
             shoulders(tally, z, laneX, lowness, rail, out);
         }
