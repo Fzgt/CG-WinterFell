@@ -184,7 +184,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
 
         // DEV ONLY: running, but going nowhere?
         const zNow = Math.round(newZ);
-        if (zNow === beat.current.lastZ) {
+        // Resting on the finish line is the ending, not a fault.
+        if (zNow <= FINISH_Z + 1) {
+            beat.current.still = 0;
+        } else if (zNow === beat.current.lastZ) {
             beat.current.still += 1;
             if (beat.current.still === 60) {
                 console.error(

@@ -104,7 +104,14 @@ const StallWatch = () => {
             const now = heartbeat.current;
             // Only once a run is properly under way: the loop idles while
             // the menu is up, which was reported as a stop at 21 frames.
-            if (now === lastSeen && now > 300 && !reported) {
+            // A hidden tab stops receiving frames by design; that is not a
+            // stopped loop, and reporting it buried the real signal.
+            if (
+                now === lastSeen &&
+                now > 300 &&
+                !reported &&
+                document.visibilityState === 'visible'
+            ) {
                 reported = true;
                 const state = useStore.getState();
                 console.error(
@@ -130,7 +137,6 @@ const StallWatch = () => {
     const seen = useRef({ level: -1, tile: -1, section: -1 });
     const worst = useRef(0);
     const frameWindow = useRef({ frames: 0, ms: 0 });
-    const blind = useRef(0);
 
     useFrame(() => {
         const now = performance.now();
@@ -163,26 +169,6 @@ const StallWatch = () => {
 
         frameWindow.current.frames += 1;
         frameWindow.current.ms += ms;
-
-        // Frames can keep running while nothing reaches the screen: post
-        // processing owns rendering here, so if it stops presenting the loop
-        // carries on and the picture does not. Watch the draw calls rather
-        // than the frame rate.
-        {
-            const info = (
-                gl as unknown as { info?: { render?: { drawCalls?: number } } }
-            ).info;
-            const drawn = info?.render?.drawCalls ?? 1;
-            blind.current = drawn > 0 ? 0 : blind.current + 1;
-            if (blind.current === 90) {
-                const state = useStore.getState();
-                console.error(
-                    `[render] loop running but nothing drawn for 90 frames` +
-                        ` at z=${Math.round(-state.playerPosition[2])}` +
-                        ` sector=${state.level + 1}`,
-                );
-            }
-        }
 
         const stats = () => {
             const info = (gl as unknown as { info?: Record<string, never> }).info;

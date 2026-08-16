@@ -27,10 +27,15 @@ const FinaleBanner = () => {
     const arrived = useStore(
         state => Math.abs(state.playerPosition[2]) > 35350,
     );
+    const restart = useStore(state => state.restart);
     if (!arrived) return null;
     return (
         <div className="finale-banner">
             <h2>WELCOME TO UTS</h2>
+            <p>Route complete — all 20 sectors</p>
+            <button className="finale-again" onClick={restart}>
+                Run Again
+            </button>
         </div>
     );
 };

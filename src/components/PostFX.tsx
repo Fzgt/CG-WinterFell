@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PostProcessing } from 'three/webgpu';
 import { pass } from 'three/tsl';
@@ -35,9 +35,6 @@ const PostFX = ({
     const scene = useThree(state => state.scene);
     const camera = useThree(state => state.camera);
 
-    // Bumping this rebuilds the pipeline. See the watchdog below.
-    const [generation, setGeneration] = useState(0);
-
     const post = useMemo(() => {
         const scenePass = pass(scene, camera);
         const composed = scenePass.add(
@@ -47,8 +44,7 @@ const PostFX = ({
         const postProcessing = new PostProcessing(gl as never);
         postProcessing.outputNode = composed;
         return postProcessing;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gl, scene, camera, strength, radius, threshold, generation]);
+    }, [gl, scene, camera, strength, radius, threshold]);
 
     useEffect(
         () => () => {
@@ -69,11 +65,11 @@ const PostFX = ({
      * showing, and it is invisible: no error, no context loss, a steady
      * frame rate.
      *
-     * So: catch throws and fall back to plain rendering, and if the renderer
-     * reports no draw calls for a second while frames are still running,
-     * rebuild the pipeline rather than sit on a dead one.
+     * So: catch throws and fall back to plain rendering. Detecting a silent
+     * stall was tried through the renderer's draw-call counter and abandoned
+     * — this renderer reports zero draw calls on every frame of a healthy
+     * run, so the check only ever fired a false alarm.
      */
-    const blind = useRef(0);
     const failed = useRef(false);
 
     useFrame(() => {
@@ -89,16 +85,6 @@ const PostFX = ({
             return;
         }
 
-        const info = (gl as unknown as { info?: { render?: { drawCalls?: number } } })
-            .info;
-        const drawn = info?.render?.drawCalls ?? 1;
-        blind.current = drawn > 0 ? 0 : blind.current + 1;
-        if (blind.current === 60) {
-            console.error(
-                '[postfx] 60 frames with nothing drawn — rebuilding the pipeline',
-            );
-            setGeneration(g => g + 1);
-        }
     }, 1);
 
     return null;
