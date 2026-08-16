@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -170,10 +170,14 @@ const Ground = () => {
     const ground1Ref = useRef<THREE.Group>(null);
     const ground2Ref = useRef<THREE.Group>(null);
 
-    const color = useMemo(
-        () => new THREE.Color(paletteFor(level).neon),
-        [level],
-    );
+    // One Color instance for the life of the ground, recoloured in place.
+    // Handing the material a *new* Color each level replaces the object on
+    // the material rather than changing a value, and on the node-material
+    // path that can invalidate what the renderer has already built for it.
+    const color = useRef(new THREE.Color(paletteFor(level).neon)).current;
+    useEffect(() => {
+        color.set(paletteFor(level).neon);
+    }, [color, level]);
 
     useFrame(() => {
         const [, , playerZ] = playerPosition;

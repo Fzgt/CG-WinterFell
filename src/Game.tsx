@@ -1,4 +1,5 @@
-import { Canvas } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/cannon';
 import Skybox from './components/Skybox';
 import Ground from './components/Ground';
@@ -8,7 +9,7 @@ import LevelDirector from './components/LevelDirector';
 import Score from './components/Score';
 import Pause from './utils/Pause';
 import { useWebGPUSupport } from './hooks/useWebGPURenderer';
-import { ACESFilmicToneMapping } from 'three';
+import { ACESFilmicToneMapping, Fog } from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { useStore } from './store/store';
 import { benchFlags } from './utils/bench';
@@ -32,6 +33,38 @@ const FinaleBanner = () => {
     );
 };
 
+
+/**
+ * Distance fog in the sky's own colour. Sections used to pop into view at
+ * the far plane with nothing to soften them; now the trail fades out ahead,
+ * which both hides the seam and gives the night some depth.
+ *
+ * The fog object is created once and only its colour changes. Declaring it
+ * as <fog args={[palette.fog, ...]} /> rebuilt the object whenever the level
+ * recoloured the world — and fog is part of a material's program key, so
+ * swapping it invalidates every material in the scene at once and the
+ * renderer recompiles all of them inside a single frame. That was the freeze
+ * that landed exactly on a sector change, with the last drawn frame stuck on
+ * the previous palette while the HUD had already moved on.
+ */
+const LevelFog = ({ color }: { color: string }) => {
+    const scene = useThree(state => state.scene);
+    const fog = useRef<Fog | null>(null);
+
+    useEffect(() => {
+        if (!fog.current) fog.current = new Fog(color, 300, 1000);
+        scene.fog = fog.current;
+        return () => {
+            if (scene.fog === fog.current) scene.fog = null;
+        };
+    }, [scene, color]);
+
+    useEffect(() => {
+        fog.current?.color.set(color);
+    }, [color]);
+
+    return null;
+};
 
 interface GameProps {
     onStart: boolean;
@@ -71,11 +104,7 @@ const Game = ({ onStart }: GameProps) => {
                 {benchFlags.perf && <PerfProbe />}
                 <PostFX />
                 <Warmup />
-                {/* Distance fog in the sky's own colour. Sections used to pop
-                    into view at the far plane with nothing to soften them;
-                    now the trail fades out ahead, which both hides the seam
-                    and gives the night some depth. */}
-                <fog attach="fog" args={[palette.fog, 300, 1000]} />
+                <LevelFog color={palette.fog} />
                 <ambientLight intensity={0.55} color="#93a7ff" />
                 <directionalLight
                     castShadow
