@@ -20,8 +20,15 @@ import { SECTION_LENGTH } from '../config/obstacles';
  * dev tools before pushing.
  */
 
-/** A frame this long is a stall, not a slow frame. */
-const STALL_MS = 400;
+/**
+ * A frame this long is worth naming. The first threshold was 400ms and it
+ * never fired: the run does not freeze, it collapses to five or ten frames a
+ * second, which reads as frozen because the craft then advances a sliver per
+ * frame.
+ */
+const STALL_MS = 120;
+/** Frames between heartbeat lines, so the trend is visible, not just spikes. */
+const HEARTBEAT = 120;
 
 interface Event {
     what: string;
@@ -36,6 +43,7 @@ const StallWatch = () => {
     const events = useRef<Event[]>([]);
     const seen = useRef({ level: -1, tile: -1, section: -1 });
     const worst = useRef(0);
+    const window = useRef({ frames: 0, ms: 0 });
 
     useFrame(() => {
         const now = performance.now();
@@ -65,30 +73,50 @@ const StallWatch = () => {
         }
         if (events.current.length > 8) events.current.shift();
 
+        window.current.frames += 1;
+        window.current.ms += ms;
+
+        const stats = () => {
+            const info = (gl as unknown as { info?: Record<string, never> }).info;
+            const memory = (info?.memory ?? {}) as {
+                geometries?: number;
+                textures?: number;
+            };
+            const render = (info?.render ?? {}) as {
+                drawCalls?: number;
+                calls?: number;
+                triangles?: number;
+            };
+            const heap = (
+                performance as unknown as { memory?: { usedJSHeapSize: number } }
+            ).memory;
+            return (
+                `geo=${memory.geometries ?? '?'} tex=${memory.textures ?? '?'}` +
+                ` calls=${render.drawCalls ?? render.calls ?? '?'}` +
+                ` tris=${render.triangles ?? '?'} sections=${registrySize()}` +
+                ` heap=${heap ? Math.round(heap.usedJSHeapSize / 1048576) + 'MB' : '?'}`
+            );
+        };
+
+        // Heartbeat: the trend matters more than any single spike — does the
+        // frame rate decay across the whole run, or fall off a cliff when a
+        // particular scene arrives?
+        if (window.current.frames >= HEARTBEAT) {
+            const avg = window.current.ms / window.current.frames;
+            console.info(
+                `[fps] ${(1000 / avg).toFixed(1)}fps (${avg.toFixed(0)}ms avg)` +
+                    ` z=${z} sector=${state.level + 1} ${stats()}`,
+            );
+            window.current = { frames: 0, ms: 0 };
+        }
+
         if (ms < STALL_MS || frame.current < 30) return;
 
-        const info = (gl as unknown as { info?: Record<string, never> }).info;
-        const memory = (info?.memory ?? {}) as {
-            geometries?: number;
-            textures?: number;
-        };
-        const render = (info?.render ?? {}) as {
-            drawCalls?: number;
-            calls?: number;
-            triangles?: number;
-        };
-        const heap = (
-            performance as unknown as { memory?: { usedJSHeapSize: number } }
-        ).memory;
         worst.current = Math.max(worst.current, ms);
 
         console.warn(
             `[stall] ${Math.round(ms)}ms at z=${z} sector=${state.level + 1}` +
-                ` | geo=${memory.geometries ?? '?'} tex=${memory.textures ?? '?'}` +
-                ` calls=${render.drawCalls ?? render.calls ?? '?'}` +
-                ` tris=${render.triangles ?? '?'} sections=${registrySize()}` +
-                ` heap=${heap ? Math.round(heap.usedJSHeapSize / 1048576) + 'MB' : '?'}` +
-                ` worst=${Math.round(worst.current)}ms`,
+                ` | ${stats()} worst=${Math.round(worst.current)}ms`,
             events.current.map(e => `${e.what}@${e.z}`).join(' '),
         );
     });
