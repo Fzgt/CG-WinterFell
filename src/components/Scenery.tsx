@@ -2015,9 +2015,34 @@ const SceneryTile = ({ index }: { index: number }) => {
     // to go when the tile does — otherwise a long run leaves every kilometre
     // it ever drew resident on the GPU. Materials and actor geometry are
     // shared and stay.
+    /**
+     * Releasing a tile must not be able to take the render loop with it.
+     *
+     * three's WebGPU backend throws out of `destroyAttribute` here — it looks
+     * the attribute up in the backend's own map, finds no record, and calls
+     * `.destroy()` on undefined. The throw travels up through
+     * `BufferGeometry.dispose` into React's unmount commit, and a throw there
+     * ends the frame loop for good: the last drawn frame stays on screen while
+     * the HUD, the sector banner and the stall readout carry on ticking from
+     * the store. That is the freeze, and it lands on a tile boundary — every
+     * 1000 units — which is why it can strike anywhere from sector 1 to the
+     * campus rather than at one distance.
+     *
+     * Each geometry is released once and on its own, so one bad attribute
+     * costs a single tile's memory rather than the run.
+     */
     useEffect(
         () => () => {
-            for (const piece of build.pieces) piece.geometry.dispose();
+            const released = new Set<THREE.BufferGeometry>();
+            for (const piece of build.pieces) {
+                if (released.has(piece.geometry)) continue;
+                released.add(piece.geometry);
+                try {
+                    piece.geometry.dispose();
+                } catch (error) {
+                    console.error('scenery: releasing a tile threw', error);
+                }
+            }
         },
         [build],
     );
