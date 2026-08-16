@@ -1937,12 +1937,15 @@ const CrestEmblem = () => {
     const zB = -35800;
     const y = trackHeight(zB);
     return (
-        <mesh position={[trackCurve(zB) - 42, y + 132, zB + 35.5]}>
+        <mesh position={[trackCurve(zB) - 26, y + 132, zB + 35.5]}>
             <planeGeometry args={[62, 62]} />
+            {/* Over-unit color so the additive quad lands in bloom range —
+                at plain white it read grey next to the solid glyph quads. */}
             <meshBasicMaterial
                 map={tex}
+                color={[1.6, 1.7, 2.0]}
                 transparent
-                opacity={0.85}
+                opacity={1}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 toneMapped={false}
