@@ -84,44 +84,9 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         };
     }, [togglePause]);
 
-    // DEV ONLY: say why the craft stopped. The heartbeat showed the run
-    // freezing with the renderer still at a steady 60fps and z pinned — so
-    // the craft stops before the picture does, and it stops here, in one of
-    // these guards. Strip with the rest of the dev tools.
-    const halted = useRef('');
-    const beat = useRef({ frames: 0, lastZ: 0, still: 0 });
-    const report = (why: string) => {
-        if (halted.current === why) return;
-        halted.current = why;
-        if (why) console.error(`[move] halted: ${why}`);
-        else console.info('[move] running again');
-    };
-
     useFrame((_, rawDelta) => {
-        if (gameOver || gamePaused) {
-            report(gameOver ? 'gameOver' : 'paused');
-            return;
-        }
-        if (!physicsRef.current || !playerGroupRef.current) {
-            report(
-                !physicsRef.current ? 'physics ref lost' : 'craft ref lost',
-            );
-            return;
-        }
-        report('');
-
-        // DEV ONLY: prove whether this callback is still being called at all.
-        // The run froze with the renderer at a steady 60fps, z pinned, and
-        // not one guard reporting — which would mean the craft's own frame
-        // callback had stopped running while everything else kept going.
-        beat.current.frames += 1;
-        if (beat.current.frames % 120 === 0) {
-            console.warn(
-                `[move] alive frame=${beat.current.frames}` +
-                    ` z=${Math.round(-zPosition.current.getValue())}` +
-                    ` speed=${playerSpeed}`,
-            );
-        }
+        if (gameOver || gamePaused) return;
+        if (!physicsRef.current || !playerGroupRef.current) return;
 
         // A dropped frame must not teleport the player. Movement is
         // delta-scaled, so one long frame — a background tab, a GC pause, a
@@ -133,11 +98,6 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
 
         const lateralStep = LATERAL_SPEED * delta;
         const forwardSpeed = playerSpeed * delta * 60;
-        // DEV ONLY: a speed of zero or NaN would freeze the run just as
-        // effectively as an early return, and silently.
-        if (!(forwardSpeed > 0)) {
-            report(`forwardSpeed=${forwardSpeed} (speed=${playerSpeed}, delta=${delta})`);
-        }
 
         // The craft banks into the track's own bends on top of the lean
         // from steering input; positive slope curves the road toward -x,
@@ -181,27 +141,6 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         playerGroupRef.current.position.set(newX + bendX, 1.5 + bendY, newZ);
 
         setPlayerPosition([newX, 2, newZ]);
-
-        // DEV ONLY: running, but going nowhere?
-        const zNow = Math.round(newZ);
-        // Resting on the finish line is the ending, not a fault.
-        if (zNow <= FINISH_Z + 1) {
-            beat.current.still = 0;
-        } else if (zNow === beat.current.lastZ) {
-            beat.current.still += 1;
-            if (beat.current.still === 60) {
-                console.error(
-                    `[move] running but z is stuck at ${-zNow}:` +
-                        ` speed=${playerSpeed} delta=${delta.toFixed(4)}` +
-                        ` forward=${forwardSpeed.toFixed(2)}` +
-                        ` value=${zPosition.current.getValue().toFixed(1)}`,
-                );
-            }
-        } else {
-            beat.current.still = 0;
-            beat.current.lastZ = zNow;
-        }
-        // console.log('Player Position:', Math.abs(Math.round(newZ)));
 
         if (cameraRef.current) {
             // High and well back, aimed down the trail rather than level with
