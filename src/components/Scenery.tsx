@@ -1934,7 +1934,16 @@ const buildTile = (index: number): TileBuild => {
     const z0 = -index * planeSize;
     const z1 = -(index + 1) * planeSize;
     const spec = sceneAt((z0 + z1) / 2);
-    return BUILDERS[spec.kind](z0, z1, spec);
+    try {
+        return BUILDERS[spec.kind](z0, z1, spec);
+    } catch (error) {
+        // One bad scene must not take the whole render loop with it: a throw
+        // inside a builder used to surface as a frozen canvas — the HUD kept
+        // updating from the store while the last drawn frame stayed on
+        // screen, which reads exactly like "the craft is stuck".
+        console.error(`scenery: ${spec.name} failed to build`, error);
+        return emptyBuild();
+    }
 };
 
 /* ------------------------------------------------------------ component -- */
