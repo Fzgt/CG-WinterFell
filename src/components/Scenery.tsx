@@ -1628,7 +1628,6 @@ const finale: Builder = (z0, z1, spec) => {
         const green: THREE.BufferGeometry[] = [];
         const pixelsA: THREE.BufferGeometry[] = [];
         const pixelsB: THREE.BufferGeometry[] = [];
-        const amber: THREE.BufferGeometry[] = [];
 
         // ── Podium: a low glass hall with wavy luminous floor plates, the
         // photo's white ribbon floors. Kept low so the tower owns the frame.
@@ -1671,12 +1670,12 @@ const finale: Builder = (z0, z1, spec) => {
             // The shield, left of the letters: the crest proper — a dark
             // pointed shield carrying white marks: diamond, tee, the
             // interlocking weave, chevrons below.
-            const sx0 = -36;
-            glass.push(at(box(32, 40, 2), sx0, wy + 2, zB + 33));
-            const tip = new THREE.ConeGeometry(16.5, 12, 4);
+            const sx0 = -42;
+            glass.push(at(box(40, 50, 2), sx0, wy + 2, zB + 33));
+            const tip = new THREE.ConeGeometry(20.5, 14, 4);
             tip.rotateX(Math.PI);
             tip.rotateY(Math.PI / 4);
-            glass.push(at(tip, sx0, wy - 22, zB + 33));
+            glass.push(at(tip, sx0, wy - 27, zB + 33));
             const mark = (
                 mx: number,
                 my: number,
@@ -1688,14 +1687,14 @@ const finale: Builder = (z0, z1, spec) => {
                 if (rot) m.rotateZ(rot);
                 signs.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.4));
             };
-            mark(0, 15, 5.6, 5.6, Math.PI / 4); // diamond
-            mark(0, 8, 20, 3.8); // tee bar
-            mark(0, 3.6, 3.8, 5); // tee stem
-            mark(-3.4, -4, 17, 3.8, Math.PI / 4); // weave /
-            mark(3.4, -4, 17, 3.8, -Math.PI / 4); // weave \
-            mark(-6, -13, 9, 3, Math.PI / 4); // chevrons
-            mark(0, -13, 9, 3, -Math.PI / 4);
-            mark(6, -13, 9, 3, Math.PI / 4);
+            mark(0, 19, 7, 7, Math.PI / 4); // diamond
+            mark(0, 10, 25, 4.8); // tee bar
+            mark(0, 4.5, 4.8, 6.5); // tee stem
+            mark(-4.3, -5, 21, 4.8, Math.PI / 4); // weave /
+            mark(4.3, -5, 21, 4.8, -Math.PI / 4); // weave \
+            mark(-7.5, -16, 11, 3.8, Math.PI / 4); // chevrons
+            mark(0, -16, 11, 3.8, -Math.PI / 4);
+            mark(7.5, -16, 11, 3.8, Math.PI / 4);
             const u = 4.2;
             glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
             glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
@@ -1713,8 +1712,7 @@ const finale: Builder = (z0, z1, spec) => {
             bands.push(at(box(w * 0.97, 1.6, 89), 0, ty + 29, zB - 30));
             ty += 30;
         }
-        // The atrium light: one clean warm column set into the face.
-        amber.push(at(box(20, 116, 2.4), 26, y + 96 + 118, zB + 14.6));
+
 
         // ── The brutalist tower to the left, banded, its own sign lit.
         glass.push(at(box(92, 250, 82), -295, y + 125, zB - 70));
@@ -1732,7 +1730,7 @@ const finale: Builder = (z0, z1, spec) => {
         // ── Building 11's ghost on the right: the angular block with
         // three green light scars cut across its face and its own lit sign.
         glass.push(at(box(105, 170, 88), 405, y + 85, zB - 85));
-        for (const [sx, tilt] of [[-26, 0.34], [2, 0.3], [30, 0.26]] as const) {
+        for (const [sx, tilt] of [[-26, -0.34], [2, -0.3], [30, -0.26]] as const) {
             const slash = box(4.5, 132, 2.4);
             slash.rotateZ(tilt);
             green.push(at(slash, 405 + sx, y + 88, zB - 40));
@@ -1745,24 +1743,34 @@ const finale: Builder = (z0, z1, spec) => {
         {
             const u = 3.8;
             const wallX = 405 - 53.5 + trackCurve(zB);
+            // Rotated -90deg so the letter faces face the track; reading
+            // direction runs far-to-near, which is left-to-right on screen.
             const letter = (l: 'U' | 'T' | 'S', lz: number) => {
                 const parts: THREE.BufferGeometry[] = [];
                 glyph(parts, l, 0, 0, 0, u);
                 for (const g of parts) {
-                    g.rotateY(Math.PI / 2);
+                    g.rotateY(-Math.PI / 2);
                     g.translate(wallX, y + 138, zB - 48 + lz);
                     signs.push(g);
                 }
             };
-            letter('U', 16);
+            letter('U', -16);
             letter('T', 0);
-            letter('S', -16);
+            letter('S', 16);
         }
 
-        emit(build, green, basic('#4dff88', { transparent: true, opacity: 0.9 }));
+        // Over-unit green so the scars cross the bloom threshold and burn.
+        emit(
+            build,
+            green,
+            new THREE.MeshBasicMaterial({
+                color: new THREE.Color('#4dff88').multiplyScalar(2.2),
+                toneMapped: false,
+            }),
+        );
         emit(build, pixelsA, basic('#39e673', { transparent: true, opacity: 0.85 }));
         emit(build, pixelsB, basic('#d5ffe6', { transparent: true, opacity: 0.7 }));
-        emit(build, amber, basic('#ffb066', { transparent: true, opacity: 0.85 }));
+
     }
 
     emit(build, lawn, dark('#0b2018'));
