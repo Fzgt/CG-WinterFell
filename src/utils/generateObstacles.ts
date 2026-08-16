@@ -160,6 +160,14 @@ const layered = (z: number, period: number, seed: number) =>
 
 const HALF_WIDTH = FIELD_WIDTH / 2;
 
+/**
+ * Ground a side of the corridor needs before anything can stand on it — two
+ * footprints, so a block placed there is a thing to go round rather than a
+ * plug in a gap. Used both to decide where the lane may go and whether a side
+ * is worth owing blocks to.
+ */
+const SIDE_ROOM = 26;
+
 /* ------------------------------------------------------------- the route -- */
 
 /**
@@ -202,7 +210,26 @@ const reachAt = (z: number) => LATERAL_SPEED / paceAt(z);
  */
 const FOLLOW = 0.55;
 
-const LANE_LIMIT = HALF_WIDTH - LANE_HALF.max;
+/**
+ * How far out the lane may wander.
+ *
+ * It used to be as far as the corridor would fit — the lane could sit at 42
+ * with the field's edge at 60, leaving eighteen units on that side, of which a
+ * block's own footprint eats most. There is nowhere to stand there, so every
+ * block in that stretch is on the other hand of the player, and no placement
+ * rule can do anything about it: the lopsidedness is the lane's position, not
+ * the scatter's luck.
+ *
+ * Held this far in, both sides of the corridor are ground a block can stand on
+ * wherever the lane happens to be. It is not free — the lane crosses less of
+ * the field, so the band of x it sweeps over is narrower and the widest line
+ * a section leaves untouched grows a little. That is the trade: a route that
+ * is always answerable on both hands, against one that occasionally has
+ * nothing to say on one of them.
+ */
+const LANE_INSET = 18;
+
+const LANE_LIMIT = HALF_WIDTH - LANE_HALF.max - LANE_INSET;
 
 /**
  * How much ground the lane covers over a window, against the most it could
@@ -463,7 +490,7 @@ const binAt = (x: number) =>
     );
 
 /**
- * How much of the section each part of the track has seen so far.
+ * How long it has been since anything stood in each part of the track.
  *
  * Uniform random placement is what makes a field read as scattered, and also
  * what leaves an x nobody ever stood in: over forty slices some strip comes up
@@ -473,17 +500,34 @@ const binAt = (x: number) =>
  *
  * Closing those by adding blocks is how a track ends up unplayable. Keep the
  * count and choose better instead: draw a few legal spots and take the one in
- * the emptiest strip. Three candidates, not the best of everything — picking
- * the global optimum every time spaces the field into a lattice, which is the
- * wallpaper problem wearing a different hat.
+ * the strip that has gone longest without one.
+ *
+ * How long, rather than how many, and the difference is the whole complaint. A
+ * running count is a fact about the section: it is flat at the start, it takes
+ * a dozen slices to mean anything, and by the end it is answering with history
+ * a player passed twenty seconds ago. What they are looking at is the last two
+ * hundred units, where the route only lays down four or five blocks — and four
+ * or five blocks placed by a rule with no short-term memory land on one side
+ * about as often as a coin lands heads twice. That is the screenshot: a crowd
+ * to the right, one block to the left, everything strictly legal.
+ *
+ * Recency has the memory a count does not. Two blocks to the right and the
+ * right is fresh, so the third is drawn to the left — not by a rule that
+ * alternates, which would build a zigzag, but because the emptiest ground is
+ * genuinely over there and the draw is looking for it.
  */
 const coverage = () => {
-    const bins = new Int32Array(BINS);
+    // Positive z is behind the start line and nothing is generated there, so
+    // it stands in for "nothing has ever been here" and reads as the largest
+    // possible gap without a special case.
+    const NEVER = 1e9;
+    const lastZ = new Float64Array(BINS).fill(NEVER);
     return {
-        seen: (x: number) => bins[binAt(x)],
-        mark: (x: number, radius: number) => {
+        /** Track units since a block last covered this strip. */
+        idle: (x: number, z: number) => Math.abs(z - lastZ[binAt(x)]),
+        mark: (x: number, radius: number, z: number) => {
             const to = binAt(x + radius);
-            for (let i = binAt(x - radius); i <= to; i++) bins[i]++;
+            for (let i = binAt(x - radius); i <= to; i++) lastZ[i] = z;
         },
     };
 };
@@ -528,20 +572,70 @@ const elbowAt = (out: Obstacle[], x: number, z: number, radius: number) => {
     return nearest;
 };
 
+/* --------------------------------------------------------------- balance -- */
+
 /**
- * A spot for `shape` clear of the lane, with room around it, and biased toward
- * the emptiest x.
+ * Which side of the corridor the route owes a block to.
+ *
+ * Every rule above places one block well and none of them looks at what the
+ * last few did, so which side of the player the field ends up on is a coin
+ * toss per block — and with four or five blocks inside the fog, a fair coin
+ * puts about two thirds of them on one side of the craft. That is not a flaw
+ * in the dice; it is what small samples do, and it is exactly the screenshot:
+ * a crowd to the right, one block to the left, every rule satisfied. Choosing
+ * the emptiest strip does not fix it either, because the strips it compares
+ * are drawn by the same coin.
+ *
+ * So the count is kept, over the last few hundred units, and once one side is
+ * two blocks up the next draw is confined to the other. Two, not one: forcing
+ * a strict alternation would build a zigzag, which is a pattern a player
+ * learns rather than reads. This only intervenes on the runs that a coin
+ * produces and an eye notices.
+ *
+ * It cannot make a layout unfair. It narrows where a block may be drawn, never
+ * where it may stand — clearance, elbow room and the lane are all still
+ * applied to whatever it picks, and if the owed side has nothing legal on it
+ * the block goes wherever it can.
+ */
+const BALANCE_WINDOW = 320;
+const BALANCE_DEBT = 2;
+
+const scales = () => {
+    const recent: { z: number; side: number }[] = [];
+    return {
+        /** -1 for the left of the lane, 1 for the right, 0 for neither. */
+        owed: (z: number) => {
+            while (
+                recent.length &&
+                Math.abs(recent[0].z - z) > BALANCE_WINDOW
+            ) {
+                recent.shift();
+            }
+            let tilt = 0;
+            for (const r of recent) tilt += r.side;
+            if (tilt >= BALANCE_DEBT) return -1;
+            if (tilt <= -BALANCE_DEBT) return 1;
+            return 0;
+        },
+        note: (z: number, side: number) => recent.push({ z, side }),
+    };
+};
+
+/**
+ * A spot for `shape` clear of the lane, with room around it, on the side the
+ * route owes, and biased toward the emptiest x.
  *
  * Three questions in that order of priority, because they answer to different
  * scales. Clearance is the contract — nothing may narrow the corridor. Elbow
  * room is what the stretch looks like: it decides whether this block is its own
- * obstacle or an extension of its neighbour. The tally is the section's
- * bookkeeping, and it only gets to choose among spots that already pass the
- * other two, which is why it can flatten the field's distribution without
- * flattening its shapes.
+ * obstacle or an extension of its neighbour. The tally is where the stretch
+ * puts its weight, and it only gets to choose among spots that already pass the
+ * other two, which is why it can even out the field without flattening its
+ * shapes.
  */
 const spread = (
     tally: ReturnType<typeof coverage>,
+    scale: ReturnType<typeof scales>,
     shape: Shape,
     z: number,
     laneX: number,
@@ -549,7 +643,25 @@ const spread = (
 ): number | null => {
     const clear = clearFor(shape, z);
     const radius = OBSTACLE_BASE_RADIUS * shape.width;
+    // The owed side, as the half of the field a draw is allowed to land in.
+    // Held for the whole call rather than re-read per candidate, so all seven
+    // are drawn from the same question.
+    //
+    // A debt is only worth collecting where there is somewhere to put it. When
+    // the lane runs near the edge of the field, the ground on that side is a
+    // sliver a few units wide, and sending every owed block into it stacks
+    // them into the one column the strip has room for — the bunching the whole
+    // exercise is meant to remove, rebuilt by the rule against it. So a side
+    // narrower than a couple of footprints is not owed anything; the route is
+    // lopsided there because the field is, and that is the lane's business.
+    const room = (side: number) =>
+        side > 0 ? HALF_WIDTH - (laneX + clear) : laneX - clear + HALF_WIDTH;
+    const debt = scale.owed(z);
+    const owed = debt !== 0 && room(debt) >= SIDE_ROOM ? debt : 0;
+    const from = owed > 0 ? Math.min(laneX + clear, HALF_WIDTH) : -HALF_WIDTH;
+    const to = owed < 0 ? Math.max(laneX - clear, -HALF_WIDTH) : HALF_WIDTH;
     let best: number | null = null;
+    let stalest = -Infinity;
     // Kept in case nothing has room: the least bad crowding beats no block.
     let roomiest: number | null = null;
     let mostRoom = -Infinity;
@@ -558,7 +670,13 @@ const spread = (
         let x = 0;
         let legal = false;
         for (let attempt = 0; attempt < 8 && !legal; attempt++) {
-            x = randomInRange2(-HALF_WIDTH, HALF_WIDTH);
+            // The owed side first, the whole field once it has been given a
+            // fair try: a side with no legal ground on it is not a debt worth
+            // dropping a block over.
+            x =
+                attempt < 5 && from < to
+                    ? randomInRange2(from, to)
+                    : randomInRange2(-HALF_WIDTH, HALF_WIDTH);
             legal = Math.abs(x - laneX) > clear;
         }
         if (!legal) continue;
@@ -568,13 +686,18 @@ const spread = (
             mostRoom = room;
             roomiest = x;
         }
-        if (room >= ELBOW && (best === null || tally.seen(x) < tally.seen(best))) {
+        const idle = tally.idle(x, z);
+        if (room >= ELBOW && idle > stalest) {
+            stalest = idle;
             best = x;
         }
     }
 
     const chosen = best ?? roomiest;
-    if (chosen !== null) tally.mark(chosen, radius);
+    if (chosen !== null) {
+        tally.mark(chosen, radius, z);
+        scale.note(z, chosen < laneX ? -1 : 1);
+    }
     return chosen;
 };
 
@@ -634,6 +757,7 @@ const spread = (
  */
 const shoulders = (
     tally: ReturnType<typeof coverage>,
+    scale: ReturnType<typeof scales>,
     z: number,
     laneX: number,
     lowness: number,
@@ -648,13 +772,16 @@ const shoulders = (
         const shape = blockShape(tallnessRoll(lowness));
         const x = laneX + side * (clearFor(shape, z) + Math.random() * 4);
         if (Math.abs(x) > HALF_WIDTH) continue;
-        tally.mark(x, OBSTACLE_BASE_RADIUS * shape.width);
-        out.push(place(shape, x, z + randomInRange2(-SLICE_DEPTH / 2, SLICE_DEPTH / 2)));
+        const at = z + randomInRange2(-SLICE_DEPTH / 2, SLICE_DEPTH / 2);
+        tally.mark(x, OBSTACLE_BASE_RADIUS * shape.width, at);
+        scale.note(at, side);
+        out.push(place(shape, x, at));
     }
 };
 
 const flock = (
     tally: ReturnType<typeof coverage>,
+    scale: ReturnType<typeof scales>,
     z: number,
     lowness: number,
     out: Obstacle[],
@@ -670,7 +797,7 @@ const flock = (
             THREE.MathUtils.clamp(tall + randomInRange2(-0.12, 0.12), 0, 1),
         );
         const at = z + randomInRange2(-40, 40);
-        const x = spread(tally, shape, at, laneAt(at), out);
+        const x = spread(tally, scale, shape, at, laneAt(at), out);
         if (x === null) continue;
         out.push(place(shape, x, at));
     }
@@ -678,6 +805,7 @@ const flock = (
 
 const comb = (
     tally: ReturnType<typeof coverage>,
+    scale: ReturnType<typeof scales>,
     z: number,
     laneX: number,
     out: Obstacle[],
@@ -693,8 +821,10 @@ const comb = (
         const x = from + side * i * spacing;
         if (Math.abs(x) > HALF_WIDTH) break;
         if (Math.abs(x - laneX) < clearFor(shape, z)) continue;
-        tally.mark(x, OBSTACLE_BASE_RADIUS * shape.width);
-        out.push(place(shape, x, z + randomInRange2(-14, 14)));
+        const at = z + randomInRange2(-14, 14);
+        tally.mark(x, OBSTACLE_BASE_RADIUS * shape.width, at);
+        scale.note(at, side);
+        out.push(place(shape, x, at));
     }
 };
 
@@ -854,6 +984,7 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
     const ramp = rampFor(section);
     const out: Obstacle[] = [];
     const tally = coverage();
+    const scale = scales();
     const lane: { z: number; x: number }[] = [];
     /** Blocks spent above (or, negative, below) what the slices allowed. */
     let debt = 0;
@@ -894,7 +1025,7 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
             0.4 * (1 - laneSweepOver(z, 400)) +
             railBias();
         if (rail > 0.58 && Math.random() < shareOf(SHOULDER, budget)) {
-            shoulders(tally, z, laneX, lowness, rail, out);
+            shoulders(tally, scale, z, laneX, lowness, rail, out);
         }
 
         // Events, rare enough to stay events. Hashed off the slice's own z, so
@@ -902,8 +1033,8 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
         // though the blocks around it are redrawn every run.
         const event = hash2(Math.round(Math.abs(z) / SLICE_DEPTH), 23);
         const events = shareOf(EVENT, budget);
-        if (event < events * 0.625) flock(tally, z, lowness, out);
-        else if (event < events) comb(tally, z, laneX, out);
+        if (event < events * 0.625) flock(tally, scale, z, lowness, out);
+        else if (event < events) comb(tally, scale, z, laneX, out);
 
         // A flock is five blocks in a slice that could afford one and a half,
         // and paying for it out of this slice alone would leave the overspend
@@ -926,7 +1057,7 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
             // measured where it will actually stand rather than at the middle
             // of the slice it belongs to.
             const at = randomInRange2(sliceStartZ, sliceEndZ);
-            const x = spread(tally, shape, at, laneAt(at), out);
+            const x = spread(tally, scale, shape, at, laneAt(at), out);
             if (x === null) continue;
             out.push(place(shape, x, at));
         }

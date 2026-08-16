@@ -128,12 +128,62 @@ const results = await page.evaluate(
                 : { clumps: 0, width: 0 };
         };
 
+        /**
+         * How often there is something on both sides of the craft at once.
+         *
+         * The column above counts separate things in a window without caring
+         * where they stand, and a window can score four while every one of the
+         * four sits to the right of the player — which is what a screenshot of
+         * "still all on one side" actually shows. Two blocks per fifty units
+         * of track is a thin enough sample that landing them on the same side
+         * is a coin toss, and a coin toss lands the same way half the time.
+         *
+         * So this asks the question the cockpit asks: within a window, and
+         * within the ground the player could actually reach, is there work on
+         * the left and work on the right? Anything less is a field that tells
+         * you which way to go instead of asking.
+         */
+        const REACHABLE = 55;
+        const bothSides = obstacles => {
+            const WINDOW = 250;
+            const zs = obstacles.map(p => p.z);
+            const top = Math.max(...zs);
+            const bottom = Math.min(...zs);
+            let both = 0;
+            let lean = 0;
+            let windows = 0;
+            for (let z = top; z > bottom; z -= WINDOW) {
+                const here = obstacles.filter(p => p.z <= z && p.z > z - WINDOW);
+                if (!here.length) continue;
+                const laneX = mod.laneAt(z - WINDOW / 2);
+                const left = here.filter(
+                    p => p.x < laneX && laneX - p.x < REACHABLE,
+                ).length;
+                const right = here.filter(
+                    p => p.x > laneX && p.x - laneX < REACHABLE,
+                ).length;
+                if (!left && !right) continue;
+                windows++;
+                if (left && right) both++;
+                // Presence is not balance: a window with six blocks right and
+                // one left passes the test above and still reads as a wall on
+                // one side. This is the share the busier side holds — a half
+                // is even, a one is everything on one hand.
+                lean += Math.max(left, right) / (left + right);
+            }
+            return windows
+                ? { both: both / windows, lean: lean / windows }
+                : { both: 0, lean: 1 };
+        };
+
         const out = [];
         for (let section = 0; section < sections; section++) {
             let blocked = 0;
             let tightest = Infinity;
             let freeTotal = 0;
             let freeWorst = 0;
+            let sidedTotal = 0;
+            let leanTotal = 0;
             let clumpTotal = 0;
             let clumpWidth = 0;
             let routeSteps = 0;
@@ -217,6 +267,9 @@ const results = await page.evaluate(
                 freeTotal += free;
                 if (free > freeWorst) freeWorst = free;
 
+                const sided = bothSides(obstacles);
+                sidedTotal += sided.both;
+                leanTotal += sided.lean;
                 const shape = clumping(obstacles);
                 clumpTotal += shape.clumps;
                 clumpWidth += shape.width;
@@ -243,6 +296,8 @@ const results = await page.evaluate(
                 tightestGap: Math.round(tightest),
                 freeLine: Math.round(freeTotal / trials),
                 freeLineWorst: freeWorst,
+                bothSidesPct: Math.round((sidedTotal / trials) * 100),
+                leanPct: Math.round((leanTotal / trials) * 100),
                 clumps: (clumpTotal / trials).toFixed(1),
                 clumpWidth: Math.round(clumpWidth / trials),
                 routes: (routeTotal / Math.max(1, routeSteps)).toFixed(1),
@@ -258,15 +313,21 @@ await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
 console.log(
-    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) | Things in view / how wide | Ways through | Where there is a choice |',
+    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) | Things in view / how wide | Something both sides | Busier side holds | Ways through | Where there is a choice |',
 );
-console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
         `| ${r.section} | ${r.obstacles} | ${r.perSecond} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
-            `${r.freeLine} / ${r.freeLineWorst} units | ${r.clumps} × ${r.clumpWidth} units | ${r.routes} | ${r.forkPct}% |`,
+            `${r.freeLine} / ${r.freeLineWorst} units | ${r.clumps} × ${r.clumpWidth} units | ${r.bothSidesPct}% | ${r.leanPct}% | ${r.routes} | ${r.forkPct}% |`,
     );
 }
+const sides = results.filter(r => r.obstacles).map(r => r.bothSidesPct);
+console.log(
+    `\nSomething to fly round on both sides at once on ${Math.min(...sides)}–${Math.max(...sides)}% ` +
+        `of the route, and the busier side holds ${Math.min(...results.map(r => r.leanPct))}–${Math.max(...results.map(r => r.leanPct))}% of what is in view. ` +
+        `Fifty per cent is an even split; the higher it runs the more the field is telling the player which way to go.`,
+);
 const forks = results.filter(r => r.obstacles).map(r => r.forkPct);
 console.log(
     `\nSomewhere between two and ${Math.max(...results.map(r => Number(r.routes)))} ways through at once; ` +
