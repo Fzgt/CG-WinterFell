@@ -90,6 +90,8 @@ const getWindowTexture = () => (windowTexture ??= buildWindowTexture());
  */
 let crestTexture: THREE.CanvasTexture | null = null;
 let crestLoading = false;
+/** Width / height of the mark itself, set when the texture is built. */
+let crestAspect = 0.62;
 
 const buildCrestFromImage = (img: HTMLImageElement) => {
     const size = 512;
@@ -146,10 +148,43 @@ const buildCrestFromImage = (img: HTMLImageElement) => {
     }
     ga.putImageData(data, 0, 0);
 
+    // Crop to the mark's own bounding box. Untrimmed, the emblem occupied
+    // barely a third of the texture and most of the resolution went to
+    // empty space — at wall scale the weave then had too few pixels to
+    // resolve and mushed together.
+    let minX = size;
+    let minY = size;
+    let maxX = 0;
+    let maxY = 0;
+    for (let yy = 0; yy < size; yy++) {
+        for (let xx = 0; xx < size; xx++) {
+            if (px[(yy * size + xx) * 4 + 3] === 0) continue;
+            if (xx < minX) minX = xx;
+            if (xx > maxX) maxX = xx;
+            if (yy < minY) minY = yy;
+            if (yy > maxY) maxY = yy;
+        }
+    }
+    const markW = Math.max(1, maxX - minX + 1);
+    const markH = Math.max(1, maxY - minY + 1);
+    crestAspect = markW / markH;
+
+    const out = document.createElement('canvas');
+    out.width = 512;
+    out.height = Math.round(512 / crestAspect);
+    const go = out.getContext('2d')!;
+    go.imageSmoothingEnabled = true;
+    go.imageSmoothingQuality = 'high';
+    go.drawImage(
+        a,
+        minX, minY, markW, markH,
+        0, 0, out.width, out.height,
+    );
+
     // No baked halo: the letters get their glow from the bloom pass with a
     // crisp core, and the emblem must match — pre-blurred layers smeared
     // the weave into a blob at wall scale.
-    const texture = new THREE.CanvasTexture(a);
+    const texture = new THREE.CanvasTexture(out);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 8;
     return texture;
@@ -1921,13 +1956,15 @@ const CrestEmblem = () => {
     const zB = -35800;
     const y = trackHeight(zB);
     return (
-        <mesh position={[trackCurve(zB) - 26, y + 132, zB + 35.5]}>
-            <planeGeometry args={[44, 44]} />
-            {/* Over-unit color so the additive quad lands in bloom range —
-                at plain white it read grey next to the solid glyph quads. */}
+        <mesh position={[trackCurve(zB) - 24, y + 132, zB + 35.5]}>
+            {/* Sized to the mark's real proportions — a square quad made it
+                small and squat beside the letters. */}
+            <planeGeometry args={[38 * crestAspect, 38]} />
+            {/* Just above unit: enough to sit in the letters' bloom range,
+                not so hot that the weave's gaps blow shut. */}
             <meshBasicMaterial
                 map={tex}
-                color={[1.6, 1.7, 2.0]}
+                color={[1.15, 1.2, 1.35]}
                 transparent
                 opacity={1}
                 blending={THREE.AdditiveBlending}
