@@ -2008,73 +2008,42 @@ export const buildTile = (index: number): TileBuild => {
 
 /* ------------------------------------------------------------ component -- */
 
-/**
- * Releasing a tile has to wait for the frames that are still drawing it.
- *
- * `geometry.dispose()` inside the unmount cleanup destroys the GPU buffers
- * during React's commit, and the renderer is not finished with them: the next
- * command buffer still carries a draw for that tile, now missing a vertex
- * buffer. The device rejects the whole submission —
- *
- *   Vertex buffer slot 1 required by [RenderPipeline "..."] was not set.
- *   [Invalid CommandBuffer ...] is invalid due to a previous error.
- *
- * — and an invalid command buffer means the entire frame is thrown away. The
- * loop is fine, requestAnimationFrame keeps its rhythm and every counter on
- * screen carries on; nothing new reaches the glass for as long as the burst
- * lasts. That is why the freeze never showed up in frame timings: measured
- * from JS the run is a flat 120fps through it.
- *
- * So the geometries go into a queue and are released a few frames after the
- * meshes leave the scene, once no submission can still reference them. The
- * memory is still returned — a queue, not a leak — just not mid-commit.
- */
-const RELEASE_AFTER_FRAMES = 3;
-
-interface PendingRelease {
-    geometry: THREE.BufferGeometry;
-    readyAtFrame: number;
-}
-
-const pendingReleases: PendingRelease[] = [];
-let releaseFrame = 0;
-
-const queueRelease = (geometries: Iterable<THREE.BufferGeometry>) => {
-    for (const geometry of geometries) {
-        pendingReleases.push({
-            geometry,
-            readyAtFrame: releaseFrame + RELEASE_AFTER_FRAMES,
-        });
-    }
-};
-
-/**
- * Called once per frame, before the renderer draws. `force` empties the queue
- * regardless of age — for when the whole scene is going away and there is no
- * next frame to wait for.
- */
-const drainReleases = (force = false) => {
-    for (let i = pendingReleases.length - 1; i >= 0; i--) {
-        const pending = pendingReleases[i];
-        if (!force && pending.readyAtFrame > releaseFrame) continue;
-        pendingReleases.splice(i, 1);
-        try {
-            pending.geometry.dispose();
-        } catch (error) {
-            console.error('scenery: releasing a tile threw', error);
-        }
-    }
-};
-
 const SceneryTile = ({ index }: { index: number }) => {
     const build = useMemo(() => buildTile(index), [index]);
 
     // A tile's merged geometry is unique to its stretch of world, so it has
     // to go when the tile does — otherwise a long run leaves every kilometre
     // it ever drew resident on the GPU. Materials and actor geometry are
-    // shared and stay. Queued rather than released here: see the queue above.
+    // shared and stay.
+    /**
+     * Releasing a tile must not be able to take the render loop with it.
+     *
+     * three's WebGPU backend throws out of `destroyAttribute` here — it looks
+     * the attribute up in the backend's own map, finds no record, and calls
+     * `.destroy()` on undefined. The throw travels up through
+     * `BufferGeometry.dispose` into React's unmount commit, and a throw there
+     * ends the frame loop for good: the last drawn frame stays on screen while
+     * the HUD, the sector banner and the stall readout carry on ticking from
+     * the store. That is the freeze, and it lands on a tile boundary — every
+     * 1000 units — which is why it can strike anywhere from sector 1 to the
+     * campus rather than at one distance.
+     *
+     * Each geometry is released once and on its own, so one bad attribute
+     * costs a single tile's memory rather than the run.
+     */
     useEffect(
-        () => () => queueRelease(new Set(build.pieces.map(piece => piece.geometry))),
+        () => () => {
+            const released = new Set<THREE.BufferGeometry>();
+            for (const piece of build.pieces) {
+                if (released.has(piece.geometry)) continue;
+                released.add(piece.geometry);
+                try {
+                    piece.geometry.dispose();
+                } catch (error) {
+                    console.error('scenery: releasing a tile threw', error);
+                }
+            }
+        },
         [build],
     );
 
@@ -2146,16 +2115,10 @@ const Scenery = () => {
     // pure reconciliation, and it scaled with how much a tile contains, which
     // is why the late, dense scenes were where the run collapsed.
     useFrame(() => {
-        releaseFrame += 1;
-        drainReleases();
         const z = useStore.getState().playerPosition[2];
         const next = Math.max(0, Math.floor(-z / planeSize));
         if (next !== anchor) setAnchor(next);
     });
-
-    // The whole world going away at once — a restart — has no next frame to
-    // wait for, so anything still queued is released now.
-    useEffect(() => () => drainReleases(true), []);
 
     return (
         <>
