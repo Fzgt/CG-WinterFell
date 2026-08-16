@@ -149,9 +149,22 @@ const results = await page.evaluate(
             }
 
             const sample = mod.generateSectionObstacles(section, 0);
+            // What the layout costs the player, as opposed to what it costs
+            // the map. A section is flown at 900 units a second early and 2040
+            // late, so the same count of blocks arrives at more than twice the
+            // rate by the end of the route — which is the crowding a player
+            // reports and which none of the columns above can show, since the
+            // sweep gets to see a whole section at once and a player sees the
+            // six hundred units the fog leaves them.
+            const midZ = -(section + 0.5) * cfg.SECTION_LENGTH;
+            const pace = levels.paletteFor(levels.levelAt(midZ)).speed * 60;
+
             out.push({
                 section,
                 obstacles: sample.length,
+                perSecond: Math.round(
+                    (sample.length / cfg.SECTION_LENGTH) * pace,
+                ),
                 blockedPct: Math.round((blocked / trials) * 100),
                 tightestGap: Math.round(tightest),
                 freeLine: Math.round(freeTotal / trials),
@@ -167,15 +180,21 @@ await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
 console.log(
-    '| Section | Obstacles | Layouts with no way through | Tightest gap | Straight line through (avg / worst) |',
+    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) |',
 );
-console.log('| --- | --- | --- | --- | --- |');
+console.log('| --- | --- | --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
-        `| ${r.section} | ${r.obstacles} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
+        `| ${r.section} | ${r.obstacles} | ${r.perSecond} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
             `${r.freeLine} / ${r.freeLineWorst} units |`,
     );
 }
+const rates = results.filter(r => r.obstacles).map(r => r.perSecond);
+console.log(
+    `\nBlocks met per second: ${Math.min(...rates)}–${Math.max(...rates)}. ` +
+        `Budgeted per second rather than per unit of track, so this is the ` +
+        `route's own swing and not the speedometer's.`,
+);
 const worst = Math.max(...results.map(r => r.blockedPct));
 console.log(
     worst === 0

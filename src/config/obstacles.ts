@@ -64,17 +64,27 @@ export const SLICE_DEPTH = 50;
 export const LANE_HALF = { min: 11, max: 18 };
 
 /**
- * Blocks scattered per slice, from the loosest stretch of track to the
- * densest — before the shoulders that bound the lane and the seal that closes
- * a column nothing else reached, which between them account for about a third
- * of a sector's blocks and do most of the work.
+ * Blocks the route puts in front of the player each second, from the loosest
+ * stretch of track to the densest. Everything the generator places is paid for
+ * out of this: the scatter, the shoulders that bound the lane, the knots and
+ * combs. Only the seal is exempt, and the seal exists to remove a straight
+ * line rather than to add difficulty.
  *
- * Deliberately low. Scattered blocks are the least valuable thing on the
- * track: they fill the view and the frame budget, and a player steers round
- * them without the route having asked for anything. Spend the count where it
- * bounds the lane instead.
+ * Per *second*, not per slice, and that is the whole point. Density was
+ * budgeted per unit of track before, which is not what a player experiences: a
+ * sector is flown at 900 units a second at the start and 2040 at the end, so a
+ * count that looks flat on the map arrives more than twice as fast late on. It
+ * compounded with the ramp, and the two together took the run from 37 blocks a
+ * second to 103 — a block every ten milliseconds, against a fog that gives
+ * about six hundred units, i.e. under a third of a second, to see one coming.
+ * That is the crowding, and no amount of layout fairness shows up in it,
+ * because the fairness sweep gets to see the whole sector at once and a player
+ * does not.
+ *
+ * Held here instead, the route still breathes — the noise below swings it
+ * between these two — but the swing is the route's, not the speedometer's.
  */
-export const BLOCKS_PER_SLICE = { min: 0.45, max: 1.35 };
+export const BLOCKS_PER_SECOND = { min: 38, max: 76 };
 /** Sections taken to ramp from the opening density to the full one. */
 export const DIFFICULTY_RAMP_SECTIONS = 5;
 

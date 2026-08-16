@@ -8,7 +8,7 @@ import {
     SECTION_LENGTH,
     SLICE_DEPTH,
     LANE_HALF,
-    BLOCKS_PER_SLICE,
+    BLOCKS_PER_SECOND,
     DIFFICULTY_RAMP_SECTIONS,
     BLOCK_HEIGHT,
     BLOCK_WIDTH,
@@ -93,8 +93,26 @@ const HALF_WIDTH = FIELD_WIDTH / 2;
 
 /* ------------------------------------------------------------- the route -- */
 
+/**
+ * The opening's discount on the full block rate.
+ *
+ * Shallower than it was (0.55) because it no longer has to be the only thing
+ * keeping the first minute readable — the rate is per second now, so speed
+ * stops compounding into it, and this is left doing the one job it is good at:
+ * giving a first-time player a sparser sector to learn the controls in.
+ */
 const rampFor = (section: number) =>
-    0.55 + 0.45 * Math.min(section / DIFFICULTY_RAMP_SECTIONS, 1);
+    0.7 + 0.3 * Math.min(section / DIFFICULTY_RAMP_SECTIONS, 1);
+
+/**
+ * Forward world units covered in a second at the speed this z is flown at.
+ *
+ * The conversion between the map and the clock, and the reason the block rate
+ * is expressed per second: this runs from 900 at the start line to 2040 by the
+ * top speed, so a fixed count per unit of track is a count that more than
+ * doubles in the only unit the player has.
+ */
+const paceAt = (z: number) => paletteFor(levelAt(z)).speed * 60;
 
 /**
  * Lateral units the craft can cover per unit of forward travel, at the speed
@@ -106,8 +124,7 @@ const rampFor = (section: number) =>
  * at the speeds this game shipped with, becomes a lane the player physically
  * cannot follow. bench/fairness.mjs measures the same ratio for this reason.
  */
-const reachAt = (z: number) =>
-    LATERAL_SPEED / (paletteFor(levelAt(z)).speed * 60);
+const reachAt = (z: number) => LATERAL_SPEED / paceAt(z);
 
 /**
  * Fraction of the theoretical reach the lane may demand. The rest is the
@@ -142,6 +159,45 @@ const FREE_TARGET = 10;
 const NARROW_RADIUS = OBSTACLE_BASE_RADIUS * BLOCK_WIDTH.min;
 
 /**
+ * The full width of x the lane occupies over a sector's worth of track around
+ * this z — its extremes, not the distance between its endpoints.
+ *
+ * The endpoints were what this measured, and they are not the same question. A
+ * lane that runs out twenty units and comes back has endpoints on top of each
+ * other and an extent of twenty, and it is the extent that decides how much
+ * ground the corridor covers: the band of x that sits inside the lane from one
+ * end of the sector to the other is two clearances less the extent. Reading it
+ * off the endpoints let the corridor stay wide through exactly the stretches
+ * where the lane doubled back, which is where a wide corridor is a straight
+ * line — the sweep found twenty-unit free bands sitting in the middle of the
+ * lane's own band, somewhere no block is allowed to stand and so somewhere no
+ * amount of blocks could have closed.
+ *
+ * Quantised to the slice and memoised: it is a pure function of z, it is asked
+ * for once per candidate position, and it walks forty samples to answer.
+ */
+const spreads = new Map<number, number>();
+
+const laneSpreadAt = (z: number) => {
+    const key = Math.round(Math.abs(z) / SLICE_DEPTH);
+    const cached = spreads.get(key);
+    if (cached !== undefined) return cached;
+
+    const centre = -key * SLICE_DEPTH;
+    const span = SECTION_LENGTH / 2;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let d = -span; d <= span; d += SLICE_DEPTH) {
+        const x = laneAt(centre + d);
+        if (x < lo) lo = x;
+        if (x > hi) hi = x;
+    }
+    const spread = hi - lo;
+    spreads.set(key, spread);
+    return spread;
+};
+
+/**
  * How wide the corridor is here.
  *
  * Partly noise, so the route has moments a player can feel arriving; capped by
@@ -150,7 +206,7 @@ const NARROW_RADIUS = OBSTACLE_BASE_RADIUS * BLOCK_WIDTH.min;
  *
  * Nothing may stand within `laneHalf` of the lane, so the band of x that no
  * block in a sector ever touches is about two clearances wide less however far
- * the lane travelled in that sector — and the travel is not negotiable, it is
+ * the lane ranges across that sector — and the range is not negotiable, it is
  * the craft's lateral speed against the route's. By the sixth level the lane
  * can be asked for nineteen units across a whole sector; against a corridor 36
  * wide that leaves seventeen units of x never once touched, which is a sector
@@ -161,9 +217,7 @@ const NARROW_RADIUS = OBSTACLE_BASE_RADIUS * BLOCK_WIDTH.min;
  * have nothing to ask.
  */
 const laneHalfAt = (z: number) => {
-    const span = SECTION_LENGTH / 2;
-    const travelled = Math.abs(laneAt(z - span) - laneAt(z + span));
-    const cap = (FREE_TARGET + travelled) / 2 - NARROW_RADIUS;
+    const cap = (FREE_TARGET + laneSpreadAt(z)) / 2 - NARROW_RADIUS;
     const wanted = THREE.MathUtils.lerp(
         LANE_HALF.min,
         LANE_HALF.max,
@@ -548,6 +602,15 @@ const seal = (out: Obstacle[], lane: { z: number; x: number }[]) => {
                 );
                 if (spots.length) break;
             }
+            // A band with no spot left is one the lane sweeps over: every
+            // block on the route stands its own footprint clear of the
+            // corridor, and this x is inside it. Letting a spire stand on the
+            // clearance line to close one was tried and measured no better —
+            // a 4.6-wide block in a 19-wide band leaves two more bands either
+            // side of it — so the case is left alone rather than paid for with
+            // a rule that overhangs the corridor. It is not a placement
+            // failure to fix here; it is the lateral budget, and it is noted
+            // in the sweep's own output.
             if (!spots.length) continue;
 
             const spot = spots[Math.floor(Math.random() * spots.length)];
@@ -564,6 +627,31 @@ const seal = (out: Obstacle[], lane: { z: number; x: number }[]) => {
     }
 };
 
+/* ---------------------------------------------------------------- budget -- */
+
+/**
+ * How a slice's blocks are divided between the three things that place them,
+ * and what each costs when it fires.
+ *
+ * A shoulder is the most valuable block on the route and a scattered one the
+ * least, so the split is not even — but it is not winner-takes-all either. Cut
+ * the block rate without splitting it and the shoulders eat the whole budget
+ * on their own by the late sectors, leaving a corridor railed on both sides
+ * with an empty field either side of that, which reads as a level that failed
+ * to load rather than a hard one.
+ *
+ * Shares are targets, not caps. Neither a shoulder nor a comb can be handed a
+ * count — one has to sit at the lane's edge, the other has to span ground — so
+ * the share buys them a chance of firing instead, and the difference between
+ * what a slice was allowed and what it actually spent is carried to the next
+ * one either way.
+ */
+const SHOULDER = { share: 0.5, cost: 1.3, cap: 0.95 };
+const EVENT = { share: 0.2, cost: 4.5, cap: 0.3 };
+
+const shareOf = ({ share, cost, cap }: typeof SHOULDER, budget: number) =>
+    Math.min(cap, (share * budget) / cost);
+
 /* ----------------------------------------------------------------- entry -- */
 
 const sectionBounds = (section: number): [number, number] =>
@@ -579,6 +667,8 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
     const out: Obstacle[] = [];
     const tally = coverage();
     const lane: { z: number; x: number }[] = [];
+    /** Blocks spent above (or, negative, below) what the slices allowed. */
+    let debt = 0;
 
     const depth = Math.abs(endZ - startZ);
     const slices = Math.max(1, Math.round(depth / SLICE_DEPTH));
@@ -594,17 +684,50 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
         const pressure = layered(z, 620, 3);
 
         // Low stretches carry more blocks than tall ones: see lownessAt.
-        const density =
+        const rate =
             THREE.MathUtils.lerp(
-                BLOCKS_PER_SLICE.min,
-                BLOCKS_PER_SLICE.max,
+                BLOCKS_PER_SECOND.min,
+                BLOCKS_PER_SECOND.max,
                 pressure,
             ) *
             (0.8 + 0.5 * lowness) *
             ramp;
-        // Fractional densities are kept rather than rounded away, so a stretch
-        // at 1.4 is genuinely lighter than one at 1.6 instead of both being 1.
-        const count = Math.floor(density) + (Math.random() < density % 1 ? 1 : 0);
+        // What that rate buys in this slice: the blocks a player meets in the
+        // time this fifty units takes to arrive.
+        const budget = (rate * SLICE_DEPTH) / paceAt(z);
+
+        const before = out.length;
+
+        // Railed in stretches, and always where the lane has stopped moving:
+        // that is the one place a corridor left unmarked becomes a place to
+        // park, and it is also the cheapest difficulty on the route.
+        const rail = layered(z, 340, 29) + 0.4 * (1 - laneSweepOver(z, 400));
+        if (rail > 0.42 && Math.random() < shareOf(SHOULDER, budget)) {
+            shoulders(tally, z, laneX, lowness, rail, out);
+        }
+
+        // Events, rare enough to stay events. Hashed off the slice's own z, so
+        // a given stretch of track always has its knot in the same place even
+        // though the blocks around it are redrawn every run.
+        const event = hash2(Math.round(Math.abs(z) / SLICE_DEPTH), 23);
+        const events = shareOf(EVENT, budget);
+        if (event < events * 0.625) knot(tally, z, laneX, lowness, out);
+        else if (event < events) comb(tally, z, laneX, out);
+
+        // A knot is five blocks in a slice that could afford one and a half,
+        // and paying for it out of this slice alone would leave the overspend
+        // invisible. It is carried instead, and the scatter runs quiet until
+        // it is paid off — which is what makes an event an event: the stretch
+        // after one is emptier than the route around it. The debt runs
+        // negative too, so a stretch where nothing fired hands its unspent
+        // blocks to the scatter rather than losing them, and a sector lands on
+        // its rate however the dice went.
+        const allowance = budget - (out.length - before) - debt;
+        const count =
+            allowance <= 0
+                ? 0
+                : Math.floor(allowance) +
+                  (Math.random() < allowance % 1 ? 1 : 0);
 
         for (let i = 0; i < count; i++) {
             const shape = blockShape(tallnessRoll(lowness));
@@ -613,18 +736,11 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
             out.push(place(shape, x, randomInRange2(sliceStartZ, sliceEndZ)));
         }
 
-        // Railed in stretches, and always where the lane has stopped moving:
-        // that is the one place a corridor left unmarked becomes a place to
-        // park, and it is also the cheapest difficulty on the route.
-        const rail = layered(z, 340, 29) + 0.4 * (1 - laneSweepOver(z, 400));
-        if (rail > 0.42) shoulders(tally, z, laneX, lowness, rail, out);
-
-        // Events, rare enough to stay events. Hashed off the slice's own z, so
-        // a given stretch of track always has its knot in the same place even
-        // though the blocks around it are redrawn every run.
-        const event = hash2(Math.round(Math.abs(z) / SLICE_DEPTH), 23);
-        if (event < 0.1 * ramp) knot(tally, z, laneX, lowness, out);
-        else if (event < 0.16 * ramp) comb(tally, z, laneX, out);
+        debt = THREE.MathUtils.clamp(
+            debt + (out.length - before) - budget,
+            -2 * budget,
+            3 * budget,
+        );
     }
 
     seal(out, lane);
