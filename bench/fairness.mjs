@@ -40,12 +40,23 @@ const results = await page.evaluate(
     async ({ sections, trials }) => {
         const mod = await import('/src/utils/generateObstacles.ts');
         const cfg = await import('/src/config/obstacles.ts');
+        const levels = await import('/src/config/levels.ts');
 
-        // Each obstacle now carries its own collision footprint, so the sweep
-        // uses that rather than one figure for all of them. Sideways reach per
-        // unit travelled comes from the game: LATERAL_SPEED against the
-        // opening playerSpeed.
-        const LATERAL_PER_FORWARD = 44 / (12 * 60);
+        // Each obstacle carries its own collision footprint, so the sweep
+        // uses that rather than one figure for all of them.
+        //
+        // Sideways reach per unit travelled is LATERAL_SPEED against the
+        // forward speed of the level that section is played at — and that
+        // is the whole point: the faster the level, the less the craft can
+        // move sideways per metre of track. Hard-coding the opening speed
+        // here (as this did) quietly validated the late game against reach
+        // it does not have.
+        const LATERAL_SPEED = 44;
+        const reachAt = section => {
+            const z = -section * cfg.SECTION_LENGTH;
+            const speed = levels.paletteFor(levels.levelAt(z)).speed;
+            return LATERAL_SPEED / (speed * 60);
+        };
         const STEP = 10; // forward sampling resolution
 
         const out = [];
@@ -68,7 +79,7 @@ const results = await page.evaluate(
                 let deadAt = null;
 
                 for (let z = startZ; z > endZ && !deadAt; z -= STEP) {
-                    const grow = STEP * LATERAL_PER_FORWARD;
+                    const grow = STEP * reachAt(section);
                     reach = reach.map(([a, b]) => [a - grow, b + grow]);
 
                     const near = obstacles.filter(

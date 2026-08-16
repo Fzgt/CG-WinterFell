@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
+    LATERAL_SPEED,
     leftBound,
     rightBound,
     trackCurve,
@@ -39,7 +40,6 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
      * first corrected value, which overshot the other way: a brief press threw
      * the craft most of the way across the track.
      */
-    const LATERAL_SPEED = 44;
     /** Longest frame allowed to drive movement, in seconds (~3 frames at 60fps). */
     const MAX_FRAME_DELTA = 1 / 20;
 

@@ -3,6 +3,14 @@ import { FIELD_WIDTH } from './obstacles';
 export const planeSize = 1000;
 
 /**
+ * Sideways travel, world units per second. Lives here rather than in the
+ * movement hook because the obstacle generator has to reason about it too:
+ * how far the craft can move sideways per unit of forward travel is what
+ * decides whether a gap is reachable at all.
+ */
+export const LATERAL_SPEED = 44;
+
+/**
  * The journey, as two centreline functions of world z — one lateral, one
  * vertical. Purely visual: gameplay happens in a straight, flat logical
  * space, and everything on the track (rails, obstacles, craft, camera,
