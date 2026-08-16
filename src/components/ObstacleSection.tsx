@@ -11,7 +11,6 @@ import {
     releaseSectionObstacles,
 } from '../utils/obstacleRegistry';
 import { trackCurve, trackHeight } from '../config/constants';
-import { useStore } from '../store/store';
 
 interface ObstacleSectionProps {
     sectionIndex: number;
@@ -34,14 +33,15 @@ const ObstacleSection = ({
     const bodyRef = useRef<THREE.InstancedMesh>(null);
     const frameRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
-    // Where the craft sits the moment this section is built, read once. It
-    // used to arrive as a prop, which meant the field had to hold a live
-    // subscription to the player's position just to pass it down.
+    // The layout is a function of where this section is on the route, and of
+    // nothing else. It used to be seeded from wherever the craft happened to
+    // be — because each section invented its own lane and had to be told where
+    // to start it — which meant the field had to hold a live subscription to
+    // the player's position just to pass it down. The lane is now continuous
+    // across the whole route, so a section already joins up with its
+    // neighbours by construction.
     const [obstacles] = useState(() => {
-        const generated = generateSectionObstacles(
-            sectionIndex,
-            useStore.getState().playerPosition[0],
-        );
+        const generated = generateSectionObstacles(sectionIndex);
         publishSectionObstacles(sectionIndex, generated);
         return generated;
     });

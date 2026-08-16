@@ -11,7 +11,6 @@ export const DISTANCE_COLORS = [
 ];
 
 // ObstacleSection.tsx
-export const OBSTACLES_PER_SECTION = 90;
 export const FIELD_WIDTH = 120;
 export const SECTION_LENGTH = 2000;
 
@@ -22,10 +21,11 @@ export const SECTION_LENGTH = 2000;
  * metre, which made a run last a couple of seconds: with nothing guaranteeing
  * a way through, most deaths were to a wall the player could not have avoided.
  *
- * Instead each section is cut into bands, every band keeps one clear lane, and
- * the lane only drifts so far between bands so it stays reachable at speed.
- * Density then ramps with distance, so the opening is readable and the late
- * game is as dense as it always was.
+ * Instead the whole route carries one clear lane whose sideways travel stays
+ * inside what the craft can steer at the speed it is being flown at, and the
+ * field around it is grown from continuous noise rather than laid out sector
+ * by sector. Density then ramps with distance, so the opening is readable and
+ * the late game is as dense as it always was.
  */
 /**
  * Collision footprint of an obstacle at scale 1. Each one multiplies this by
@@ -34,9 +34,18 @@ export const SECTION_LENGTH = 2000;
  */
 export const OBSTACLE_BASE_RADIUS = 4.6;
 
-export const BAND_DEPTH = 100;
 /**
- * Half-width of the lane every formation keeps clear.
+ * Depth of one slice of track.
+ *
+ * The field is not built out of bands with a layout each any more; it is one
+ * continuous terrain sampled at this resolution, which is small enough that
+ * the run's texture changes inside a sector rather than at its seams.
+ */
+export const SLICE_DEPTH = 50;
+
+/**
+ * Half-width of the clear lane, and how far that opens and closes along the
+ * route.
  *
  * The single number that decides how hard the route plays, and the one worth
  * moving before any other. Difficulty bought here is free: the field keeps
@@ -44,25 +53,46 @@ export const BAND_DEPTH = 100;
  * aimed at rather than a direction to hold. Difficulty bought by adding blocks
  * costs the view, the frame budget, and eventually the game — a field dense
  * enough to be interesting to look at is one nobody can fly.
+ *
+ * A fixed lane makes every stretch of the route play at one pitch. The route
+ * breathes between these two instead — partly on noise, so it has moments, and
+ * partly on how much ground the lane is covering: where the lane is crossing
+ * the field there is work to do at any width, and where it has run into the
+ * edge of the field and turned back the corridor closes up, because a corridor
+ * that stands still is somewhere to park.
  */
-export const LANE_HALF_WIDTH = 15;
-/** How far a band's clear lane may move from the previous band's. */
-export const LANE_MAX_DRIFT = 26;
-export const OBSTACLES_PER_BAND_START = 3;
-export const OBSTACLES_PER_BAND_MAX = Math.round(
-    OBSTACLES_PER_SECTION / (SECTION_LENGTH / BAND_DEPTH),
-);
+export const LANE_HALF = { min: 11, max: 18 };
+
+/**
+ * Blocks scattered per slice, from the loosest stretch of track to the
+ * densest — before the shoulders that bound the lane and the seal that closes
+ * a column nothing else reached, which between them account for about a third
+ * of a sector's blocks and do most of the work.
+ *
+ * Deliberately low. Scattered blocks are the least valuable thing on the
+ * track: they fill the view and the frame budget, and a player steers round
+ * them without the route having asked for anything. Spend the count where it
+ * bounds the lane instead.
+ */
+export const BLOCKS_PER_SLICE = { min: 0.45, max: 1.35 };
 /** Sections taken to ramp from the opening density to the full one. */
 export const DIFFICULTY_RAMP_SECTIONS = 5;
 
 /**
- * How tall a block may stand, as a multiple of the 13-unit base block.
+ * A block's silhouette, as multiples of the 7 × 13 × 7 base block.
  *
  * The camera's eye sits at y = 11 and every piece of scenery — ridges, arches,
  * spires, the lot — lives beyond x = 94, so anything both tall and broad is a
- * hoarding pulled across the horizon. Two silhouettes are allowed and only
- * two: a slab that stays near the eye line, so you see over it, and a spire
- * narrow enough that you see past it. Nothing may be both.
+ * hoarding pulled across the horizon. Rather than allowing two named shapes
+ * and hoping neither drifts, one rule covers every block ever placed:
+ *
+ *     width × height ≤ SILHOUETTE_BUDGET
+ *
+ * so height is bought with width. A block that stays under the eye line may be
+ * seventeen units broad, because you see over it; one that stands twenty-two
+ * units tall is under five units wide, because you see past it. There is no
+ * setting of the dice that produces a wall.
  */
-export const SLAB_HEIGHT = { min: 0.45, max: 0.85 };
-export const SPIRE_HEIGHT = { min: 1.2, max: 2.4 };
+export const BLOCK_HEIGHT = { min: 0.42, max: 1.72 };
+export const BLOCK_WIDTH = { min: 0.45, max: 2.5 };
+export const SILHOUETTE_BUDGET = 1.05;
