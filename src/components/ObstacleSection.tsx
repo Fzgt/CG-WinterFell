@@ -11,6 +11,7 @@ import {
     releaseSectionObstacles,
 } from '../utils/obstacleRegistry';
 import { trackCurve, trackHeight } from '../config/constants';
+import { useStore } from '../store/store';
 
 interface ObstacleSectionProps {
     sectionIndex: number;
@@ -20,7 +21,6 @@ interface ObstacleSectionProps {
         bodyMaterial: THREE.MeshStandardMaterial;
         frameMaterial: THREE.MeshBasicMaterial;
     };
-    playerPosition: [number, number, number];
     checkCollision: (obstacle: Obstacle) => boolean;
     visible?: boolean;
 }
@@ -28,17 +28,19 @@ interface ObstacleSectionProps {
 const ObstacleSection = ({
     sectionIndex,
     meshData,
-    playerPosition,
     checkCollision,
     visible = true,
 }: ObstacleSectionProps) => {
     const bodyRef = useRef<THREE.InstancedMesh>(null);
     const frameRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useRef(new THREE.Object3D()).current;
+    // Where the craft sits the moment this section is built, read once. It
+    // used to arrive as a prop, which meant the field had to hold a live
+    // subscription to the player's position just to pass it down.
     const [obstacles] = useState(() => {
         const generated = generateSectionObstacles(
             sectionIndex,
-            playerPosition[0],
+            useStore.getState().playerPosition[0],
         );
         publishSectionObstacles(sectionIndex, generated);
         return generated;

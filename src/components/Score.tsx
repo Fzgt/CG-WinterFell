@@ -6,7 +6,6 @@ import { playMilestone } from '../utils/audio';
 
 const Score = () => {
     const gameOver = useStore(state => state.gameOver);
-    const playerPosition = useStore(state => state.playerPosition);
     const level = useStore(state => state.level);
     const restart = useStore(state => state.restart);
     const [highScores, setHighScores] = useState<number[]>([]);
@@ -18,7 +17,14 @@ const Score = () => {
     // which meant a run could end on a negative number after clipping a few
     // hazards — a strange thing to show someone who just travelled a mile.
     // Metres, not raw world units.
-    const distance = Math.max(0, Math.round(Math.abs(playerPosition[2]) / 10));
+    //
+    // Selected down to the number on screen rather than taken from the raw
+    // position: the store is handed a fresh position array every frame, so
+    // subscribing to the array itself re-rendered this panel — game-over
+    // modal, best-runs table and all — sixty times a second.
+    const distance = useStore(state =>
+        Math.max(0, Math.round(Math.abs(state.playerPosition[2]) / 10)),
+    );
 
     useEffect(() => {
         if (!gameOver) return;

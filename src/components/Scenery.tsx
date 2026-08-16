@@ -2080,11 +2080,18 @@ const CrestEmblem = () => {
 };
 
 const Scenery = () => {
-    const playerPosition = useStore(state => state.playerPosition);
     const [anchor, setAnchor] = useState(0);
 
+    // Read the position rather than subscribe to it. The store is handed a
+    // fresh array every frame, so a subscription here re-rendered the whole
+    // tile — every mesh, actor, rotor and beam of a kilometre of world — sixty
+    // times a second, to arrive at the same two tiles. The build itself is
+    // memoised, so nothing showed up as geometry or heap growth; the cost was
+    // pure reconciliation, and it scaled with how much a tile contains, which
+    // is why the late, dense scenes were where the run collapsed.
     useFrame(() => {
-        const next = Math.max(0, Math.floor(-playerPosition[2] / planeSize));
+        const z = useStore.getState().playerPosition[2];
+        const next = Math.max(0, Math.floor(-z / planeSize));
         if (next !== anchor) setAnchor(next);
     });
 

@@ -61,7 +61,6 @@ const shellTransforms = (
     });
 
 const Skybox = () => {
-    const playerPosition = useStore(state => state.playerPosition);
     const level = useStore(state => state.level);
     const groupRef = useRef<THREE.Group>(null);
     const spinRef = useRef<THREE.Group>(null);
@@ -125,7 +124,11 @@ const Skybox = () => {
     useFrame((_, delta) => {
         // The dome travels with the player so it never falls behind, and the
         // shell spins slowly so the view out of the window keeps changing.
-        groupRef.current?.position.set(...playerPosition);
+        // Read, don't subscribe: the dome is moved by ref, and re-rendering
+        // the whole sky to do it re-diffed both instanced meshes every frame.
+        groupRef.current?.position.set(
+            ...useStore.getState().playerPosition,
+        );
         if (spinRef.current) spinRef.current.rotation.y += delta * 0.012;
 
         // Stars are laid out once; streaks are re-laid every frame below.

@@ -16,16 +16,17 @@ import { playLevelCue } from '../utils/audio';
  * decides what a level is, and everything else just reads the current one.
  */
 const LevelDirector = () => {
-    const playerPosition = useStore(state => state.playerPosition);
     const level = useStore(state => state.level);
     const gameOver = useStore(state => state.gameOver);
     const setLevel = useStore(state => state.setLevel);
     const setPlayerSpeed = useStore(state => state.setPlayerSpeed);
     const lastAnnounced = useRef(-1);
 
+    // Read, don't subscribe: the player's position changes every frame, and
+    // only its level bucket matters here.
     useFrame(() => {
         if (gameOver) return;
-        const next = levelAt(playerPosition[2]);
+        const next = levelAt(useStore.getState().playerPosition[2]);
         if (next !== level) setLevel(next);
     });
 

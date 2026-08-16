@@ -165,7 +165,6 @@ const RailTile = ({
 };
 
 const Ground = () => {
-    const playerPosition = useStore(state => state.playerPosition);
     const level = useStore(state => state.level);
     const ground1Ref = useRef<THREE.Group>(null);
     const ground2Ref = useRef<THREE.Group>(null);
@@ -179,8 +178,10 @@ const Ground = () => {
         color.set(paletteFor(level).neon);
     }, [color, level]);
 
+    // Read, don't subscribe: this only moves two groups by ref, so a
+    // per-frame re-render of the rail tiles bought nothing.
     useFrame(() => {
-        const [, , playerZ] = playerPosition;
+        const playerZ = useStore.getState().playerPosition[2];
         if (!ground1Ref.current || !ground2Ref.current) return;
 
         // Snap both tiles to a lattice derived from the player's position

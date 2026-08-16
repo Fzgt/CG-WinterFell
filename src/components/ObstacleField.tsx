@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -53,9 +53,7 @@ const buildFrame = () => {
 };
 
 const ObstacleField = () => {
-    const playerPosition = useStore(state => state.playerPosition);
     const gameOver = useStore(state => state.gameOver);
-    const setGameOver = useStore(state => state.setGameOver);
     const level = useStore(state => state.level);
     // DEV ONLY: scenic mode drops the whole field — and with it every
     // collision, since the collision check lives here too.
@@ -95,7 +93,10 @@ const ObstacleField = () => {
         meshData.frameMaterial.color.copy(neon);
     }, [level, meshData]);
 
-    const checkCollision = (obstacle: Obstacle): boolean => {
+    // Stable across renders, so the live sections are not handed a new
+    // callback — and re-rendered — every time the field renders.
+    const checkCollision = useCallback((obstacle: Obstacle): boolean => {
+        const { gameOver, playerPosition, setGameOver } = useStore.getState();
         if (gameOver) return false;
 
         const [px, , pz] = playerPosition;
@@ -109,12 +110,17 @@ const ObstacleField = () => {
         setGameOver(true);
         playCrash();
         return true;
-    };
+    }, []);
 
+    // Read, don't subscribe. The store is handed a fresh position array every
+    // frame; subscribing to it here re-rendered the field, and with it all
+    // three live sections, sixty times a second — to arrive at the same three
+    // sections almost every time.
     useFrame(() => {
         if (gameOver) return;
 
-        const next = Math.floor(Math.abs(playerPosition[2]) / SECTION_LENGTH);
+        const z = useStore.getState().playerPosition[2];
+        const next = Math.floor(Math.abs(z) / SECTION_LENGTH);
         if (next > currentSectionIndex) {
             setCurrentSectionIndex(next);
             // Endless: sections are generated from their index, so there is no
@@ -134,7 +140,6 @@ const ObstacleField = () => {
                     key={`section-${sectionIndex}`}
                     sectionIndex={sectionIndex}
                     meshData={meshData}
-                    playerPosition={playerPosition}
                     checkCollision={checkCollision}
                 />
             ))}
