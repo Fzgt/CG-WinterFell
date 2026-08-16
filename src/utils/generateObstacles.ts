@@ -370,7 +370,13 @@ const slalom = (
         rotationY: randomInRange2(-0.3, 0.3),
     });
     const columns = Math.max(1, Math.round(FIELD_WIDTH / COLUMN_WIDTH));
-    const litter = 0.4 + ramp * 0.3;
+    // Thinner than the scatter sectors, and mostly low slabs. The canyon
+    // already spends its spires on the lane edges, where they are doing the
+    // work; filling the outfield with more of them turns the sector into a
+    // picket fence, which is the hoarding again in a thinner disguise. The
+    // seal pass below is what guarantees there is no way round, so this only
+    // has to make crossing the outfield expensive, not impossible.
+    const litter = 0.3 + ramp * 0.22;
 
     for (let z = startZ; z > endZ; z -= step) {
         const laneX = nextLane();
@@ -393,7 +399,7 @@ const slalom = (
         // ever leaving a straight line open.
         for (let column = 0; column < columns; column++) {
             if (Math.random() > litter) continue;
-            const shape = someShape(0.6);
+            const shape = someShape(0.78);
             const clear = clearFor(shape);
             const from = -HALF_WIDTH + COLUMN_WIDTH * column;
 
