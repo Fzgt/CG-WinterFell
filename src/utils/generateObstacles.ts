@@ -131,7 +131,6 @@ const mixBias = () => runBias(2, 0.22);
 const corridorBias = () => runBias(3, 0.3);
 const railBias = () => runBias(4, 0.12);
 const crossingScale = () => 0.75 + 0.75 * runRoll(5);
-const clumpBias = () => runBias(6, 0.2);
 
 /**
  * Smooth 0..1 value noise along the track.
@@ -445,69 +444,6 @@ const place = (shape: Shape, x: number, z: number): Obstacle => ({
 const clearFor = (shape: Shape, z: number) =>
     laneHalfAt(z) + OBSTACLE_BASE_RADIUS * shape.width;
 
-/* ------------------------------------------------------------------ mass -- */
-
-/**
- * Where across the field this stretch piles up, and how tightly.
- *
- * Everything that varies on this route varies along z: the corridor opens and
- * closes, the pressure swells, the mix runs from slabs to spires. Across x
- * there was nothing — a block's x was a uniform draw over the whole 120 units,
- * nudged toward the emptiest strip, which is the most even distribution the
- * generator could have produced. So every stretch had the same amount of field
- * on the left as on the right, and evenness at that scale is what the eye
- * reports as regular however irregular each block's own position is.
- *
- * A drifting centre of mass gives x the structure z already had. The field
- * leans: it packs against one side for a few hundred units, thins out, crosses
- * over. What a player meets is a crowd on one hand and open ground on the
- * other, which is the shape they asked for and the shape uniform sampling can
- * never produce, because it is a property of the distribution rather than of
- * the dice.
- *
- * The two rolls are deliberately on different periods so the field is not
- * simply a stripe sliding sideways: `massAt` says which side, `clumpAt` says
- * how strongly it commits, and where the second is low the first stops
- * mattering and the stretch goes back to being evenly scattered.
- *
- * None of this touches the guarantees. The lane clearance is applied after the
- * draw, so a crowd never closes the corridor; the count is unchanged, since
- * this decides where the slice's blocks stand and not how many; and the
- * section-wide seal still runs, so a lean that lasted a whole sector would
- * still be filled in — it is the drift that keeps it from having to be.
- */
-const massAt = (z: number) => (2 * layered(z, 300 * periodScale(), 53) - 1) * HALF_WIDTH;
-
-const clumpAt = (z: number) =>
-    THREE.MathUtils.clamp(
-        0.3 + 0.75 * layered(z, 470 * periodScale(), 59) + clumpBias(),
-        0,
-        1,
-    );
-
-/**
- * The tightest a crowd may pack — a touch over two footprints wide, so a fully
- * committed stretch is a rope of blocks rather than a band of them, and the
- * ground it is not standing on is unmistakably empty.
- */
-const CLUMP_WIDTH = 11;
-
-/**
- * Fold a draw back inside the field rather than clamping it.
- *
- * A clamp would answer every overshoot with the same x, and since a crowd
- * leaning on the edge overshoots constantly, that builds a wall one block wide
- * along the boundary. Reflecting spends the overshoot back inward instead, so
- * the edge is where the crowd is densest and not where it is welded.
- */
-const fold = (x: number) => {
-    let f = x;
-    for (let i = 0; i < 4 && Math.abs(f) > HALF_WIDTH; i++) {
-        f = Math.sign(f) * (2 * HALF_WIDTH - Math.abs(f));
-    }
-    return THREE.MathUtils.clamp(f, -HALF_WIDTH, HALF_WIDTH);
-};
-
 /* -------------------------------------------------------------- coverage -- */
 
 /** Width of one tally bin, well under an obstacle's own footprint. */
@@ -547,23 +483,7 @@ const coverage = () => {
     };
 };
 
-/**
- * A spot for `shape` clear of the lane, in this stretch's crowd and biased
- * toward the emptiest x within it.
- *
- * The two pulls look opposed and are not, because they work at different
- * scales. The draw decides which part of the field this stretch is using; the
- * tally decides where inside that part the block goes, and only ever compares
- * candidates that came out of the same crowd — so it still keeps blocks off
- * each other's shoulders without dragging the crowd back out into an even
- * spread.
- *
- * The last two attempts fall back to the whole field. A crowd that has drifted
- * onto the corridor has nowhere legal in it, and a block that cannot be placed
- * is a block the slice does not spend: without the fallback the field thins out
- * exactly where the lane and the mass cross, which is a hole rather than a
- * lean.
- */
+/** A spot for `shape` clear of the lane, biased toward the emptiest x. */
 const spread = (
     tally: ReturnType<typeof coverage>,
     shape: Shape,
@@ -571,20 +491,13 @@ const spread = (
     laneX: number,
 ): number | null => {
     const clear = clearFor(shape, z);
-    const centre = massAt(z);
-    // Triangular rather than flat: a crowd has a middle. Its width runs from
-    // the whole field at no clumping to a few footprints at full.
-    const reach = THREE.MathUtils.lerp(HALF_WIDTH, CLUMP_WIDTH, clumpAt(z));
     let best: number | null = null;
 
     for (let candidate = 0; candidate < 3; candidate++) {
         let x = 0;
         let legal = false;
         for (let attempt = 0; attempt < 8 && !legal; attempt++) {
-            x =
-                attempt < 6
-                    ? fold(centre + (Math.random() + Math.random() - 1) * reach)
-                    : randomInRange2(-HALF_WIDTH, HALF_WIDTH);
+            x = randomInRange2(-HALF_WIDTH, HALF_WIDTH);
             legal = Math.abs(x - laneX) > clear;
         }
         if (legal && (best === null || tally.seen(x) < tally.seen(best))) {
