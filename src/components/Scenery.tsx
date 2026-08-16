@@ -1670,12 +1670,17 @@ const finale: Builder = (z0, z1, spec) => {
             // The shield, left of the letters: the crest proper — a dark
             // pointed shield carrying white marks: diamond, tee, the
             // interlocking weave, chevrons below.
+            // The crest, done as the real one reads: a solid glowing
+            // shield with the marks as dark negative space cut into it —
+            // white light, matching the letters beside it.
             const sx0 = -42;
-            glass.push(at(box(40, 50, 2), sx0, wy + 2, zB + 33));
-            const tip = new THREE.ConeGeometry(20.5, 14, 4);
+            const crestGlow: THREE.BufferGeometry[] = [];
+            const crestCut: THREE.BufferGeometry[] = [];
+            crestGlow.push(at(box(42, 52, 2), sx0, wy + 2, zB + 34));
+            const tip = new THREE.ConeGeometry(21.5, 15, 4);
             tip.rotateX(Math.PI);
             tip.rotateY(Math.PI / 4);
-            glass.push(at(tip, sx0, wy - 27, zB + 33));
+            crestGlow.push(at(tip, sx0, wy - 27, zB + 34));
             const mark = (
                 mx: number,
                 my: number,
@@ -1683,26 +1688,20 @@ const finale: Builder = (z0, z1, spec) => {
                 h: number,
                 rot = 0,
             ) => {
-                const m = box(w, h, 2.2);
+                const m = box(w, h, 1.4);
                 if (rot) m.rotateZ(rot);
-                signs.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.4));
+                crestCut.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.6));
             };
-            // The shield itself glows as an outline — the dark plate reads
-            // as nothing against the dark wall, so the border carries the
-            // crest's silhouette: three straight edges and the pointed foot.
-            mark(0, 27, 44, 2.4); // top edge
-            mark(-21, 0, 2.4, 52); // left edge
-            mark(21, 0, 2.4, 52); // right edge
-            mark(-10.5, -32, 26, 2.4, -0.59); // foot, left slope
-            mark(10.5, -32, 26, 2.4, 0.59); // foot, right slope
-            mark(0, 19, 7, 7, Math.PI / 4); // diamond
-            mark(0, 10, 25, 4.8); // tee bar
-            mark(0, 4.5, 4.8, 6.5); // tee stem
-            mark(-4.3, -5, 21, 4.8, Math.PI / 4); // weave /
-            mark(4.3, -5, 21, 4.8, -Math.PI / 4); // weave \
-            mark(-7.5, -16, 11, 3.8, Math.PI / 4); // chevrons
-            mark(0, -16, 11, 3.8, -Math.PI / 4);
-            mark(7.5, -16, 11, 3.8, Math.PI / 4);
+            mark(0, 17, 7, 7, Math.PI / 4); // diamond
+            mark(0, 8.5, 25, 4.8); // tee bar
+            mark(0, 3.2, 4.8, 6.5); // tee stem
+            mark(-4.3, -5.5, 21, 4.8, Math.PI / 4); // weave /
+            mark(4.3, -5.5, 21, 4.8, -Math.PI / 4); // weave \
+            mark(-7.5, -16.5, 11, 3.8, Math.PI / 4); // chevrons
+            mark(0, -16.5, 11, 3.8, -Math.PI / 4);
+            mark(7.5, -16.5, 11, 3.8, Math.PI / 4);
+            emit(build, crestGlow, basic('#e8f4ff'));
+            emit(build, crestCut, basic('#0a1420'));
             const u = 4.2;
             glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
             glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
@@ -1760,7 +1759,7 @@ const finale: Builder = (z0, z1, spec) => {
                     g.rotateY(-Math.PI / 2);
                     // Centred on the wall's own midpoint — anchored off the
                     // door position it slid past the corner.
-                    g.translate(wallX, y + 128, zB - 85 + lz);
+                    g.translate(wallX, y + 148, zB - 85 + lz);
                     signs.push(g);
                 }
             };
