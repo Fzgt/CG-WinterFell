@@ -24,6 +24,17 @@ export const benchFlags = {
     immortal: params.has('immortal'),
 };
 
+/**
+ * Which model the player drives.
+ *
+ * A flag rather than an edit, so the two can be compared on the deployed site
+ * without a rebuild: `?craft=plane` brings back the interceptor. Both models
+ * are built the same way and cost about the same, so this is a question of
+ * taste, and taste is easier to settle side by side.
+ */
+export const craftChoice: 'kart' | 'plane' =
+    params.get('craft') === 'plane' ? 'plane' : 'kart';
+
 export interface BenchSample {
     t: number;
     frameMs: number;

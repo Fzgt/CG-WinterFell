@@ -13,6 +13,7 @@ import {
 import useKeyboardControls from './useKeyboardControls';
 import { useStore } from '../store/store';
 import { MotionController } from '../utils/MotionController';
+import { craftChoice } from '../utils/bench';
 import * as THREE from 'three';
 
 export interface PlayerRefs {
@@ -20,6 +21,16 @@ export interface PlayerRefs {
     playerGroupRef: React.RefObject<THREE.Group>;
     cameraRef: React.RefObject<THREE.PerspectiveCamera>;
 }
+
+/**
+ * How far the craft rolls into a steering input.
+ *
+ * An aircraft rolls to turn, so a quarter-turn of bank is the whole gesture.
+ * A kart does not: at 26 degrees it reads as two wheels off the ground rather
+ * than as a car being thrown into a corner, because the wheels are drawn and
+ * the ground is right there. It gets a lean, not a roll.
+ */
+const STEER_LEAN = craftChoice === 'kart' ? Math.PI / 22 : Math.PI / 7;
 
 export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: PlayerRefs) => {
     const gameOver = useStore(state => state.gameOver);
@@ -107,10 +118,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         );
         const bank = -bendYaw * 0.8;
         if (left) {
-            rotationZ.current.setTarget(-Math.PI / 7 + bank);
+            rotationZ.current.setTarget(-STEER_LEAN + bank);
             laneX.current = Math.max(laneX.current - lateralStep, leftBound);
         } else if (right) {
-            rotationZ.current.setTarget(Math.PI / 7 + bank);
+            rotationZ.current.setTarget(STEER_LEAN + bank);
             laneX.current = Math.min(laneX.current + lateralStep, rightBound);
         } else {
             rotationZ.current.setTarget(bank);
