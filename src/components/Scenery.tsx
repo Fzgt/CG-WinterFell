@@ -93,8 +93,6 @@ let crestLoading = false;
 
 const buildCrestFromImage = (img: HTMLImageElement) => {
     const size = 512;
-    const pad = Math.round(size * 0.22); // roomier than the widest blur
-    const full = size + pad * 2;
 
     const a = document.createElement('canvas');
     a.width = size;
@@ -148,24 +146,10 @@ const buildCrestFromImage = (img: HTMLImageElement) => {
     }
     ga.putImageData(data, 0, 0);
 
-    const b = document.createElement('canvas');
-    b.width = full;
-    b.height = full;
-    const gb = b.getContext('2d')!;
-    gb.shadowColor = '#dfe9ff';
-    for (const [blur, alpha] of [
-        [size * 0.16, 0.55],
-        [size * 0.07, 0.75],
-    ] as const) {
-        gb.shadowBlur = blur;
-        gb.globalAlpha = alpha;
-        gb.drawImage(a, pad, pad);
-    }
-    gb.shadowBlur = 0;
-    gb.globalAlpha = 1;
-    gb.drawImage(a, pad, pad);
-
-    const texture = new THREE.CanvasTexture(b);
+    // No baked halo: the letters get their glow from the bloom pass with a
+    // crisp core, and the emblem must match — pre-blurred layers smeared
+    // the weave into a blob at wall scale.
+    const texture = new THREE.CanvasTexture(a);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 8;
     return texture;
@@ -1938,7 +1922,7 @@ const CrestEmblem = () => {
     const y = trackHeight(zB);
     return (
         <mesh position={[trackCurve(zB) - 26, y + 132, zB + 35.5]}>
-            <planeGeometry args={[62, 62]} />
+            <planeGeometry args={[44, 44]} />
             {/* Over-unit color so the additive quad lands in bloom range —
                 at plain white it read grey next to the solid glyph quads. */}
             <meshBasicMaterial
