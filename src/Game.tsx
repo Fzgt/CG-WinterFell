@@ -129,6 +129,67 @@ const LevelFog = ({ color }: { color: string }) => {
     return null;
 };
 
+/**
+ * A lost WebGPU device looks exactly like a frozen render loop.
+ *
+ * When the browser drops the device — a GPU process restart, a driver reset,
+ * another tab exhausting VRAM — every subsequent submit is discarded in
+ * silence. Nothing throws, so the console stays empty; the store keeps
+ * ticking, so the HUD keeps counting; and the canvas holds the last frame
+ * that made it through. That is indistinguishable, from the outside, from the
+ * teardown bugs above, and it sent an afternoon of bisecting after code that
+ * was already correct.
+ *
+ * So say it out loud. The banner goes straight into the DOM rather than
+ * through React, because a device loss can take the renderer down without
+ * touching the component tree, and the message has to survive that.
+ */
+const reportDeviceLoss = (renderer: unknown) => {
+    const device = (
+        renderer as {
+            backend?: {
+                device?: {
+                    lost?: Promise<{ reason: string; message: string }>;
+                    addEventListener?: (
+                        type: string,
+                        listener: (event: { error?: { message?: string } }) => void
+                    ) => void;
+                };
+            };
+        } | null
+    )?.backend?.device;
+    // The WebGL2 fallback has no device at all, and a three upgrade may move
+    // this: in either case there is nothing to watch.
+    if (!device?.lost) return;
+
+    const announce = (headline: string, detail: string) => {
+        console.error(`[renderer] ${headline}: ${detail}`);
+        const banner = document.createElement('div');
+        banner.style.cssText =
+            'position:fixed;inset:0 0 auto 0;z-index:9999;padding:12px 16px;' +
+            'background:#3a0d16;color:#ffd7de;font:14px/1.5 monospace;' +
+            'border-bottom:1px solid #ff5470;pointer-events:none';
+        banner.textContent = `${headline} — ${detail.replace(/\.$/, '')}. Reload to recover.`;
+        document.body.appendChild(banner);
+    };
+
+    device.lost.then(({ reason, message }) => {
+        announce(`GPU device lost (${reason})`, message || 'no message given');
+    });
+
+    // Validation errors do not throw either; they are reported here and
+    // nowhere else. One line per distinct message is enough to name the
+    // culprit — a broken pipeline repeats itself every frame.
+    const seen = new Set<string>();
+    device.addEventListener?.('uncapturederror', event => {
+        const message = event.error?.message ?? String(event.error);
+        const key = message.slice(0, 120);
+        if (seen.has(key) || seen.size >= 5) return;
+        seen.add(key);
+        console.error('[renderer] uncaptured GPU error:', message);
+    });
+};
+
 interface GameProps {
     onStart: boolean;
 }
@@ -164,6 +225,7 @@ const Game = ({ onStart }: GameProps) => {
                     // init() is what builds the attribute map, so the guard
                     // goes on after it and before the first tile is drawn.
                     guardAttributeRelease(renderer);
+                    reportDeviceLoss(renderer);
                     return renderer;
                 }}
             >
