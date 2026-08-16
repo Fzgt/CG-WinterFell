@@ -28,10 +28,6 @@ const FinaleBanner = () => {
     return (
         <div className="finale-banner">
             <h2>WELCOME TO UTS</h2>
-            <p>
-                Run complete — all 20 scenes cleared. The grid ends where it
-                all began.
-            </p>
         </div>
     );
 };

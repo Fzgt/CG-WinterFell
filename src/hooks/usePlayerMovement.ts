@@ -111,9 +111,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         }
         xPosition.current.setTarget(laneX.current);
 
-        // The run ends at the doors of UTS: forward motion clamps at the
-        // threshold and the craft glides to a stop inside the lit hall.
-        const FINAL_Z = -35720;
+        // The run ends on the UTS forecourt: far enough back that the final
+        // frame holds the whole building — podium, tower, lit sign — with
+        // the craft small on the avenue below. Composed to be screenshotted.
+        const FINAL_Z = -35360;
         zPosition.current.setTarget(
             Math.max(zPosition.current.getValue() - forwardSpeed, FINAL_Z),
         );
