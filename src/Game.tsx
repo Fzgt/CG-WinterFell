@@ -100,6 +100,18 @@ const Game = ({ onStart }: GameProps) => {
                     } as never);
                     renderer.toneMapping = ACESFilmicToneMapping;
                     await renderer.init();
+                    // DEV ONLY: a lost device is the one way the render loop
+                    // ends without throwing — the frame that would have
+                    // scheduled the next one never returns, the last picture
+                    // stays up, and nothing is logged. Say so if it happens.
+                    const device = (
+                        renderer as unknown as {
+                            backend?: { device?: { lost?: Promise<unknown> } };
+                        }
+                    ).backend?.device;
+                    device?.lost?.then(info => {
+                        console.error('[gpu] device lost', info);
+                    });
                     return renderer;
                 }}
             >
