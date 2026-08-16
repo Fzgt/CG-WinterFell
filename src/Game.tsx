@@ -22,6 +22,64 @@ import Warmup from './components/Warmup';
 import Scenery from './components/Scenery';
 import SectorBanner from './components/SectorBanner';
 
+/**
+ * three r174 releases a geometry's GPU buffers twice, and the second pass
+ * throws.
+ *
+ * `Geometries.initGeometry` adds a `dispose` listener per *render object*, not
+ * per geometry. A mesh lit by a shadow-casting light is one geometry with two
+ * render objects — the shadow pass and the camera pass — so `dispose()` fires
+ * two identical teardowns. The first empties the attribute map. The second
+ * finds nothing, and hits this in `Attributes.delete`:
+ *
+ *     const attributeData = super.delete( attribute );   // DataMap: null when absent
+ *     if ( attributeData !== undefined ) {               // null passes
+ *         this.backend.destroyAttribute( attribute );    // ...and destroys nothing
+ *     }
+ *
+ * `destroyAttribute` then asks the backend for a record that no longer exists.
+ * `DataMap.get` hands back a fresh `{}` rather than `undefined`, so the next
+ * line is `undefined.destroy()` — the TypeError seen once per tile.
+ *
+ * That throw lands inside React's unmount commit and ends the frame loop: the
+ * last frame stays on screen while the HUD keeps ticking from the store. It
+ * also aborts the teardown midway, so every vertex buffer after the index is
+ * left resident on the GPU — a run leaks most of the world it has driven past.
+ *
+ * The guard is the `undefined` check three meant to write. No record means
+ * nothing to destroy, so the second teardown becomes a no-op and the first is
+ * allowed to finish.
+ */
+const guardAttributeRelease = (renderer: unknown) => {
+    const attributes = (
+        renderer as { _attributes?: Record<string, unknown> } | null
+    )?._attributes;
+    const records = attributes?.data as WeakMap<object, unknown> | undefined;
+    const release = attributes?.delete as
+        | ((attribute: object) => unknown)
+        | undefined;
+    // Private fields: if a three upgrade renames them, leave the renderer be.
+    if (!attributes || !records?.has || !release || attributes.__guarded) {
+        return;
+    }
+    // Under ?perf=1 the swallowed calls are counted: a non-zero number is the
+    // double teardown happening for real, and each one is a throw that no
+    // longer reaches the frame loop.
+    let swallowed = 0;
+    attributes.delete = (attribute: object) => {
+        if (records.has(attribute)) return release.call(attributes, attribute);
+        swallowed += 1;
+        return null;
+    };
+    attributes.__guarded = true;
+    if (benchFlags.perf) {
+        Object.defineProperty(window, '__doubleRelease', {
+            get: () => swallowed,
+            configurable: true,
+        });
+    }
+};
+
 /** Shown once the run crosses into the final scene: no loop past here. */
 const FinaleBanner = () => {
     const arrived = useStore(
@@ -105,6 +163,9 @@ const Game = ({ onStart }: GameProps) => {
                     } as never);
                     renderer.toneMapping = ACESFilmicToneMapping;
                     await renderer.init();
+                    // init() is what builds the attribute map, so the guard
+                    // goes on after it and before the first tile is drawn.
+                    guardAttributeRelease(renderer);
                     // DEV ONLY: a lost device is the one way the render loop
                     // ends without throwing — the frame that would have
                     // scheduled the next one never returns, the last picture
