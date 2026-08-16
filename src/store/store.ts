@@ -16,20 +16,15 @@ export const useStore = create<GameStore>(set => ({
     level: 0,
     setLevel: level => set({ level }),
 
-    // Bumping this remounts the scene (see Game.tsx), which resets every
-    // section, the craft and the physics world without reloading the page —
-    // restarting used to be window.location.reload(), which meant sitting
-    // through a full asset load between two-second runs.
-    runId: 0,
-    restart: () =>
-        set(state => ({
-            runId: state.runId + 1,
-            gameOver: false,
-            gamePaused: false,
-            playerSpeed: 15,
-            level: 0,
-            playerPosition: [0, 1, -20],
-        })),
+    // Restarting reloads the document instead of remounting the scene.
+    // @react-three/fiber v9 no longer disposes on unmount, and most of the
+    // geometry and materials here are constructed by hand, so a remount left
+    // every buffer and texture from the previous run alive on the GPU —
+    // measured at ~800 live buffers after one restart against 463 on a cold
+    // start. The reload was dropped originally to avoid re-loading assets;
+    // MODEL_PATHS is empty now, so it costs a bundle parse and nothing else.
+    // High scores live in localStorage and survive it.
+    restart: () => window.location.reload(),
 
     gamePaused: false,
     togglePause: () => set(state => ({ gamePaused: !state.gamePaused })),

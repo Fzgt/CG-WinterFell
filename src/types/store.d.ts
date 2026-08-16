@@ -13,7 +13,6 @@ export interface GameStore {
     level: number;
     setLevel: (level: number) => void;
 
-    runId: number;
     restart: () => void;
 
     gamePaused: boolean;

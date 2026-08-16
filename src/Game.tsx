@@ -88,9 +88,8 @@ const FinaleBanner = () => {
     return (
         <div className="finale-banner">
             <h2>WELCOME TO UTS</h2>
-            <p>Route complete — all 20 sectors</p>
             <button className="finale-again" onClick={restart}>
-                Run Again
+                Back to Start
             </button>
         </div>
     );
@@ -200,7 +199,6 @@ const Game = ({ onStart }: GameProps) => {
     // benchmarked against the same scene.
     const isWebGPUSupported = webGPUAvailable && !benchFlags.forceWebGL;
     const gameOver = useStore(state => state.gameOver);
-    const runId = useStore(state => state.runId);
     const level = useStore(state => state.level);
     const scenic = useStore(state => state.scenic);
     const palette = paletteFor(level);
@@ -250,7 +248,7 @@ const Game = ({ onStart }: GameProps) => {
                 />
                 <Skybox />
 
-                <Physics key={runId}>
+                <Physics>
                     <Ground />
                     <Scenery />
                     {onStart && <Player />}

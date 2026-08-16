@@ -108,7 +108,7 @@ const Score = () => {
                         onClick={restart}
                         autoFocus
                     >
-                        Run Again
+                        Back to Start
                     </button>
                 </div>
             </div>
