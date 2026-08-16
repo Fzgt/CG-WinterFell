@@ -90,8 +90,15 @@ const results = await page.evaluate(
             let freeWorst = 0;
 
             for (let t = 0; t < trials; t++) {
+                // A fresh route per trial, not a fresh throw of the dice on
+                // one route. The layout's shape — where the lane crosses,
+                // where the field thickens, where the events sit — is now the
+                // run's seed rather than a constant, so sampling one seed many
+                // times would test one route many times and say nothing about
+                // the one the player is actually handed.
+                mod.reseedRoute(section * 7919 + t);
                 const obstacles = mod
-                    .generateSectionObstacles(section, 0)
+                    .generateSectionObstacles(section)
                     .map(o => ({ x: o.position.x, z: o.position.z, r: o.radius }));
                 const zs = obstacles.map(p => p.z);
                 const startZ = Math.max(...zs);
@@ -148,7 +155,7 @@ const results = await page.evaluate(
                 if (free > freeWorst) freeWorst = free;
             }
 
-            const sample = mod.generateSectionObstacles(section, 0);
+            const sample = mod.generateSectionObstacles(section);
             // What the layout costs the player, as opposed to what it costs
             // the map. A section is flown at 900 units a second early and 2040
             // late, so the same count of blocks arrives at more than twice the

@@ -58,10 +58,33 @@ export interface Obstacle {
 
 /* ----------------------------------------------------------------- noise -- */
 
-/** Deterministic 0..1 from two integers. */
+/**
+ * The number that makes this run's route this run's own.
+ *
+ * Everything above is a function of world z, which is what keeps a section
+ * joined to its neighbours and lets the fairness sweep ask its questions — and
+ * it also meant the route was the same route every time it was played. The
+ * blocks moved between runs, because each one is placed with an unseeded roll,
+ * but the shape did not: the lane crossed the field at the same z, the knots
+ * sat in the same slices, the density peaked in the same places. A player who
+ * dies twice in the same sector is meeting the same sector.
+ *
+ * So the whole field hangs off one integer, drawn once when the module loads —
+ * i.e. once per run, since a restart reloads the page. It is folded into the
+ * hash every noise stream is built from, which reseeds the lane, the pressure,
+ * the low/tall balance, the railing and the events in one place, and cannot
+ * pull the streams into phase with each other: XOR is one-to-one, so seeds
+ * that differ still differ.
+ *
+ * The contract is untouched. Nothing here changes what the route is allowed to
+ * ask for — bench/fairness.mjs walks fresh seeds for exactly that reason.
+ */
+let routeSeed = (Math.random() * 0xffffffff) | 0;
+
+/** Deterministic 0..1 from two integers, and this run's seed. */
 const hash2 = (a: number, b: number) => {
     let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b);
-    h = Math.imul(h ^ Math.imul(b + 0x165667b1, 0x27d4eb2f), 0xc2b2ae35);
+    h = Math.imul(h ^ Math.imul((b ^ routeSeed) + 0x165667b1, 0x27d4eb2f), 0xc2b2ae35);
     h ^= h >>> 15;
     h = Math.imul(h, 0x85ebca6b);
     h ^= h >>> 13;
@@ -653,6 +676,26 @@ const shareOf = ({ share, cost, cap }: typeof SHOULDER, budget: number) =>
     Math.min(cap, (share * budget) / cost);
 
 /* ----------------------------------------------------------------- entry -- */
+
+/**
+ * Draw a different route.
+ *
+ * The game never calls this — a restart reloads the page and the module picks
+ * its own seed on the way up. It exists so the fairness sweep can walk many
+ * routes rather than many rolls of the dice on one route, which is the only
+ * way the sweep's guarantee still means what it says now that the shape of the
+ * field varies too.
+ *
+ * Everything memoised off z has to go with it: the lane's samples are a walk
+ * from the start line, and its cached spreads are read off those samples.
+ */
+export const reseedRoute = (seed?: number) => {
+    routeSeed = (seed ?? Math.random() * 0xffffffff) | 0;
+    laneSamples.length = 1;
+    laneDir = 1;
+    laneHold = 0;
+    spreads.clear();
+};
 
 const sectionBounds = (section: number): [number, number] =>
     section === 0
