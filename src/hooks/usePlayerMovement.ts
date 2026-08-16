@@ -160,14 +160,14 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             );
             cameraRef.current.position.set(
                 camX + trackCurve(newZ + 20),
-                11 + lift * 20 + trackHeight(newZ + 20),
+                11 + lift * 8 + trackHeight(newZ + 20),
                 newZ + 20,
             );
             // Aim at the road ahead in full 3D: cresting a hill points the
             // view down into the valley, a dip aims it up at the sky road.
             cameraRef.current.lookAt(
                 camX + trackCurve(newZ - 55),
-                2 + lift * 150 + trackHeight(newZ - 55),
+                2 + lift * 30 + trackHeight(newZ - 55),
                 newZ - 55,
             );
         }
