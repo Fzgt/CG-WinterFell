@@ -1668,24 +1668,15 @@ const finale: Builder = (z0, z1, spec) => {
         {
             const wy = y + 130;
             glass.push(at(box(230, 62, 8), 0, wy, zB + 30));
-            for (let px = 0; px < 90; px++) {
-                const gx = -106 + Math.floor(px % 30) * 7.3;
-                const gy = wy - 22 + Math.floor(px / 30) * 20 + rand(-6, 6);
-                if (Math.random() < 0.45) continue;
-                if (gx > -40 && gx < 62) continue; // clear zone for the marque
-                (Math.random() < 0.7 ? pixelsA : pixelsB).push(
-                    at(box(3.4, 3.4, 1.6), gx, gy, zB + 35),
-                );
-            }
             // The shield, left of the letters: the crest proper — a dark
             // pointed shield carrying white marks: diamond, tee, the
             // interlocking weave, chevrons below.
-            const sx0 = -30;
-            glass.push(at(box(24, 30, 2), sx0, wy + 2, zB + 33.4));
-            const tip = new THREE.ConeGeometry(12.5, 9, 4);
+            const sx0 = -36;
+            glass.push(at(box(32, 40, 2), sx0, wy + 2, zB + 33));
+            const tip = new THREE.ConeGeometry(16.5, 12, 4);
             tip.rotateX(Math.PI);
             tip.rotateY(Math.PI / 4);
-            glass.push(at(tip, sx0, wy - 16, zB + 33.4));
+            glass.push(at(tip, sx0, wy - 22, zB + 33));
             const mark = (
                 mx: number,
                 my: number,
@@ -1693,18 +1684,18 @@ const finale: Builder = (z0, z1, spec) => {
                 h: number,
                 rot = 0,
             ) => {
-                const m = box(w, h, 1.2);
+                const m = box(w, h, 2.2);
                 if (rot) m.rotateZ(rot);
-                signs.push(at(m, sx0 + mx, wy + 2 + my, zB + 35));
+                signs.push(at(m, sx0 + mx, wy + 2 + my, zB + 35.4));
             };
-            mark(0, 11, 4.2, 4.2, Math.PI / 4); // diamond
-            mark(0, 5.5, 15, 3); // tee bar
-            mark(0, 2.2, 3, 4); // tee stem
-            mark(-2.6, -3.4, 13, 3, Math.PI / 4); // weave /
-            mark(2.6, -3.4, 13, 3, -Math.PI / 4); // weave \
-            mark(-4.4, -10.2, 7, 2.4, Math.PI / 4); // chevrons
-            mark(-0.6, -10.2, 7, 2.4, -Math.PI / 4);
-            mark(4.4, -10.2, 7, 2.4, Math.PI / 4);
+            mark(0, 15, 5.6, 5.6, Math.PI / 4); // diamond
+            mark(0, 8, 20, 3.8); // tee bar
+            mark(0, 3.6, 3.8, 5); // tee stem
+            mark(-3.4, -4, 17, 3.8, Math.PI / 4); // weave /
+            mark(3.4, -4, 17, 3.8, -Math.PI / 4); // weave \
+            mark(-6, -13, 9, 3, Math.PI / 4); // chevrons
+            mark(0, -13, 9, 3, -Math.PI / 4);
+            mark(6, -13, 9, 3, Math.PI / 4);
             const u = 4.2;
             glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
             glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
@@ -1713,24 +1704,22 @@ const finale: Builder = (z0, z1, spec) => {
 
         // ── The tower: wandering glass storeys with hairline light plates
         // and the warm atrium notch bitten out of the face.
+        // An aligned taper — storeys narrow as they rise, faces flush, so
+        // the silhouette reads deliberate instead of jumbled.
         let ty = y + 96;
         for (let f = 0; f < 8; f++) {
-            const w = 190 - f * 10;
-            const wobble = Math.sin(f * 1.6) * 13;
-            const storey = box(w, 30, 92 - f * 5);
-            storey.rotateY(Math.sin(f * 2.1) * 0.05);
-            glass.push(at(storey, wobble, ty + 15, zB - 30));
-            bands.push(at(box(w * 0.97, 1.6, (92 - f * 5) * 1.01), wobble, ty + 29, zB - 30));
-            // The amber bite: a warm-lit notch climbing the face.
-            if (f >= 2 && f <= 5) {
-                amber.push(at(box(26, 22, 3), -20 + (f - 2) * 16, ty + 14, zB - 30 + 48 - f * 2.5));
-            }
+            const w = 190 - f * 12;
+            glass.push(at(box(w, 30, 88), 0, ty + 15, zB - 30));
+            bands.push(at(box(w * 0.97, 1.6, 89), 0, ty + 29, zB - 30));
             ty += 30;
         }
+        // The atrium light: one clean warm column set into the face.
+        amber.push(at(box(20, 116, 2.4), 26, y + 96 + 118, zB + 14.6));
 
         // ── The brutalist tower to the left, banded, its own sign lit.
         glass.push(at(box(92, 250, 82), -295, y + 125, zB - 70));
-        for (let f = 0; f < 8; f++) {
+        for (let f = 0; f < 7; f++) {
+            // Stops short of the crown, so no band crosses the carved sign.
             bands.push(at(box(78, 1.4, 84), -295, y + 34 + f * 28, zB - 70));
         }
         {
@@ -1744,18 +1733,30 @@ const finale: Builder = (z0, z1, spec) => {
         // three green light scars cut across its face and its own lit sign.
         glass.push(at(box(105, 170, 88), 405, y + 85, zB - 85));
         for (const [sx, tilt] of [[-26, 0.34], [2, 0.3], [30, 0.26]] as const) {
-            const slash = box(3, 130, 2);
+            const slash = box(4.5, 132, 2.4);
             slash.rotateZ(tilt);
             green.push(at(slash, 405 + sx, y + 88, zB - 40));
         }
         for (let f = 0; f < 5; f++) {
             bands.push(at(box(92, 1.2, 90), 405, y + 26 + f * 32, zB - 85));
         }
+        // The sign lives on the left wall, lit, reading down the length of
+        // the building toward the run — not a placard on the roof.
         {
-            const u = 3.6;
-            glyph(signs, 'U', 390 + trackCurve(zB), y + 182, zB - 40, u);
-            glyph(signs, 'T', 405 + trackCurve(zB), y + 182, zB - 40, u);
-            glyph(signs, 'S', 420 + trackCurve(zB), y + 182, zB - 40, u);
+            const u = 3.8;
+            const wallX = 405 - 53.5 + trackCurve(zB);
+            const letter = (l: 'U' | 'T' | 'S', lz: number) => {
+                const parts: THREE.BufferGeometry[] = [];
+                glyph(parts, l, 0, 0, 0, u);
+                for (const g of parts) {
+                    g.rotateY(Math.PI / 2);
+                    g.translate(wallX, y + 138, zB - 48 + lz);
+                    signs.push(g);
+                }
+            };
+            letter('U', 16);
+            letter('T', 0);
+            letter('S', -16);
         }
 
         emit(build, green, basic('#4dff88', { transparent: true, opacity: 0.9 }));
