@@ -89,6 +89,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     // the craft stops before the picture does, and it stops here, in one of
     // these guards. Strip with the rest of the dev tools.
     const halted = useRef('');
+    const beat = useRef({ frames: 0, lastZ: 0, still: 0 });
     const report = (why: string) => {
         if (halted.current === why) return;
         halted.current = why;
@@ -108,6 +109,19 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             return;
         }
         report('');
+
+        // DEV ONLY: prove whether this callback is still being called at all.
+        // The run froze with the renderer at a steady 60fps, z pinned, and
+        // not one guard reporting — which would mean the craft's own frame
+        // callback had stopped running while everything else kept going.
+        beat.current.frames += 1;
+        if (beat.current.frames % 120 === 0) {
+            console.info(
+                `[move] alive frame=${beat.current.frames}` +
+                    ` z=${Math.round(-zPosition.current.getValue())}` +
+                    ` speed=${playerSpeed}`,
+            );
+        }
 
         // A dropped frame must not teleport the player. Movement is
         // delta-scaled, so one long frame — a background tab, a GC pause, a
@@ -167,6 +181,23 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         playerGroupRef.current.position.set(newX + bendX, 1.5 + bendY, newZ);
 
         setPlayerPosition([newX, 2, newZ]);
+
+        // DEV ONLY: running, but going nowhere?
+        const zNow = Math.round(newZ);
+        if (zNow === beat.current.lastZ) {
+            beat.current.still += 1;
+            if (beat.current.still === 60) {
+                console.error(
+                    `[move] running but z is stuck at ${-zNow}:` +
+                        ` speed=${playerSpeed} delta=${delta.toFixed(4)}` +
+                        ` forward=${forwardSpeed.toFixed(2)}` +
+                        ` value=${zPosition.current.getValue().toFixed(1)}`,
+                );
+            }
+        } else {
+            beat.current.still = 0;
+            beat.current.lastZ = zNow;
+        }
         // console.log('Player Position:', Math.abs(Math.round(newZ)));
 
         if (cameraRef.current) {

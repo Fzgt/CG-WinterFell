@@ -70,7 +70,9 @@ const StallWatch = () => {
         let reported = false;
         const timer = setInterval(() => {
             const now = heartbeat.current;
-            if (now === lastSeen && now > 0 && !reported) {
+            // Only once a run is properly under way: the loop idles while
+            // the menu is up, which was reported as a stop at 21 frames.
+            if (now === lastSeen && now > 300 && !reported) {
                 reported = true;
                 const state = useStore.getState();
                 console.error(
