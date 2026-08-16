@@ -52,10 +52,12 @@ const RAIL_SEGMENT = 25;
 
 const RailTile = ({
     tileRef,
-    color,
+    railMaterial,
+    rungMaterial,
 }: {
     tileRef: React.RefObject<THREE.Group>;
-    color: THREE.Color;
+    railMaterial: THREE.Material;
+    rungMaterial: THREE.Material;
 }) => {
     const railCount = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
     const segsPerRail = Math.ceil(planeSize / RAIL_SEGMENT);
@@ -133,33 +135,21 @@ const RailTile = ({
         <group ref={tileRef}>
             <instancedMesh
                 ref={railsRef}
-                args={[railGeometry, undefined, railCount * segsPerRail]}
+                args={[railGeometry, railMaterial, railCount * segsPerRail]}
                 frustumCulled={false}
-            >
-                <meshBasicMaterial color={color} toneMapped={false} />
-            </instancedMesh>
-            {/* Cross lines, dimmer so they read as ties between the rails
-                rather than competing with them for the eye. */}
-            {/* A dark floor under the grid, so looking down shows ground
-                rather than the inside of the sky dome. */}
+            />
             {/* The abyss floor: far below the deepest valley the height
-                curve can dig, so dips read as real drops. */}
+                curve can dig, so dips read as real drops, and so looking
+                down shows ground rather than the inside of the sky dome. */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -110, 0]}>
                 <planeGeometry args={[planeSize * 1.6, planeSize]} />
                 <meshBasicMaterial color="#04030a" />
             </mesh>
             <instancedMesh
                 ref={rungsRef}
-                args={[rungGeometry, undefined, rungCount]}
+                args={[rungGeometry, rungMaterial, rungCount]}
                 frustumCulled={false}
-            >
-                <meshBasicMaterial
-                    color={color}
-                    toneMapped={false}
-                    transparent
-                    opacity={0.28}
-                />
-            </instancedMesh>
+            />
         </group>
     );
 };
@@ -169,14 +159,37 @@ const Ground = () => {
     const ground1Ref = useRef<THREE.Group>(null);
     const ground2Ref = useRef<THREE.Group>(null);
 
-    // One Color instance for the life of the ground, recoloured in place.
-    // Handing the material a *new* Color each level replaces the object on
-    // the material rather than changing a value, and on the node-material
-    // path that can invalidate what the renderer has already built for it.
-    const color = useRef(new THREE.Color(paletteFor(level).neon)).current;
+    /**
+     * The materials are owned here and recoloured in place, the same way the
+     * obstacles and the sky dome are.
+     *
+     * They used to be declared inside the tiles as `<meshBasicMaterial
+     * color={color} />` against a Color instance held up here, on the theory
+     * that mutating one object beat handing the material a new one each level.
+     * It never reached the material: r3f *copies* a Color prop into
+     * `material.color` when it applies it, and the prop's identity never
+     * changed afterwards, so no later render even tried. Every level after the
+     * first recoloured the sky, the obstacles and the HUD, and left the grid
+     * on level 0's cyan.
+     */
+    const { railMaterial, rungMaterial } = useMemo(
+        () => ({
+            railMaterial: new THREE.MeshBasicMaterial({ toneMapped: false }),
+            // Dimmer, so the ties read as cross members between the rails
+            // rather than competing with them for the eye.
+            rungMaterial: new THREE.MeshBasicMaterial({
+                toneMapped: false,
+                transparent: true,
+                opacity: 0.28,
+            }),
+        }),
+        [],
+    );
     useEffect(() => {
-        color.set(paletteFor(level).neon);
-    }, [color, level]);
+        const neon = paletteFor(level).neon;
+        railMaterial.color.set(neon);
+        rungMaterial.color.set(neon);
+    }, [level, railMaterial, rungMaterial]);
 
     // Read, don't subscribe: this only moves two groups by ref, so a
     // per-frame re-render of the rail tiles bought nothing.
@@ -197,8 +210,16 @@ const Ground = () => {
 
     return (
         <>
-            <RailTile tileRef={ground1Ref} color={color} />
-            <RailTile tileRef={ground2Ref} color={color} />
+            <RailTile
+                tileRef={ground1Ref}
+                railMaterial={railMaterial}
+                rungMaterial={rungMaterial}
+            />
+            <RailTile
+                tileRef={ground2Ref}
+                railMaterial={railMaterial}
+                rungMaterial={rungMaterial}
+            />
         </>
     );
 };
