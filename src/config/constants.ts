@@ -7,8 +7,21 @@ export const planeSize = 1000;
  * movement hook because the obstacle generator has to reason about it too:
  * how far the craft can move sideways per unit of forward travel is what
  * decides whether a gap is reachable at all.
+ *
+ * It is also the ceiling on how much the route may ask for, which is why it
+ * moved. The guaranteed corridor is empty ground, so a stretch of track only
+ * stops being flyable on a fixed x once the corridor has slid its own width
+ * across — and how fast it can slide is this number against the forward speed,
+ * nothing else. At 44, by the late levels, the craft covered two per cent of
+ * its forward travel sideways: the corridor took most of a sector to move out
+ * of its own way, and the route could not have been made to ask for more
+ * without asking for something the craft cannot do. Every other knob was
+ * downstream of that. At 64 the craft crosses the field in a sector rather
+ * than in two, the corridor closes inside the fog, and the steering is
+ * noticeably livelier — that last part is a change to how the game feels, not
+ * only to how it is laid out.
  */
-export const LATERAL_SPEED = 44;
+export const LATERAL_SPEED = 64;
 
 /**
  * Where the route stops being a course and becomes an arrival: no obstacles

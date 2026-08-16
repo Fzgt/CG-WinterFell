@@ -51,7 +51,11 @@ const results = await page.evaluate(
         // move sideways per metre of track. Hard-coding the opening speed
         // here (as this did) quietly validated the late game against reach
         // it does not have.
-        const LATERAL_SPEED = 44;
+        // Imported rather than restated: this was a copy of the constant, and
+        // a copy of a constant is a constant that goes stale — it sat at 44
+        // while the craft was given more steering, which would have validated
+        // the route against reach the sweep no longer knew about.
+        const { LATERAL_SPEED } = await import('/src/config/constants.ts');
         const reachAt = section => {
             const z = -section * cfg.SECTION_LENGTH;
             const speed = levels.paletteFor(levels.levelAt(z)).speed;
@@ -81,6 +85,59 @@ const results = await page.evaluate(
             }
             return widest;
         };
+
+        /**
+         * The longest stretch of track that can be flown on one fixed x.
+         *
+         * The column above asks whether a band of x survives a whole section,
+         * and answering "no" is weaker than it sounds: an x touched once at
+         * the very top of a section scores zero there and is still open for
+         * the nineteen hundred units below it. What the player reports is not
+         * a band, it is a duration — "I held one key and never had to dodge" —
+         * and this measures that directly: for every x, the largest gap in z
+         * between the blocks that cover it, including the run in from the
+         * section's start and the run out to its end.
+         *
+         * It is the number that would have caught the open channel earlier.
+         * The field measured as busy, fair and evenly weighted on both sides
+         * while some x was flyable for an entire sector, because nothing that
+         * was being measured was measured along the direction of travel.
+         *
+         * Read against the control beside it, never on its own. Some x always
+         * gets lucky: with eighty blocks spread over a hundred and twenty
+         * units of width, a given strip is covered seven times in two thousand
+         * units, and the largest gap among a hundred and twenty such strips is
+         * most of a sector by chance alone. So the same blocks, with the same
+         * footprints, are thrown at the section uniformly and measured again.
+         * The control is what this density can do; the gap between the two is
+         * what the layout is adding, and the layout is the only part that can
+         * be fixed without changing how much is on the track.
+         */
+        const holdLine = (obstacles, startZ, endZ) => {
+            const half = cfg.FIELD_WIDTH / 2;
+            let longest = 0;
+            for (let x = -half; x <= half; x += 1) {
+                const hits = obstacles
+                    .filter(p => Math.abs(p.x - x) < p.r)
+                    .map(p => p.z)
+                    .sort((a, b) => b - a);
+                let prev = startZ;
+                for (const z of hits) {
+                    if (prev - z > longest) longest = prev - z;
+                    prev = z;
+                }
+                if (prev - endZ > longest) longest = prev - endZ;
+            }
+            return longest;
+        };
+
+        /** The same blocks, thrown at the same ground with no rules at all. */
+        const shuffled = (obstacles, startZ, endZ) =>
+            obstacles.map(p => ({
+                r: p.r,
+                x: (Math.random() - 0.5) * cfg.FIELD_WIDTH,
+                z: endZ + Math.random() * (startZ - endZ),
+            }));
 
         /**
          * What a stretch of track looks like from inside it, as opposed to
@@ -182,6 +239,9 @@ const results = await page.evaluate(
             let tightest = Infinity;
             let freeTotal = 0;
             let freeWorst = 0;
+            let holdTotal = 0;
+            let holdWorst = 0;
+            let holdControl = 0;
             let sidedTotal = 0;
             let leanTotal = 0;
             let clumpTotal = 0;
@@ -267,6 +327,15 @@ const results = await page.evaluate(
                 freeTotal += free;
                 if (free > freeWorst) freeWorst = free;
 
+                const hold = holdLine(obstacles, startZ, endZ);
+                holdTotal += hold;
+                if (hold > holdWorst) holdWorst = hold;
+                holdControl += holdLine(
+                    shuffled(obstacles, startZ, endZ),
+                    startZ,
+                    endZ,
+                );
+
                 const sided = bothSides(obstacles);
                 sidedTotal += sided.both;
                 leanTotal += sided.lean;
@@ -296,6 +365,10 @@ const results = await page.evaluate(
                 tightestGap: Math.round(tightest),
                 freeLine: Math.round(freeTotal / trials),
                 freeLineWorst: freeWorst,
+                hold: Math.round(holdTotal / trials),
+                holdWorst: Math.round(holdWorst),
+                holdSeconds: (holdTotal / trials / pace).toFixed(1),
+                holdControl: Math.round(holdControl / trials),
                 bothSidesPct: Math.round((sidedTotal / trials) * 100),
                 leanPct: Math.round((leanTotal / trials) * 100),
                 clumps: (clumpTotal / trials).toFixed(1),
@@ -313,13 +386,13 @@ await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
 console.log(
-    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) | Things in view / how wide | Something both sides | Busier side holds | Ways through | Where there is a choice |',
+    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) | Flown on one fixed x (avg / worst / same blocks at random) | Things in view / how wide | Something both sides | Busier side holds | Ways through | Where there is a choice |',
 );
-console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
         `| ${r.section} | ${r.obstacles} | ${r.perSecond} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
-            `${r.freeLine} / ${r.freeLineWorst} units | ${r.clumps} × ${r.clumpWidth} units | ${r.bothSidesPct}% | ${r.leanPct}% | ${r.routes} | ${r.forkPct}% |`,
+            `${r.freeLine} / ${r.freeLineWorst} units | ${r.hold} / ${r.holdWorst} / ${r.holdControl} units (${r.holdSeconds}s) | ${r.clumps} × ${r.clumpWidth} units | ${r.bothSidesPct}% | ${r.leanPct}% | ${r.routes} | ${r.forkPct}% |`,
     );
 }
 const sides = results.filter(r => r.obstacles).map(r => r.bothSidesPct);
@@ -345,6 +418,18 @@ console.log(
     worst === 0
         ? `\nEvery layout sampled had a continuous path through it.`
         : `\nUp to ${worst}% of layouts had no path through — those runs end in a death the player could not avoid.`,
+);
+const held = Math.round(
+    results.reduce((s, r) => s + r.hold, 0) / results.length,
+);
+const control = Math.round(
+    results.reduce((s, r) => s + r.holdControl, 0) / results.length,
+);
+console.log(
+    `\nLongest stretch flyable without touching the controls: ${held} units on ` +
+        `average, against ${control} for the same blocks thrown at the same ground ` +
+        `at random. The control is what this density can do; anything above it is ` +
+        `the layout handing out an open channel.`,
 );
 const idle = Math.max(...results.map(r => r.freeLineWorst));
 console.log(

@@ -60,8 +60,27 @@ export const SLICE_DEPTH = 50;
  * the field there is work to do at any width, and where it has run into the
  * edge of the field and turned back the corridor closes up, because a corridor
  * that stands still is somewhere to park.
+ *
+ * `floor` is not part of that breathing, and it is the number that decides
+ * whether the route has an open channel down it. The corridor is empty ground
+ * by construction — nothing may stand in it anywhere — so a corridor wider
+ * than the ground the lane covers while the player is looking at it is a band
+ * of x that is free for as far as they can see. Over the fog the lane covers
+ * eight units late in the run; against a 22-unit corridor that left a lane and
+ * a half of permanently open track down the middle of a field that measured as
+ * busy, which is what "I can hold a straight line and never dodge anything"
+ * looks like from the generator's side.
+ *
+ * So where the arithmetic says the corridor must be narrower than `min` for
+ * that band to close, it is allowed down to here and no further. Fourteen
+ * units of clear air, for a craft that collides as a point against blocks that
+ * each carry their own footprint: tight to aim at, not tight to fit. In
+ * practice the cap binds hardest late in the run, where the craft covers least
+ * ground per unit of track — so the corridor tightens toward the floor as the
+ * route speeds up, which is difficulty the block count does not have to pay
+ * for.
  */
-export const LANE_HALF = { min: 11, max: 18 };
+export const LANE_HALF = { floor: 7, min: 11, max: 18 };
 
 /**
  * Blocks the route puts in front of the player each second, from the loosest

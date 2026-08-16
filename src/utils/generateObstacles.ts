@@ -207,8 +207,17 @@ const reachAt = (z: number) => LATERAL_SPEED / paceAt(z);
  * Fraction of the theoretical reach the lane may demand. The rest is the
  * player's: reaction time, the craft's easing onto its lane target, and the
  * fact that nobody threads a gap by arriving exactly at its edge.
+ *
+ * It is also the exchange rate between the craft's lateral speed and the only
+ * currency that removes straight lines. The corridor is empty ground, so the
+ * band of x left free is the corridor's width less the ground the lane covers
+ * — and the lane's ground is the craft's lateral speed and nothing else. Spent
+ * at 0.55 the lane crossed eighteen units in a sector against a corridor
+ * twenty-two wide, and the difference was the open channel. Raised, it buys
+ * the band back directly, in the way that costs nothing to look at: the same
+ * blocks, a route that crosses more of the field to reach them.
  */
-const FOLLOW = 0.55;
+const FOLLOW = 0.72;
 
 /**
  * How far out the lane may wander.
@@ -250,8 +259,15 @@ const laneSweepOver = (z: number, window: number) => {
 /**
  * The widest band of x a sector is allowed to leave untouched, and the
  * footprint of the narrowest block that could stand at the corridor's edge.
+ *
+ * Ten was a band the seal was expected to close and cannot: the band this
+ * governs is the one inside the corridor from one end of the sector to the
+ * other, and no block on the route may stand there at any z. It was therefore
+ * not a target at all but a floor — ten units of guaranteed open track, plus
+ * whatever the clamp below added on top of it. Set under the narrowest
+ * footprint instead, so the arithmetic closes the band rather than sizing it.
  */
-const FREE_TARGET = 10;
+const FREE_TARGET = 2;
 const NARROW_RADIUS = OBSTACLE_BASE_RADIUS * BLOCK_WIDTH.min;
 
 /**
@@ -269,9 +285,22 @@ const NARROW_RADIUS = OBSTACLE_BASE_RADIUS * BLOCK_WIDTH.min;
  * lane's own band, somewhere no block is allowed to stand and so somewhere no
  * amount of blocks could have closed.
  *
+ * Measured over what the player can see rather than over a sector, and that is
+ * the correction that matters. A sector is two thousand units and the fog is
+ * about seven hundred: sizing the corridor against the lane's travel over a
+ * sector says "this band closes eventually", and eventually is three times
+ * further than the player can see. What they report is the stretch in front of
+ * them, and over that stretch the lane covers a third as much ground — so the
+ * corridor was consistently twice as wide as the ground it was crossing, which
+ * is an open channel that drifts rather than a route. Sized against the view,
+ * the band the corridor leaves has to close inside the distance the player is
+ * looking at.
+ *
  * Quantised to the slice and memoised: it is a pure function of z, it is asked
- * for once per candidate position, and it walks forty samples to answer.
+ * for once per candidate position, and it walks the window to answer.
  */
+const VIEW_AHEAD = 700;
+
 const spreads = new Map<number, number>();
 
 const laneSpreadAt = (z: number) => {
@@ -280,7 +309,7 @@ const laneSpreadAt = (z: number) => {
     if (cached !== undefined) return cached;
 
     const centre = -key * SLICE_DEPTH;
-    const span = SECTION_LENGTH / 2;
+    const span = VIEW_AHEAD / 2;
     let lo = Infinity;
     let hi = -Infinity;
     for (let d = -span; d <= span; d += SLICE_DEPTH) {
@@ -301,16 +330,20 @@ const laneSpreadAt = (z: number) => {
  * a straight line.
  *
  * Nothing may stand within `laneHalf` of the lane, so the band of x that no
- * block in a sector ever touches is about two clearances wide less however far
- * the lane ranges across that sector — and the range is not negotiable, it is
- * the craft's lateral speed against the route's. By the sixth level the lane
- * can be asked for nineteen units across a whole sector; against a corridor 36
- * wide that leaves seventeen units of x never once touched, which is a sector
- * flown with one key held down. So the corridor is the thing that gives: it is
- * capped at whatever leaves FREE_TARGET, which opens it where the lane is
- * crossing the field and closes it where the lane has run into the edge of the
- * field and turned back — steepest exactly where the route would otherwise
- * have nothing to ask.
+ * block ever touches over a stretch of track is about two clearances wide less
+ * however far the lane ranges across that stretch — and the range is not
+ * negotiable, it is the craft's lateral speed against the route's. Over the
+ * six hundred-odd units the fog leaves, the lane can be asked for eight of
+ * them late in the run; against a corridor 22 wide that is fourteen units of x
+ * never once touched anywhere the player can see, which is a straight line
+ * they can hold until it goes out of view and then keep holding.
+ *
+ * So the corridor is the thing that gives: it is capped at whatever leaves
+ * FREE_TARGET, which opens it where the lane is crossing the field and closes
+ * it where the lane has run into the edge of the field and turned back —
+ * steepest exactly where the route would otherwise have nothing to ask. The
+ * cap is real now rather than advisory; it used to be overruled by the clamp
+ * below in every case where it had something to say.
  */
 const laneHalfAt = (z: number) => {
     const cap = (FREE_TARGET + laneSpreadAt(z)) / 2 - NARROW_RADIUS;
@@ -323,9 +356,15 @@ const laneHalfAt = (z: number) => {
             1,
         ),
     );
+    // Floor, not min: the clamp used to hold the corridor at LANE_HALF.min
+    // whatever the cap said, which is the same as having no cap — the cap only
+    // ever binds where the lane is covering little ground, i.e. exactly where
+    // it was being overruled. A corridor is empty ground by construction, so
+    // that overrule was 22 units of open track handed to every sector the lane
+    // did not cross.
     return THREE.MathUtils.clamp(
         Math.min(wanted, cap),
-        LANE_HALF.min,
+        LANE_HALF.floor,
         LANE_HALF.max,
     );
 };
