@@ -84,9 +84,30 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         };
     }, [togglePause]);
 
+    // DEV ONLY: say why the craft stopped. The heartbeat showed the run
+    // freezing with the renderer still at a steady 60fps and z pinned — so
+    // the craft stops before the picture does, and it stops here, in one of
+    // these guards. Strip with the rest of the dev tools.
+    const halted = useRef('');
+    const report = (why: string) => {
+        if (halted.current === why) return;
+        halted.current = why;
+        if (why) console.error(`[move] halted: ${why}`);
+        else console.info('[move] running again');
+    };
+
     useFrame((_, rawDelta) => {
-        if (gameOver || gamePaused) return;
-        if (!physicsRef.current || !playerGroupRef.current) return;
+        if (gameOver || gamePaused) {
+            report(gameOver ? 'gameOver' : 'paused');
+            return;
+        }
+        if (!physicsRef.current || !playerGroupRef.current) {
+            report(
+                !physicsRef.current ? 'physics ref lost' : 'craft ref lost',
+            );
+            return;
+        }
+        report('');
 
         // A dropped frame must not teleport the player. Movement is
         // delta-scaled, so one long frame — a background tab, a GC pause, a
@@ -98,6 +119,11 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
 
         const lateralStep = LATERAL_SPEED * delta;
         const forwardSpeed = playerSpeed * delta * 60;
+        // DEV ONLY: a speed of zero or NaN would freeze the run just as
+        // effectively as an early return, and silently.
+        if (!(forwardSpeed > 0)) {
+            report(`forwardSpeed=${forwardSpeed} (speed=${playerSpeed}, delta=${delta})`);
+        }
 
         // The craft banks into the track's own bends on top of the lean
         // from steering input; positive slope curves the road toward -x,
