@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
+    FINISH_Z,
     LATERAL_SPEED,
     leftBound,
     rightBound,
@@ -119,9 +120,8 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // The run ends on the UTS forecourt: far enough back that the final
         // frame holds the whole building — podium, tower, lit sign — with
         // the craft small on the avenue below. Composed to be screenshotted.
-        const FINAL_Z = -35360;
         zPosition.current.setTarget(
-            Math.max(zPosition.current.getValue() - forwardSpeed, FINAL_Z),
+            Math.max(zPosition.current.getValue() - forwardSpeed, FINISH_Z),
         );
 
         const newX = xPosition.current.update();
@@ -161,7 +161,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             // holds the whole complex — podium, tower, lit sign.
             const lift = Math.min(
                 1,
-                Math.max(0, (newZ + 34960) / (FINAL_Z + 34960)),
+                Math.max(0, (newZ + 34960) / (FINISH_Z + 34960)),
             );
             cameraRef.current.position.set(
                 camX + trackCurve(newZ + 20),

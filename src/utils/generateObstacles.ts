@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { randomInRange2 } from './utils';
-import { LATERAL_SPEED } from '../config/constants';
+import { CAMPUS_Z, LATERAL_SPEED } from '../config/constants';
 import { levelAt, paletteFor } from '../config/levels';
 import {
     OBSTACLE_BASE_RADIUS,
@@ -301,20 +301,22 @@ export const generateSectionObstacles = (
     playerX = 0,
 ): Obstacle[] => {
     const [startZ, endZ] = sectionBounds(section);
-    // The final scene is a victory lap: the last stretch runs clean into
-    // the doors of UTS, no obstacles on campus.
-    if (startZ <= -34200) return [];
+    if (startZ <= CAMPUS_Z) return [];
     const ramp = rampFor(section);
     const reach = reachFor(section);
 
-    switch (formationFor(section)) {
-        case 'gates':
-            return gates(startZ, endZ, ramp, playerX, reach);
-        case 'slalom':
-            return slalom(startZ, endZ, ramp, reach);
-        case 'pillars':
-            return pillars(startZ, endZ, ramp, reach);
-        default:
-            return scatter(startZ, endZ, ramp, playerX, reach);
-    }
+    const formation = formationFor(section);
+    const obstacles =
+        formation === 'gates'
+            ? gates(startZ, endZ, ramp, playerX, reach)
+            : formation === 'slalom'
+              ? slalom(startZ, endZ, ramp, reach)
+              : formation === 'pillars'
+                ? pillars(startZ, endZ, ramp, reach)
+                : scatter(startZ, endZ, ramp, playerX, reach);
+
+    // The final scene is a victory lap: clip per obstacle, because the
+    // section straddling the boundary starts before the campus and ends
+    // well past where the craft comes to rest.
+    return obstacles.filter(o => o.position.z > CAMPUS_Z);
 };

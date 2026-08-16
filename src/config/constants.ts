@@ -11,6 +11,17 @@ export const planeSize = 1000;
 export const LATERAL_SPEED = 44;
 
 /**
+ * Where the route stops being a course and becomes an arrival: no obstacles
+ * past here, and the craft comes to rest a little further in, on the UTS
+ * forecourt. Both used to be loose numbers in two files, and the obstacle
+ * cutoff was applied per 2000-unit section by its start — so the section
+ * beginning at -34000 seeded the whole campus approach, right through the
+ * point the craft stops at.
+ */
+export const CAMPUS_Z = -34200;
+export const FINISH_Z = -35360;
+
+/**
  * The journey, as two centreline functions of world z — one lateral, one
  * vertical. Purely visual: gameplay happens in a straight, flat logical
  * space, and everything on the track (rails, obstacles, craft, camera,
