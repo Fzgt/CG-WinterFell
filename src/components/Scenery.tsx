@@ -134,7 +134,7 @@ const buildCrestFromImage = (img: HTMLImageElement) => {
         if (i < size * (size - 1)) queue.push(i + size);
     }
 
-    const tint = new THREE.Color('#dfe9ff');
+    const tint = new THREE.Color('#e8f4ff'); // the letters' own colour
     const cr = Math.round(tint.r * 255);
     const cg = Math.round(tint.g * 255);
     const cb = Math.round(tint.b * 255);
@@ -1969,16 +1969,17 @@ const CrestEmblem = () => {
     const zB = -35800;
     const y = trackHeight(zB);
     return (
-        <mesh position={[trackCurve(zB) - 22, y + 132, zB + 35.5]}>
-            {/* The mark's real proportions, about 1.8x the letters' cap
-                height — the lockup's own ratio. */}
-            <planeGeometry args={[46 * crestAspect, 46]} />
-            {/* Additive, which is what actually renders here — an opaque
-                alpha-tested material vanished on this path. Thin strokes
-                are answered with size rather than blend mode. */}
+        <mesh position={[trackCurve(zB) - 12, y + 130, zB + 35.5]}>
+            {/* Letters are 4.5u tall at u=4.2, i.e. ~19 units; the lockup
+                sets the crest near 1.35x that. */}
+            <planeGeometry args={[26 * crestAspect, 26]} />
+            {/* Additive, which is what actually renders on this path. The
+                multiplier stays neutral and barely over unit so the result
+                lands on the same white as the opaque glyph boxes rather
+                than a cooler, hotter version of it. */}
             <meshBasicMaterial
                 map={tex}
-                color={[1.25, 1.3, 1.45]}
+                color={[1.06, 1.06, 1.06]}
                 transparent
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
