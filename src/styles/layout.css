@@ -104,3 +104,18 @@
     transform: translateY(-1px);
     box-shadow: 0 0 40px var(--ember-glow, rgba(207, 217, 238, 0.6));
 }
+
+/* DEV ONLY: the stall readout. */
+.stall-readout {
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    z-index: 200;
+    padding: 0.3em 0.7em;
+    border-radius: 8px;
+    background: rgba(6, 8, 16, 0.72);
+    color: #9fe8c0;
+    font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}

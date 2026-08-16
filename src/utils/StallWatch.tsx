@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useStore } from '../store/store';
 import { registrySize } from './obstacleRegistry';
@@ -35,6 +35,30 @@ interface Marker {
     z: number;
     atFrame: number;
 }
+
+/**
+ * DEV ONLY readout, drawn as DOM rather than logged.
+ *
+ * The console was the wrong instrument twice over: the heartbeats are
+ * info-level, which the browser was configured to hide, and reading them
+ * needs a hand free while playing. This corner tag is updated from inside
+ * the render loop four times a second, so it answers the question that
+ * matters the moment the picture stops: if the tag keeps ticking while the
+ * world is frozen, only the canvas has stopped; if the tag freezes too, the
+ * whole page has.
+ */
+export const StallReadout = () => {
+    const [text, setText] = useState('…');
+    useEffect(() => {
+        readout = setText;
+        return () => {
+            readout = null;
+        };
+    }, []);
+    return <div className="stall-readout">{text}</div>;
+};
+
+let readout: ((text: string) => void) | null = null;
 
 const StallWatch = () => {
     const gl = useThree(state => state.gl);
@@ -170,6 +194,14 @@ const StallWatch = () => {
         frameWindow.current.frames += 1;
         frameWindow.current.ms += ms;
 
+        // Four times a second, straight from the loop into the DOM.
+        if (frame.current % 15 === 0) {
+            readout?.(
+                `${(1000 / Math.max(ms, 0.01)).toFixed(0)}fps · f${frame.current}` +
+                    ` · ${z}m · S${state.level + 1}`,
+            );
+        }
+
         const stats = () => {
             const info = (gl as unknown as { info?: Record<string, never> }).info;
             const memory = (info?.memory ?? {}) as {
@@ -197,7 +229,7 @@ const StallWatch = () => {
         // particular scene arrives?
         if (frameWindow.current.frames >= HEARTBEAT) {
             const avg = frameWindow.current.ms / frameWindow.current.frames;
-            console.info(
+            console.warn(
                 `[fps] ${(1000 / avg).toFixed(1)}fps (${avg.toFixed(0)}ms avg)` +
                     ` z=${z} sector=${state.level + 1} ${stats()}`,
             );

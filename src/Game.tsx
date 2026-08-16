@@ -16,7 +16,7 @@ import { benchFlags } from './utils/bench';
 import { paletteFor } from './config/levels';
 import PerfProbe from './utils/PerfProbe';
 // DEV ONLY: strip with the rest of the dev tools before pushing.
-import StallWatch from './utils/StallWatch';
+import StallWatch, { StallReadout } from './utils/StallWatch';
 import PostFX from './components/PostFX';
 import Warmup from './components/Warmup';
 import Scenery from './components/Scenery';
@@ -153,6 +153,8 @@ const Game = ({ onStart }: GameProps) => {
             </Canvas>
             {/* DEV ONLY: scenic badge. */}
             {onStart && scenic && <div className="scenic-badge">SCENIC</div>}
+            {/* DEV ONLY */}
+            {onStart && <StallReadout />}
             {onStart && <FinaleBanner />}
             {onStart && <Score />}
             {onStart && <SectorBanner />}

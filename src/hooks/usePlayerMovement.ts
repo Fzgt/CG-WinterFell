@@ -116,7 +116,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // callback had stopped running while everything else kept going.
         beat.current.frames += 1;
         if (beat.current.frames % 120 === 0) {
-            console.info(
+            console.warn(
                 `[move] alive frame=${beat.current.frames}` +
                     ` z=${Math.round(-zPosition.current.getValue())}` +
                     ` speed=${playerSpeed}`,
