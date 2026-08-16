@@ -88,7 +88,13 @@ const ObstacleSection = ({
         }
     });
 
-    if (!visible) return null;
+    // A section past the obstacle cutoff generates nothing, and an
+    // InstancedMesh of nothing is not free: it still builds an instance
+    // matrix buffer, of zero bytes, and the device refuses it — taking the
+    // frame, and every frame after, with it. The first such section is 17
+    // (it starts at -34000, past OBSTACLES_END_Z), and the field holds three
+    // sections ahead, so it mounts the moment the craft passes 30000.
+    if (!visible || obstacles.length === 0) return null;
 
     // Naive baseline for benchmarking (?instancing=off): one mesh per
     // obstacle, i.e. one draw call each. Only used to measure what instancing
