@@ -103,18 +103,48 @@ const buildCrestFromImage = (img: HTMLImageElement) => {
     ga.drawImage(img, 0, 0, size, size);
     const data = ga.getImageData(0, 0, size, size);
     const px = data.data;
+
+    // What glows is the pattern itself — the white marks INSIDE the black
+    // shield. The background is also white, so brightness alone cannot
+    // separate them: flood-fill from the borders marks every white pixel
+    // connected to the outside, and whatever bright remains is the mark.
+    const bright = new Uint8Array(size * size);
+    for (let i = 0; i < size * size; i++) {
+        const o = i * 4;
+        const lum =
+            (px[o] * 0.299 + px[o + 1] * 0.587 + px[o + 2] * 0.114) / 255;
+        bright[i] = px[o + 3] < 40 || lum > 0.5 ? 1 : 0;
+    }
+    const outside = new Uint8Array(size * size);
+    const queue: number[] = [];
+    for (let x = 0; x < size; x++) {
+        queue.push(x, (size - 1) * size + x);
+    }
+    for (let yq = 0; yq < size; yq++) {
+        queue.push(yq * size, yq * size + size - 1);
+    }
+    while (queue.length) {
+        const i = queue.pop()!;
+        if (outside[i] || !bright[i]) continue;
+        outside[i] = 1;
+        const x = i % size;
+        if (x > 0) queue.push(i - 1);
+        if (x < size - 1) queue.push(i + 1);
+        if (i >= size) queue.push(i - size);
+        if (i < size * (size - 1)) queue.push(i + size);
+    }
+
     const tint = new THREE.Color('#dfe9ff');
     const cr = Math.round(tint.r * 255);
     const cg = Math.round(tint.g * 255);
     const cb = Math.round(tint.b * 255);
-    for (let i = 0; i < px.length; i += 4) {
-        const lum =
-            (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
-        const alpha = (px[i + 3] / 255) * (1 - lum);
-        px[i] = cr;
-        px[i + 1] = cg;
-        px[i + 2] = cb;
-        px[i + 3] = Math.round(alpha * 255);
+    for (let i = 0; i < size * size; i++) {
+        const o = i * 4;
+        const isMark = bright[i] && !outside[i];
+        px[o] = cr;
+        px[o + 1] = cg;
+        px[o + 2] = cb;
+        px[o + 3] = isMark ? 255 : 0;
     }
     ga.putImageData(data, 0, 0);
 
