@@ -48,10 +48,20 @@ export const BAND_DEPTH = 100;
 export const LANE_HALF_WIDTH = 12;
 /** How far a band's clear lane may move from the previous band's. */
 export const LANE_MAX_DRIFT = 26;
-export const OBSTACLES_PER_BAND_START = 4;
-export const OBSTACLES_PER_BAND_MAX = Math.round(
-    OBSTACLES_PER_SECTION / (SECTION_LENGTH / BAND_DEPTH),
-);
+/**
+ * Width of one placement column.
+ *
+ * A band is filled column by column rather than by dropping n blocks anywhere
+ * across it: uniform random placement leaves holes, and holes that line up
+ * from band to band are a free run down a single x. At 19 the field is six
+ * columns wide, so a band still looks scattered — the blocks sit anywhere
+ * inside their column and plenty of columns stay empty — but no x is empty
+ * for a whole section by accident.
+ */
+export const COLUMN_WIDTH = 19;
+/** Chance a column is occupied, at the start of the run and at full density. */
+export const FILL_START = 0.5;
+export const FILL_MAX = 0.86;
 /**
  * Sections taken to ramp from the opening density to the full one.
  *

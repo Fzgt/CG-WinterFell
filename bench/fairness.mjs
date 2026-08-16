@@ -59,10 +59,35 @@ const results = await page.evaluate(
         };
         const STEP = 10; // forward sampling resolution
 
+        /**
+         * Widest band of x that survives the whole section untouched.
+         *
+         * "Is there a way through" and "does the player have to do anything"
+         * are different questions, and only the first one was being asked. A
+         * layout can be perfectly fair and still be a corridor you hold one
+         * key through — which is what a lane that jitters instead of sweeping
+         * produces. This measures the second: any non-zero result is a
+         * straight line down which the section flies itself.
+         */
+        const freeLine = obstacles => {
+            const half = cfg.FIELD_WIDTH / 2;
+            const STEP_X = 1;
+            let widest = 0;
+            let run = 0;
+            for (let x = -half; x <= half; x += STEP_X) {
+                const hit = obstacles.some(p => Math.abs(p.x - x) < p.r);
+                run = hit ? 0 : run + STEP_X;
+                if (run > widest) widest = run;
+            }
+            return widest;
+        };
+
         const out = [];
         for (let section = 0; section < sections; section++) {
             let blocked = 0;
             let tightest = Infinity;
+            let freeTotal = 0;
+            let freeWorst = 0;
 
             for (let t = 0; t < trials; t++) {
                 const obstacles = mod
@@ -117,6 +142,10 @@ const results = await page.evaluate(
                 }
 
                 if (deadAt !== null) blocked++;
+
+                const free = freeLine(obstacles);
+                freeTotal += free;
+                if (free > freeWorst) freeWorst = free;
             }
 
             const sample = mod.generateSectionObstacles(section, 0);
@@ -125,6 +154,8 @@ const results = await page.evaluate(
                 obstacles: sample.length,
                 blockedPct: Math.round((blocked / trials) * 100),
                 tightestGap: Math.round(tightest),
+                freeLine: Math.round(freeTotal / trials),
+                freeLineWorst: freeWorst,
             });
         }
         return out;
@@ -135,11 +166,14 @@ const results = await page.evaluate(
 await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
-console.log('| Section | Obstacles | Layouts with no way through | Tightest gap |');
-console.log('| --- | --- | --- | --- |');
+console.log(
+    '| Section | Obstacles | Layouts with no way through | Tightest gap | Straight line through (avg / worst) |',
+);
+console.log('| --- | --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
-        `| ${r.section} | ${r.obstacles} | ${r.blockedPct}% | ${r.tightestGap} units |`,
+        `| ${r.section} | ${r.obstacles} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
+            `${r.freeLine} / ${r.freeLineWorst} units |`,
     );
 }
 const worst = Math.max(...results.map(r => r.blockedPct));
@@ -147,4 +181,10 @@ console.log(
     worst === 0
         ? `\nEvery layout sampled had a continuous path through it.`
         : `\nUp to ${worst}% of layouts had no path through — those runs end in a death the player could not avoid.`,
+);
+const idle = Math.max(...results.map(r => r.freeLineWorst));
+console.log(
+    idle === 0
+        ? `No section could be flown on a fixed x: every layout demanded steering.`
+        : `Widest straight line anywhere: ${idle} units — that much of some section flies itself.`,
 );

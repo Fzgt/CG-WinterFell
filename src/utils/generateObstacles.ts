@@ -9,8 +9,9 @@ import {
     BAND_DEPTH,
     LANE_HALF_WIDTH,
     LANE_MAX_DRIFT,
-    OBSTACLES_PER_BAND_START,
-    OBSTACLES_PER_BAND_MAX,
+    COLUMN_WIDTH,
+    FILL_START,
+    FILL_MAX,
     DIFFICULTY_RAMP_SECTIONS,
 } from '../config/obstacles';
 
@@ -76,21 +77,127 @@ const reachFor = (section: number) => {
  * player's: reaction time, the craft's easing onto its lane target, and the
  * fact that nobody threads a gap by arriving exactly at its edge.
  */
-const FOLLOW = 0.55;
+const FOLLOW = 0.65;
 
-const block = (
-    x: number,
-    z: number,
-    width: number,
-    height: number,
-    depth: number,
-    rotationY = 0,
-): Obstacle => ({
+/* --------------------------------------------------------------- shapes -- */
+
+/**
+ * A block is either low and wide or tall and thin. Never both.
+ *
+ * The camera's eye sits at y = 11 and every piece of scenery — ridges,
+ * arches, spires, the lot — lives beyond x = 94. Anything both tall and
+ * broad is therefore a hoarding pulled across the horizon: the canyon walls
+ * this file built for a while stood 18–34 high and 16 across, and they hid
+ * the entire outfield behind them. A slab tops out around 8, under the eye
+ * line, so you see over it; a spire reaches 40 but is only ~6 across, so you
+ * see past it. Difficulty is a question of where the blocks are, never of how
+ * much sky they take.
+ */
+type Kind = 'slab' | 'spire';
+
+interface Shape {
+    width: number;
+    height: number;
+    depth: number;
+    rotationY: number;
+}
+
+const shapeOf = (kind: Kind): Shape =>
+    kind === 'slab'
+        ? {
+              width: randomInRange2(1.7, 3.0),
+              height: randomInRange2(0.34, 0.62),
+              depth: randomInRange2(0.7, 1.7),
+              rotationY: randomInRange2(-0.6, 0.6),
+          }
+        : {
+              width: randomInRange2(0.45, 0.95),
+              height: randomInRange2(1.7, 3.1),
+              depth: randomInRange2(0.45, 1.0),
+              rotationY: randomInRange2(-0.4, 0.4),
+          };
+
+const someShape = (slabChance: number) =>
+    shapeOf(Math.random() < slabChance ? 'slab' : 'spire');
+
+const place = (shape: Shape, x: number, z: number): Obstacle => ({
     position: new THREE.Vector3(x, 0, z),
-    scale: new THREE.Vector3(width, height, depth),
-    rotationY,
-    radius: OBSTACLE_BASE_RADIUS * width,
+    scale: new THREE.Vector3(shape.width, shape.height, shape.depth),
+    rotationY: shape.rotationY,
+    radius: OBSTACLE_BASE_RADIUS * shape.width,
 });
+
+/**
+ * How far this block's centre has to sit from the lane centre.
+ *
+ * Its own footprint plus the lane, because a 3.0-wide slab carries a 13.8
+ * radius: one placed just outside a nominal 12-unit lane reaches most of the
+ * way back across it. The lane has to be as wide to fly as it is to look at.
+ */
+const clearFor = (shape: Shape) =>
+    LANE_HALF_WIDTH + OBSTACLE_BASE_RADIUS * shape.width;
+
+/* ----------------------------------------------------------------- lane -- */
+
+/** Where the guaranteed-clear lane sat, sampled down the section. */
+interface LaneSample {
+    z: number;
+    x: number;
+}
+
+interface Layout {
+    obstacles: Obstacle[];
+    lane: LaneSample[];
+}
+
+/**
+ * A clear lane that sweeps instead of jittering.
+ *
+ * Every formation used to move its lane by a signed random amount per band,
+ * which is a random walk: the steps are as large as the craft can follow, but
+ * they cancel, so over a whole 2000-unit section the lane ended up within a
+ * few units of where it started. That is the "you left me a corridor and I
+ * just flew down it" complaint — one x held for the entire section, no input
+ * required, on a track whose whole difficulty budget was being spent on steps
+ * that undid each other.
+ *
+ * Holding a direction spends exactly the same per-band budget — so nothing
+ * here asks for lateral speed the craft does not have — but the lane actually
+ * crosses the field, and no fixed x survives it.
+ *
+ * How long it holds has to scale with the step, not be a fixed number of
+ * bands. What breaks a straight line is the lane travelling further than its
+ * own width; a few bands of a 2.7-unit step moves it 13, and a 32-wide clear
+ * lane still has 20 units common to every band of the section — measurably a
+ * corridor, which is exactly what the sweep reported. A run long enough to
+ * carry the lane most of the way to the boundary leaves nothing in common.
+ */
+const laneSweeper = (start: number, maxStep: number) => {
+    let x = THREE.MathUtils.clamp(start, -LANE_LIMIT, LANE_LIMIT);
+    let dir = Math.random() < 0.5 ? -1 : 1;
+    // Steps needed to cross from the middle to the edge, so the hold is stated
+    // in track rather than in bands and stays right at any speed or spacing.
+    const crossing = Math.max(3, LANE_LIMIT / maxStep);
+    // Never shorter than three quarters of a crossing: a run that turns back
+    // early leaves the bands either side of the turn overlapping, and that
+    // overlap is the corridor.
+    const newHold = () => Math.round(randomInRange2(0.75, 1.25) * crossing);
+    let hold = newHold();
+
+    return () => {
+        const step = randomInRange2(0.7, 1) * maxStep;
+        // Turn when the run is spent, or at the boundary — otherwise the lane
+        // parks against the edge and is a straight line again.
+        const next = x + dir * step;
+        if (hold <= 0 || next < -LANE_LIMIT || next > LANE_LIMIT) {
+            dir = -dir;
+            hold = newHold();
+        }
+        hold--;
+        x = THREE.MathUtils.clamp(x + dir * step, -LANE_LIMIT, LANE_LIMIT);
+        return x;
+    };
+};
 
 /* ------------------------------------------------------------- scatter -- */
 
@@ -100,62 +207,55 @@ const scatter = (
     ramp: number,
     playerX: number,
     reach: number,
-): Obstacle[] => {
+): Layout => {
     const out: Obstacle[] = [];
-    const perBand = Math.round(
-        OBSTACLES_PER_BAND_START +
-            (OBSTACLES_PER_BAND_MAX - OBSTACLES_PER_BAND_START) * ramp,
-    );
+    const lane: LaneSample[] = [];
+    // Bands are filled by column rather than by throwing n blocks anywhere in
+    // the band. Uniform random placement leaves holes, and a hole that
+    // happens to line up band after band is a free run down one x — with 4
+    // blocks scattered over a 120-wide band there were plenty. Walking the
+    // columns and skipping some of them looks just as irregular but cannot
+    // leave a lane nobody asked for: a column has to come up empty twenty
+    // times running to make one.
+    const columns = Math.max(1, Math.round(FIELD_WIDTH / COLUMN_WIDTH));
+    const fill =
+        FILL_START + (FILL_MAX - FILL_START) * ramp;
 
-    let laneX = THREE.MathUtils.clamp(playerX, -LANE_LIMIT, LANE_LIMIT);
     const depth = Math.abs(endZ - startZ);
     const bands = Math.max(1, Math.round(depth / BAND_DEPTH));
     // The lane may only move as far between bands as the craft can follow.
-    const maxDrift = Math.min(LANE_MAX_DRIFT, BAND_DEPTH * reach * FOLLOW);
+    const nextLane = laneSweeper(
+        playerX,
+        Math.min(LANE_MAX_DRIFT, BAND_DEPTH * reach * FOLLOW),
+    );
 
     for (let band = 0; band < bands; band++) {
         const bandStartZ = startZ - (depth * band) / bands;
         const bandEndZ = startZ - (depth * (band + 1)) / bands;
+        const laneX = nextLane();
+        lane.push({ z: (bandStartZ + bandEndZ) / 2, x: laneX });
 
-        laneX = THREE.MathUtils.clamp(
-            laneX + randomInRange2(-maxDrift, maxDrift),
-            -LANE_LIMIT,
-            LANE_LIMIT,
-        );
+        for (let column = 0; column < columns; column++) {
+            if (Math.random() > fill) continue;
 
-        for (let i = 0; i < perBand; i++) {
-            // Size the block first: the lane has to clear this obstacle's own
-            // footprint, not a nominal centre distance. A 2.8-wide slab
-            // carries a 12.9 radius, so one placed just outside the nominal
-            // lane reached 13 units into it — the lane looked 34 wide and
-            // played 8 wide, which is what "that one was impossible" was.
-            const wide = Math.random() < 0.45;
-            const width = wide
-                ? randomInRange2(1.6, 2.8)
-                : randomInRange2(0.55, 1.3);
-            const clear = LANE_HALF_WIDTH + OBSTACLE_BASE_RADIUS * width;
+            // Size the block first: how far it has to sit from the lane
+            // depends on its own footprint.
+            const shape = someShape(0.45);
+            const clear = clearFor(shape);
+            const from = -HALF_WIDTH + COLUMN_WIDTH * column;
 
             let x = 0;
             let placed = false;
-            for (let attempt = 0; attempt < 12 && !placed; attempt++) {
-                x = randomInRange2(-HALF_WIDTH, HALF_WIDTH);
+            for (let attempt = 0; attempt < 8 && !placed; attempt++) {
+                x = randomInRange2(from, from + COLUMN_WIDTH);
                 placed = Math.abs(x - laneX) > clear;
             }
             if (!placed) continue;
 
-            out.push(
-                block(
-                    x,
-                    randomInRange2(bandStartZ, bandEndZ),
-                    width,
-                    wide ? randomInRange2(0.5, 1.1) : randomInRange2(1.1, 2.6),
-                    randomInRange2(0.6, 1.6),
-                    randomInRange2(-0.5, 0.5),
-                ),
-            );
+            out.push(place(shape, x, randomInRange2(bandStartZ, bandEndZ)));
         }
     }
-    return out;
+    return { obstacles: out, lane };
 };
 
 /* --------------------------------------------------------------- gates -- */
@@ -166,45 +266,59 @@ const gates = (
     ramp: number,
     playerX: number,
     reach: number,
-): Obstacle[] => {
+): Layout => {
     const out: Obstacle[] = [];
+    const lane: LaneSample[] = [];
     // Rows get a little closer as the run ramps, never closer than the craft
     // can re-steer between (drift below stays inside lateral reach). At the
     // old 300–240 a wall arrived every four seconds and the gap between two
     // of them had usually not moved far enough to need a correction; this
     // puts them close enough together to read as a sequence.
     const spacing = 235 - ramp * 55;
-    let laneX = THREE.MathUtils.clamp(playerX, -LANE_LIMIT, LANE_LIMIT);
+    // The gap may only move between walls as far as the craft can follow, and
+    // it sweeps rather than jitters, so consecutive gates pull the same way
+    // for a while instead of cancelling each other out.
+    const nextLane = laneSweeper(playerX, Math.min(11, spacing * reach * FOLLOW));
 
-    // The gap may only move between walls as far as the craft can follow.
-    const rowDrift = Math.min(11, spacing * reach * FOLLOW);
-    const slabWidth = 2.3; // ×7 units
-    // The gap clears the slabs' own footprint, not their centres.
-    const gateClear = LANE_HALF_WIDTH + OBSTACLE_BASE_RADIUS * slabWidth;
+    /**
+     * The wall is a row of posts, not a row of billboards.
+     *
+     * It used to be 16-unit slabs standing up to 19 high — solid enough that
+     * a gate blanked the horizon on approach. Posts overlap footprints just
+     * as thoroughly, so there is still exactly one way through, but between
+     * them you can see the outfield, which is the whole reason the scenery
+     * is modelled.
+     */
+    const postWidth = 0.9; // ×7 units
+    const postRadius = OBSTACLE_BASE_RADIUS * postWidth;
+    // Under a footprint's diameter, so consecutive posts leave no seam.
+    const step = postRadius * 1.75;
+    const gateClear = LANE_HALF_WIDTH + postRadius;
 
     for (let z = startZ - spacing / 2; z > endZ; z -= spacing) {
-        laneX = THREE.MathUtils.clamp(
-            laneX + randomInRange2(-rowDrift, rowDrift),
-            -LANE_LIMIT,
-            LANE_LIMIT,
-        );
+        const laneX = nextLane();
+        lane.push({ z, x: laneX });
 
-        // A wall of wide slabs with one gap at the lane.
-        const step = slabWidth * 7 + 2;
         for (let x = -HALF_WIDTH + step / 2; x < HALF_WIDTH; x += step) {
-            if (Math.abs(x - laneX) < gateClear) continue;
+            // Jitter first, test after: a post nudged off its nominal place
+            // after the gap was measured is a post standing in the gap.
+            const jittered = x + randomInRange2(-1.2, 1.2);
+            if (Math.abs(jittered - laneX) < gateClear) continue;
             out.push(
-                block(
-                    x,
-                    z + randomInRange2(-4, 4),
-                    slabWidth,
-                    randomInRange2(0.8, 1.5),
-                    randomInRange2(0.7, 1.1),
+                place(
+                    {
+                        width: postWidth,
+                        height: randomInRange2(1.9, 3.1),
+                        depth: randomInRange2(0.6, 1.0),
+                        rotationY: randomInRange2(-0.25, 0.25),
+                    },
+                    jittered,
+                    z + randomInRange2(-5, 5),
                 ),
             );
         }
     }
-    return out;
+    return { obstacles: out, lane };
 };
 
 /* -------------------------------------------------------------- slalom -- */
@@ -214,74 +328,85 @@ const slalom = (
     endZ: number,
     ramp: number,
     reach: number,
-): Obstacle[] => {
+): Layout => {
     const out: Obstacle[] = [];
-    // Lane swings as a sine of absolute z: slope stays well inside the
-    // craft's lateral reach (amplitude · ω < LATERAL_SPEED / forward speed).
-    const amplitude = LANE_LIMIT * (0.55 + ramp * 0.3);
-    // Peak lane slope is amplitude x omega; hold it inside the reach.
-    const omega = Math.min(0.0011, (reach * FOLLOW) / amplitude);
-    const laneAt = (z: number) => amplitude * Math.sin(Math.abs(z) * omega);
-
-    const step = 60;
+    const lane: LaneSample[] = [];
+    const step = 52;
     /**
-     * Each wall runs from the edge of the lane all the way out to the edge of
-     * the field.
+     * The canyon used to wind as a sine of absolute z, with a fixed amplitude
+     * and a frequency squeezed down until the slope fitted inside the craft's
+     * lateral reach. That trade is the wrong way round: hold the amplitude and
+     * the period stretches, so at the speeds the late route runs at one period
+     * came to nine sections and the "winding" canyon ran dead straight through
+     * any one of them. The sweep caught it — sector 10 was a fixed 19-unit
+     * corridor in every layout generated, the same number every time, because
+     * nothing about that lane was random.
      *
-     * It used to be one spire per side — two thin posts on a 120-wide track,
-     * with the whole outfield behind them empty. The lane was decoration: you
-     * could sit at either boundary and fly the entire section in a straight
-     * line without ever entering the canyon, which is what the fairness sweep
-     * was reporting when it measured a 75-unit free corridor on a formation
-     * whose whole point is that it is narrow. The slabs are wide enough that
-     * consecutive footprints overlap, so the wall has no seam to slip through.
+     * The same sweeper the other formations use spends the reach budget in one
+     * direction instead of spreading it over a period, which is what actually
+     * moves the lane across the field.
      */
-    const WALL_WIDTH = 1.8;
-    const slabRadius = OBSTACLE_BASE_RADIUS * WALL_WIDTH;
-    const wallStep = slabRadius * 1.7;
-
+    const nextLane = laneSweeper(0, Math.min(LANE_MAX_DRIFT, step * reach * FOLLOW));
     /**
-     * The wall sinks as it runs away from the lane.
+     * The canyon is two rows of spires marking the lane, and an outfield that
+     * is scattered rather than walled.
      *
-     * Collision is a distance test in x/z — an obstacle's height is not part
-     * of it — so the outfield slabs can be any height at all without changing
-     * what the section asks of the player. Left at canyon height they were
-     * a 34-unit hoarding standing between the camera (eye at 11) and every
-     * piece of scenery, which all lives beyond x = 94. Tapering to roughly
-     * 8 puts the far end of the wall under the eye line: the canyon still
-     * reads as walls where the player is flying, and the ridges, arches and
-     * spires either side stay visible over the top of the rest.
+     * Both earlier versions were wrong in opposite directions. One spire per
+     * side left the whole outfield empty, so the canyon was optional: sit at
+     * either boundary and the entire section flies itself in a straight line.
+     * Filling the outfield with a solid run of slabs closed that off but put
+     * a continuous hoarding either side of the player, and the scenery this
+     * game spends most of its triangles on disappeared behind it.
+     *
+     * Marking the lane with spires and littering the rest keeps both: the
+     * canyon still reads as a canyon, the outfield is expensive enough to
+     * cross that the lane is worth flying, and none of it is tall and wide at
+     * the same time, so the ridges stay visible throughout.
      */
-    const innerX = LANE_HALF_WIDTH + slabRadius;
-    const outfield = Math.max(1, HALF_WIDTH - innerX);
+    const edgeSpire = () => ({
+        width: randomInRange2(0.55, 0.95),
+        height: randomInRange2(2.0, 3.1),
+        depth: randomInRange2(0.5, 0.9),
+        rotationY: randomInRange2(-0.3, 0.3),
+    });
+    const columns = Math.max(1, Math.round(FIELD_WIDTH / COLUMN_WIDTH));
+    const litter = 0.4 + ramp * 0.3;
 
     for (let z = startZ; z > endZ; z -= step) {
-        const laneX = laneAt(z);
+        const laneX = nextLane();
+        lane.push({ z, x: laneX });
+
+        // The lane edges: a pair per row, clearing their own footprint so the
+        // canyon is as wide to fly as it is to look at.
         for (const side of [-1, 1]) {
-            // The innermost slab clears its own footprint, so the canyon is
-            // as wide to fly as it is to look at.
-            let x = laneX + side * innerX;
-            for (; Math.abs(x) <= HALF_WIDTH; x += side * wallStep) {
-                const fromLane = Math.abs(x - laneX) - innerX;
-                const away = THREE.MathUtils.clamp(fromLane / outfield, 0, 1);
-                // Cubic, so the drop happens across the outfield rather than
-                // immediately outside the lane, where the wall still has to
-                // look like a wall.
-                const fall = 1 - away * away * away;
-                out.push(
-                    block(
-                        x,
-                        z + randomInRange2(-6, 6),
-                        WALL_WIDTH,
-                        randomInRange2(0.5, 0.62) +
-                            randomInRange2(0.9, 2.0) * fall,
-                        randomInRange2(0.8, 1.4),
-                    ),
-                );
+            const shape = edgeSpire();
+            out.push(
+                place(
+                    shape,
+                    laneX + side * clearFor(shape),
+                    z + randomInRange2(-5, 5),
+                ),
+            );
+        }
+
+        // Outfield. Same column walk as scatter, so it is irregular without
+        // ever leaving a straight line open.
+        for (let column = 0; column < columns; column++) {
+            if (Math.random() > litter) continue;
+            const shape = someShape(0.6);
+            const clear = clearFor(shape);
+            const from = -HALF_WIDTH + COLUMN_WIDTH * column;
+
+            let x = 0;
+            let placed = false;
+            for (let attempt = 0; attempt < 8 && !placed; attempt++) {
+                x = randomInRange2(from, from + COLUMN_WIDTH);
+                placed = Math.abs(x - laneX) > clear;
             }
+            if (placed) out.push(place(shape, x, z + randomInRange2(-24, 24)));
         }
     }
-    return out;
+    return { obstacles: out, lane };
 };
 
 /* ------------------------------------------------------------- pillars -- */
@@ -291,43 +416,97 @@ const pillars = (
     endZ: number,
     ramp: number,
     reach: number,
-): Obstacle[] => {
+): Layout => {
     const out: Obstacle[] = [];
+    const lane: LaneSample[] = [];
     const rowSpacing = 118 - ramp * 18;
     const colSpacing = 24;
-    const rowDrift = Math.min(8, rowSpacing * reach * FOLLOW);
-    // Spires run to 0.8 wide, so the lane clears their footprint too.
-    const pillarClear = LANE_HALF_WIDTH + OBSTACLE_BASE_RADIUS * 0.8;
-    let laneX = 0;
+    const nextLane = laneSweeper(0, Math.min(8, rowSpacing * reach * FOLLOW));
     let row = 0;
 
     for (let z = startZ - rowSpacing / 2; z > endZ; z -= rowSpacing, row++) {
-        laneX = THREE.MathUtils.clamp(
-            laneX + randomInRange2(-rowDrift, rowDrift),
-            -LANE_LIMIT,
-            LANE_LIMIT,
-        );
+        const laneX = nextLane();
+        lane.push({ z, x: laneX });
         const offset = row % 2 === 0 ? 0 : colSpacing / 2;
 
-        for (
-            let x = -HALF_WIDTH + offset;
-            x <= HALF_WIDTH;
-            x += colSpacing
-        ) {
-            if (Math.abs(x - laneX) < pillarClear) continue;
+        for (let x = -HALF_WIDTH + offset; x <= HALF_WIDTH; x += colSpacing) {
+            const shape = shapeOf('spire');
+            // The grid is where the spires belong, not where they stand. A
+            // ruler-straight lattice reads as a texture rather than as
+            // something to fly through; jittering each one by a third of the
+            // spacing keeps the coverage and loses the wallpaper. Clearance is
+            // tested on the jittered position — testing the grid position and
+            // then moving the spire is how one ends up inside the lane.
+            const jittered = x + randomInRange2(-colSpacing / 3, colSpacing / 3);
+            if (Math.abs(jittered - laneX) < clearFor(shape)) continue;
             out.push(
-                block(
-                    x,
-                    z,
-                    randomInRange2(0.5, 0.8),
-                    randomInRange2(1.6, 2.8),
-                    randomInRange2(0.5, 0.8),
-                    randomInRange2(-0.3, 0.3),
+                place(
+                    shape,
+                    jittered,
+                    z + randomInRange2(-rowSpacing / 4, rowSpacing / 4),
                 ),
             );
         }
     }
-    return out;
+    return { obstacles: out, lane };
+};
+
+/* ----------------------------------------------------------------- seal -- */
+
+/** Free runs of x narrower than this are not a corridor anyone can fly. */
+const CORRIDOR = 4;
+/** Spacing of the spires used to seal one, under a footprint's diameter. */
+const SEAL_STEP = 5;
+
+/**
+ * Close any x that survives the whole section untouched.
+ *
+ * "Is there a way through" and "does the player have to do anything" are
+ * different questions, and the layouts only ever answered the first. Sweeping
+ * the lane answers most of the second, but not the tail: a column that comes
+ * up empty band after band, or a run of blocks that happen to sit either side
+ * of the same x, still leaves a line down which the section flies itself —
+ * measured at up to 21 units even after the lane crossed the field.
+ *
+ * So measure it and close it. Every free run of x wide enough to fly gets
+ * spires dropped into it, at a z where the lane was far enough away that the
+ * lane itself is untouched. Anything that cannot be sealed without narrowing
+ * the lane is left alone: a section that flies itself beats one that cannot
+ * be flown at all.
+ */
+const seal = (layout: Layout): Obstacle[] => {
+    const { obstacles, lane } = layout;
+    if (!lane.length || !obstacles.length) return obstacles;
+
+    const free: [number, number][] = [];
+    let runStart: number | null = null;
+    for (let x = -HALF_WIDTH; x <= HALF_WIDTH; x += 1) {
+        const covered = obstacles.some(o => Math.abs(o.position.x - x) < o.radius);
+        if (!covered && runStart === null) runStart = x;
+        if (covered && runStart !== null) {
+            free.push([runStart, x]);
+            runStart = null;
+        }
+    }
+    if (runStart !== null) free.push([runStart, HALF_WIDTH]);
+
+    const added: Obstacle[] = [];
+    for (const [from, to] of free) {
+        if (to - from < CORRIDOR) continue;
+        for (let x = from + SEAL_STEP / 2; x < to; x += SEAL_STEP) {
+            const shape = shapeOf('spire');
+            const clear = clearFor(shape);
+            // Furthest the lane ever got from this x — if even that is inside
+            // the lane's clearance there is nowhere to stand.
+            let best = lane[0];
+            for (const s of lane) {
+                if (Math.abs(s.x - x) > Math.abs(best.x - x)) best = s;
+            }
+            if (Math.abs(best.x - x) <= clear) continue;
+            added.push(place(shape, x, best.z + randomInRange2(-8, 8)));
+        }
+    }
+    return obstacles.concat(added);
 };
 
 /* ---------------------------------------------------------------- entry -- */
@@ -342,7 +521,7 @@ export const generateSectionObstacles = (
     const reach = reachFor(section);
 
     const formation = formationFor(section);
-    const obstacles =
+    const layout =
         formation === 'gates'
             ? gates(startZ, endZ, ramp, playerX, reach)
             : formation === 'slalom'
@@ -350,6 +529,7 @@ export const generateSectionObstacles = (
               : formation === 'pillars'
                 ? pillars(startZ, endZ, ramp, reach)
                 : scatter(startZ, endZ, ramp, playerX, reach);
+    const obstacles = seal(layout);
 
     // The finish is a victory lap: clip per obstacle, because the section
     // straddling the boundary starts before it and ends well past where the
