@@ -14,14 +14,11 @@ const App = () => {
     const setScenic = useStore(state => state.setScenic);
 
     const handleStartGame = () => {
-        setScenic(false);
-        setShowWelcome(false);
-        setGameStarted(true);
-    };
-
-    // DEV ONLY: comment out with the WelcomePage button before pushing.
-    const handleScenicStart = () => {
-        setScenic(true);
+        // DEV ONLY: scenic mode (no obstacles, no crashes) is kept for
+        // reviewing the scenes, but off the menu — ?scenic=1 turns it on,
+        // pairs with ?z= for jumping down the route. Strip both with the
+        // rest of the dev tools before pushing.
+        setScenic(new URLSearchParams(location.search).has('scenic'));
         setShowWelcome(false);
         setGameStarted(true);
     };
@@ -38,12 +35,7 @@ const App = () => {
             </div>
 
             <div className="app-container">
-                {showWelcome && (
-                    <WelcomePage
-                        onStart={handleStartGame}
-                        onScenicStart={handleScenicStart}
-                    />
-                )}
+                {showWelcome && <WelcomePage onStart={handleStartGame} />}
                 <div className="game-container">
                     {staticLoaded && <Game onStart={!showWelcome} />}
                 </div>
