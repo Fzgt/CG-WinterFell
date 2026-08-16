@@ -7,7 +7,10 @@
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "dev:scenic": "vite --open \"/?scenic=1\"",
+        "dev:end": "vite --open \"/?scenic=1&z=35300\"",
+        "dev:sector": "vite --open \"/?scenic=1&z=$npm_config_z\""
     },
     "dependencies": {
         "@react-three/cannon": "^6.6.0",

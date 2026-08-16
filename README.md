@@ -81,3 +81,22 @@ and FPS will not separate them — draw calls and triangles are the useful
 signal. And instancing is a trade, not a free win: it collapses a section into
 one draw call but also into one bounding volume, so per-instance frustum
 culling is lost and more geometry is submitted. The script reports both sides.
+
+## Reviewing the route
+
+The run passes through twenty scenes, and reaching the later ones by playing
+takes a while. Two dev-only flags shortcut it, wired up as scripts:
+
+```bash
+npm run dev:scenic          # no obstacles, no crashes — just the ride
+npm run dev:end             # straight to the arrival at UTS
+npm run dev:sector --z=12600 # start this many units along the route
+```
+
+Both are plain URL flags (`?scenic=1`, `?z=`), so they work on a running
+server too: `localhost:5173/?scenic=1&z=21600`. Scenes change every 1800
+units, so scene *n* starts at `(n - 1) * 1800`.
+
+Everything behind these flags is fenced with `DEV ONLY` comments — the store
+flag, the obstacle field's early return, the SCENIC badge and the start
+offset — and is meant to be stripped before pushing to the remote.
