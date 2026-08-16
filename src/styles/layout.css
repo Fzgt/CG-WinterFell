@@ -61,22 +61,14 @@
     pointer-events: none;
     animation: finale-in 1.6s ease both;
 }
-/* The banner sits over the portal's warm white glow, so it is set in
-   dark ink, not neon — light text vanished into the doorway. */
 .finale-banner h2 {
     margin: 0;
     font-size: 3rem;
     font-weight: 800;
     letter-spacing: 0.3em;
     text-indent: 0.3em;
-    color: #10131f;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-.finale-banner p {
-    margin: 0.6rem 0 0;
-    color: rgba(16, 19, 31, 0.72);
-    letter-spacing: 0.08em;
-    font-weight: 600;
+    color: #eef3ff;
+    text-shadow: 0 0 26px rgba(169, 184, 216, 0.9), 0 0 60px rgba(255, 233, 196, 0.4);
 }
 @keyframes finale-in {
     from { opacity: 0; transform: translateX(-50%) translateY(-14px); }

@@ -52,9 +52,9 @@ export const levelAt = (distance: number) =>
  */
 const TERMINUS: Level = {
     name: 'Terminus',
-    neon: '#cfd9ee',
+    neon: '#a9b8d8',
     accent: '#ffe9c4',
-    fog: '#090b16',
+    fog: '#0a0d1c',
     speed: 24,
 };
 

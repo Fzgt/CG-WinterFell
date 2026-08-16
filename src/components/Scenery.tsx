@@ -1607,7 +1607,7 @@ const finale: Builder = (z0, z1, spec) => {
             const h = rand(26, 38);
             const base = trackHeight(z) - 4;
             trunks.push(at(new THREE.CylinderGeometry(1, 1.6, h, 5), x, base + h / 2, z));
-            canopies.push(at(new THREE.SphereGeometry(h * 0.42, 8, 6), x, base + h + 4, z));
+            canopies.push(at(new THREE.SphereGeometry(h * 0.38, 8, 6), x, base + h + 3, z));
             lanterns.push(at(new THREE.SphereGeometry(1.6, 6, 5), side * 78, base + 12, z - 60));
         }
     }
@@ -1625,61 +1625,122 @@ const finale: Builder = (z0, z1, spec) => {
     const zB = -35800;
     if (z0 >= zB && z1 <= zB) {
         const y = trackHeight(zB);
+        const green: THREE.BufferGeometry[] = [];
+        const pixelsA: THREE.BufferGeometry[] = [];
+        const pixelsB: THREE.BufferGeometry[] = [];
+        const amber: THREE.BufferGeometry[] = [];
 
-        // Podium: a glass hall of luminous floor plates, with the great
-        // door the track runs into. The photo's white wave-floors become
-        // full-width light bands.
-        glass.push(at(box(150, 110, 120), -175, y + 55, zB)); // left wing
-        glass.push(at(box(150, 110, 120), 175, y + 55, zB)); // right wing
-        glass.push(at(box(500, 34, 120), 0, y + 93, zB)); // spanning storey
-        for (const by of [30, 58, 84]) {
-            bands.push(at(box(496, 4, 124), 0, y + by, zB));
+        // ── Podium: a low glass hall with wavy luminous floor plates, the
+        // photo's white ribbon floors. Kept low so the tower owns the frame.
+        glass.push(at(box(170, 72, 110), -160, y + 36, zB));
+        glass.push(at(box(170, 72, 110), 160, y + 36, zB));
+        glass.push(at(box(490, 22, 110), 0, y + 83, zB));
+        for (const by of [26, 48, 68]) {
+            // Wave: each band is segments riding a gentle sine.
+            for (let seg = 0; seg < 14; seg++) {
+                const sx = -238 + seg * 35;
+                if (Math.abs(sx) < 90 && by < 60) continue; // door zone
+                pixelsB.push(
+                    at(box(33, 2.2, 114), sx, y + by + Math.sin(seg * 1.1 + by) * 2.4, zB),
+                );
+            }
         }
-        // The door: legs, lintel, and the warm lit interior you stop inside.
+        // Roof garden: a line of small dark trees along the podium edge.
+        for (let tx = -220; tx <= 220; tx += 44) {
+            trunks.push(at(new THREE.CylinderGeometry(0.8, 1.2, 8, 5), tx, y + 98, zB + 48));
+            canopies.push(at(new THREE.SphereGeometry(5, 7, 5), tx, y + 106, zB + 48));
+        }
+
+        // ── The door: a calm portal at the podium's centre...
         for (const side of [-1, 1]) {
-            glass.push(at(box(30, 76, 44), side * 85, y + 38, zB + 40));
+            glass.push(at(box(24, 60, 40), side * 82, y + 30, zB + 38));
         }
-        glass.push(at(box(200, 18, 44), 0, y + 85, zB + 40));
-        portal.push(at(box(136, 66, 4), 0, y + 38, zB + 6)); // glowing hall
-        bands.push(at(box(140, 3, 44), 0, y + 74, zB + 40)); // lintel light
-
-        // The tower above: stacked, slightly wandering glass storeys — the
-        // Gehry-adjacent curve, in this world's language.
-        let ty = y + 110;
-        for (let f = 0; f < 6; f++) {
-            const w = 200 - f * 14;
-            const wobble = Math.sin(f * 1.7) * 16;
-            const storey = box(w, 34, 96 - f * 6);
-            storey.rotateY(Math.sin(f * 2.1) * 0.06);
-            glass.push(at(storey, wobble, ty + 17, zB - 10));
-            bands.push(at(box(w * 0.96, 3, (96 - f * 6) * 1.02), wobble, ty + 33, zB - 10));
-            ty += 34;
-        }
-        // The UTS sign on the tower's crown, facing the run.
-        {
-            const u = 7;
-            const sy = ty + 24;
-            glyph(signs, 'U', -30 + trackCurve(zB), sy, zB + 44, u);
-            glyph(signs, 'T', 0 + trackCurve(zB), sy, zB + 44, u);
-            glyph(signs, 'S', 30 + trackCurve(zB), sy, zB + 44, u);
+        glass.push(at(box(188, 14, 40), 0, y + 67, zB + 38));
+        portal.push(at(box(132, 52, 4), 0, y + 30, zB + 8));
+        bands.push(at(box(136, 2.6, 40), 0, y + 60, zB + 38));
+        // ...with shallow steps spilling onto the plaza.
+        for (let st = 0; st < 3; st++) {
+            glass.push(at(box(150 + st * 26, 2.2, 10), 0, y + 4 - st * 2.2, zB + 44 + st * 10));
         }
 
-        // The old brutalist tower keeping watch to the left, its own sign lit.
-        glass.push(at(box(95, 280, 85), -300, y + 140, zB - 60));
-        for (let f = 0; f < 7; f++) {
-            bands.push(at(box(80, 1.6, 87), -300, y + 40 + f * 34, zB - 60));
+        // ── The LED matrix wall over the door: the green pixel sign, with
+        // the shield and white-hot UTS letters.
+        {
+            const wy = y + 130;
+            glass.push(at(box(230, 62, 8), 0, wy, zB + 30));
+            for (let px = 0; px < 90; px++) {
+                const gx = -106 + Math.floor(px % 30) * 7.3;
+                const gy = wy - 22 + Math.floor(px / 30) * 20 + rand(-6, 6);
+                if (Math.random() < 0.45) continue;
+                if (gx > -40 && gx < 62) continue; // clear zone for the marque
+                (Math.random() < 0.7 ? pixelsA : pixelsB).push(
+                    at(box(3.4, 3.4, 1.6), gx, gy, zB + 35),
+                );
+            }
+            // The shield, left of the letters.
+            green.push(at(box(16, 18, 1.8), -26, wy + 2, zB + 35));
+            const point = new THREE.ConeGeometry(8, 8, 4);
+            point.rotateX(Math.PI);
+            point.rotateY(Math.PI / 4);
+            green.push(at(point, -26, wy - 11, zB + 35));
+            const u = 4.2;
+            glyph(signs, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
+            glyph(signs, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
+            glyph(signs, 'S', 46 + trackCurve(zB), wy, zB + 35, u);
+        }
+
+        // ── The tower: wandering glass storeys with hairline light plates
+        // and the warm atrium notch bitten out of the face.
+        let ty = y + 96;
+        for (let f = 0; f < 8; f++) {
+            const w = 190 - f * 10;
+            const wobble = Math.sin(f * 1.6) * 13;
+            const storey = box(w, 30, 92 - f * 5);
+            storey.rotateY(Math.sin(f * 2.1) * 0.05);
+            glass.push(at(storey, wobble, ty + 15, zB - 30));
+            bands.push(at(box(w * 0.97, 1.6, (92 - f * 5) * 1.01), wobble, ty + 29, zB - 30));
+            // The amber bite: a warm-lit notch climbing the face.
+            if (f >= 2 && f <= 5) {
+                amber.push(at(box(26, 22, 3), -20 + (f - 2) * 16, ty + 14, zB - 30 + 48 - f * 2.5));
+            }
+            ty += 30;
+        }
+        // The crown sign, white and generous.
+        {
+            const u = 7.5;
+            glyph(signs, 'U', -32 + trackCurve(zB), ty + 26, zB + 20, u);
+            glyph(signs, 'T', 0 + trackCurve(zB), ty + 26, zB + 20, u);
+            glyph(signs, 'S', 32 + trackCurve(zB), ty + 26, zB + 20, u);
+        }
+
+        // ── The brutalist tower to the left, banded, its own sign lit.
+        glass.push(at(box(92, 250, 82), -295, y + 125, zB - 70));
+        for (let f = 0; f < 8; f++) {
+            bands.push(at(box(78, 1.4, 84), -295, y + 34 + f * 28, zB - 70));
         }
         {
-            const u = 3.4;
-            glyph(signs, 'U', -314 + trackCurve(zB), y + 262, zB - 15, u);
-            glyph(signs, 'T', -300 + trackCurve(zB), y + 262, zB - 15, u);
-            glyph(signs, 'S', -286 + trackCurve(zB), y + 262, zB - 15, u);
+            const u = 3.2;
+            glyph(signs, 'U', -308 + trackCurve(zB), y + 232, zB - 26, u);
+            glyph(signs, 'T', -295 + trackCurve(zB), y + 232, zB - 26, u);
+            glyph(signs, 'S', -282 + trackCurve(zB), y + 232, zB - 26, u);
         }
-        // A quieter glass sibling to the right, for the skyline's balance.
-        glass.push(at(box(110, 190, 90), 315, y + 95, zB - 80));
+
+        // ── Building 11's ghost on the right: the angular block with the
+        // two green light slashes cut across its face.
+        glass.push(at(box(105, 170, 88), 310, y + 85, zB - 85));
+        for (const [sx, tilt] of [[-16, 0.32], [18, 0.28]] as const) {
+            const slash = box(3, 130, 2);
+            slash.rotateZ(tilt);
+            green.push(at(slash, 310 + sx, y + 88, zB - 40));
+        }
         for (let f = 0; f < 5; f++) {
-            bands.push(at(box(100, 1.6, 92), 315, y + 30 + f * 36, zB - 80));
+            bands.push(at(box(92, 1.2, 90), 310, y + 26 + f * 32, zB - 85));
         }
+
+        emit(build, green, basic('#4dff88', { transparent: true, opacity: 0.9 }));
+        emit(build, pixelsA, basic('#39e673', { transparent: true, opacity: 0.85 }));
+        emit(build, pixelsB, basic('#d5ffe6', { transparent: true, opacity: 0.7 }));
+        emit(build, amber, basic('#ffb066', { transparent: true, opacity: 0.85 }));
     }
 
     emit(build, lawn, dark('#0b2018'));
@@ -1687,7 +1748,7 @@ const finale: Builder = (z0, z1, spec) => {
     emit(build, bands, basic('#e8f4ff', { transparent: true, opacity: 0.8 }));
     emit(build, signs, basic(spec.a));
     emit(build, trunks, dark('#232a3c'));
-    emit(build, canopies, basic('#cfd9ee', { transparent: true, opacity: 0.34 }));
+    emit(build, canopies, dark('#16301f'));
     emit(build, seams, basic('#ffe9c4', { transparent: true, opacity: 0.8 }));
     emit(build, lanterns, basic('#ffe9c4'));
     emit(build, portal, basic('#ffe9c4'));

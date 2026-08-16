@@ -151,18 +151,23 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             // edge of the screen while the view stayed put.
             cameraX.current.setTarget(newX);
             const camX = cameraX.current.update();
-            // Eye and aim each take the curve at their own z, so the camera
-            // swings through the bend and looks down the road, not across it.
+            // Arrival shot: over the last stretch of the forecourt the view
+            // tilts up from the road to the building, so the final frame
+            // holds the whole complex — podium, tower, lit sign.
+            const lift = Math.min(
+                1,
+                Math.max(0, (newZ + 34960) / (FINAL_Z + 34960)),
+            );
             cameraRef.current.position.set(
                 camX + trackCurve(newZ + 20),
-                11 + trackHeight(newZ + 20),
+                11 + lift * 20 + trackHeight(newZ + 20),
                 newZ + 20,
             );
             // Aim at the road ahead in full 3D: cresting a hill points the
             // view down into the valley, a dip aims it up at the sky road.
             cameraRef.current.lookAt(
                 camX + trackCurve(newZ - 55),
-                2 + trackHeight(newZ - 55),
+                2 + lift * 150 + trackHeight(newZ - 55),
                 newZ - 55,
             );
         }
