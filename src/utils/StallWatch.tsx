@@ -30,7 +30,7 @@ const STALL_MS = 120;
 /** Frames between heartbeat lines, so the trend is visible, not just spikes. */
 const HEARTBEAT = 120;
 
-interface Event {
+interface Marker {
     what: string;
     z: number;
     atFrame: number;
@@ -52,6 +52,38 @@ const StallWatch = () => {
      * the loop, so it still runs to say so, and the listeners catch whatever
      * threw.
      */
+    /**
+     * The picture freezes, input stops answering, and the simulation keeps
+     * running underneath — the craft goes on to hit something it can no
+     * longer be steered around. That is not the loop dying: it is the
+     * rendering stopping to reach the screen while everything else carries
+     * on, which is what a lost graphics context looks like. It is silent by
+     * default on both backends, so listen for it on both.
+     */
+    useEffect(() => {
+        const canvas = gl.domElement;
+        const onLost = (event: globalThis.Event) => {
+            event.preventDefault();
+            const state = useStore.getState();
+            console.error(
+                `[gpu] context lost at z=${Math.round(-state.playerPosition[2])}` +
+                    ` sector=${state.level + 1} — the picture freezes here` +
+                    ' while the simulation keeps running',
+            );
+        };
+        const onRestored = () => console.info('[gpu] context restored');
+        canvas.addEventListener('webglcontextlost', onLost);
+        canvas.addEventListener('webglcontextrestored', onRestored);
+        const onVisibility = () =>
+            console.info(`[gpu] visibility → ${document.visibilityState}`);
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => {
+            canvas.removeEventListener('webglcontextlost', onLost);
+            canvas.removeEventListener('webglcontextrestored', onRestored);
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
+    }, [gl]);
+
     useEffect(() => {
         const onError = (event: ErrorEvent) =>
             console.error(
@@ -94,7 +126,7 @@ const StallWatch = () => {
     }, []);
     const last = useRef(performance.now());
     const frame = useRef(0);
-    const events = useRef<Event[]>([]);
+    const events = useRef<Marker[]>([]);
     const seen = useRef({ level: -1, tile: -1, section: -1 });
     const worst = useRef(0);
     const frameWindow = useRef({ frames: 0, ms: 0 });
