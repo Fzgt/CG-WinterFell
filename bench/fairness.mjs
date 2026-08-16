@@ -82,12 +82,63 @@ const results = await page.evaluate(
             return widest;
         };
 
+        /**
+         * What a stretch of track looks like from inside it, as opposed to
+         * what the sweep can prove about a whole section.
+         *
+         * The reach set answers "is there a way through, and how many" with
+         * the whole section in hand. A player has the fog — about six hundred
+         * units — and reads the field as shapes: a run of blocks whose
+         * footprints touch is one obstacle to them however many blocks it was
+         * built from, and the ground between two such runs is the choice they
+         * actually get to make. So this walks the section in windows, merges
+         * overlapping footprints in x, and reports how many separate things
+         * stand in a window and how wide each has grown.
+         *
+         * Fewer, fatter clumps and the same block count is a field that reads
+         * as walls with holes; more, thinner ones is a field that reads as
+         * things to go around.
+         */
+        const clumping = obstacles => {
+            const WINDOW = 220;
+            const zs = obstacles.map(p => p.z);
+            const top = Math.max(...zs);
+            const bottom = Math.min(...zs);
+            let clumps = 0;
+            let width = 0;
+            let windows = 0;
+            for (let z = top; z > bottom; z -= WINDOW) {
+                const here = obstacles
+                    .filter(p => p.z <= z && p.z > z - WINDOW)
+                    .map(p => [p.x - p.r, p.x + p.r])
+                    .sort((a, b) => a[0] - b[0]);
+                if (!here.length) continue;
+                const merged = here.reduce((acc, cur) => {
+                    const prev = acc[acc.length - 1];
+                    if (prev && cur[0] <= prev[1]) prev[1] = Math.max(prev[1], cur[1]);
+                    else acc.push([...cur]);
+                    return acc;
+                }, []);
+                clumps += merged.length;
+                width += merged.reduce((s, [a, b]) => s + (b - a), 0) / merged.length;
+                windows++;
+            }
+            return windows
+                ? { clumps: clumps / windows, width: width / windows }
+                : { clumps: 0, width: 0 };
+        };
+
         const out = [];
         for (let section = 0; section < sections; section++) {
             let blocked = 0;
             let tightest = Infinity;
             let freeTotal = 0;
             let freeWorst = 0;
+            let clumpTotal = 0;
+            let clumpWidth = 0;
+            let routeSteps = 0;
+            let routeTotal = 0;
+            let forkSteps = 0;
 
             for (let t = 0; t < trials; t++) {
                 // A fresh route per trial, not a fresh throw of the dice on
@@ -145,6 +196,18 @@ const results = await page.evaluate(
                         }, []);
                     const widest = reach.reduce((m, [a, b]) => Math.max(m, b - a), 0);
                     if (widest < tightest) tightest = widest;
+                    // How many separate ways through there are right here, as
+                    // opposed to whether there is one. The reach set is already
+                    // the answer: each interval is a corridor the craft could
+                    // be in and still survive what is ahead, and two intervals
+                    // mean a block between them that has to be gone round on a
+                    // side the player picks. A field that is fair, dense and
+                    // has one interval everywhere is a queue, not a route —
+                    // which is a thing the other columns cannot see.
+                    const flyable = reach.filter(([a, b]) => b - a >= 6).length;
+                    routeSteps++;
+                    routeTotal += flyable;
+                    if (flyable >= 2) forkSteps++;
                     if (!reach.length) deadAt = z;
                 }
 
@@ -153,6 +216,10 @@ const results = await page.evaluate(
                 const free = freeLine(obstacles);
                 freeTotal += free;
                 if (free > freeWorst) freeWorst = free;
+
+                const shape = clumping(obstacles);
+                clumpTotal += shape.clumps;
+                clumpWidth += shape.width;
             }
 
             const sample = mod.generateSectionObstacles(section);
@@ -176,6 +243,10 @@ const results = await page.evaluate(
                 tightestGap: Math.round(tightest),
                 freeLine: Math.round(freeTotal / trials),
                 freeLineWorst: freeWorst,
+                clumps: (clumpTotal / trials).toFixed(1),
+                clumpWidth: Math.round(clumpWidth / trials),
+                routes: (routeTotal / Math.max(1, routeSteps)).toFixed(1),
+                forkPct: Math.round((forkSteps / Math.max(1, routeSteps)) * 100),
             });
         }
         return out;
@@ -187,15 +258,21 @@ await browser.close();
 
 console.log(`\n# Obstacle-layout fairness (${TRIALS} generated layouts per section)\n`);
 console.log(
-    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) |',
+    '| Section | Obstacles | Blocks/second | Layouts with no way through | Tightest gap | Straight line through (avg / worst) | Things in view / how wide | Ways through | Where there is a choice |',
 );
-console.log('| --- | --- | --- | --- | --- | --- |');
+console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 for (const r of results) {
     console.log(
         `| ${r.section} | ${r.obstacles} | ${r.perSecond} | ${r.blockedPct}% | ${r.tightestGap} units | ` +
-            `${r.freeLine} / ${r.freeLineWorst} units |`,
+            `${r.freeLine} / ${r.freeLineWorst} units | ${r.clumps} × ${r.clumpWidth} units | ${r.routes} | ${r.forkPct}% |`,
     );
 }
+const forks = results.filter(r => r.obstacles).map(r => r.forkPct);
+console.log(
+    `\nSomewhere between two and ${Math.max(...results.map(r => Number(r.routes)))} ways through at once; ` +
+        `a choice of side on ${Math.min(...forks)}–${Math.max(...forks)}% of the route. ` +
+        `One way through everywhere is fair and still a queue.`,
+);
 const rates = results.filter(r => r.obstacles).map(r => r.perSecond);
 console.log(
     `\nBlocks met per second: ${Math.min(...rates)}–${Math.max(...rates)}. ` +

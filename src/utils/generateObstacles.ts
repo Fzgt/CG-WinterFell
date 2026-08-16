@@ -47,9 +47,14 @@ export interface Obstacle {
  * All three are smooth noise with different periods, so they drift in and out
  * of phase and no stretch of track resembles the one before it — and none of
  * them knows where a section boundary is, so the seams disappear. Clusters
- * (knots and combs, below) ride on top, which is where the field gets the
+ * (flocks and combs, below) ride on top, which is where the field gets the
  * shapes a formation used to hand it, at a scale of tens of units rather than
  * thousands.
+ *
+ * Whatever places a block, it is placed with room around it. Two footprints
+ * that touch are one obstacle with no way between them, and a field of those
+ * is a field of short walls — which the player reads as one route with holes
+ * in it rather than as things to go around.
  *
  * The contract is unchanged and bench/fairness.mjs still enforces it: there is
  * always a continuous path through, and the lane never asks for more lateral
@@ -483,29 +488,94 @@ const coverage = () => {
     };
 };
 
-/** A spot for `shape` clear of the lane, biased toward the emptiest x. */
+/* ------------------------------------------------------------ elbow room -- */
+
+/**
+ * Two blocks close enough in z to be met at once, and near enough in x to
+ * touch, are not two blocks: they are one wider thing with no way between
+ * them. Uniform placement produces them constantly — with a footprint up to
+ * eleven units of radius, two draws landing twenty units apart merge — and a
+ * field of merged pairs is a field of short walls. The player reads walls as
+ * one route with holes in it, and goes where the hole is; what they asked for
+ * instead is several things to go around, so that which side to pass on is a
+ * decision they make rather than one the layout makes for them.
+ *
+ * So every block wants clear ground either side of it, edge to edge. It is not
+ * a hard rule: where there is nowhere with room, the roomiest spot is taken
+ * anyway rather than the block being dropped, because thinning the field is
+ * the one thing that would cost more than merging.
+ */
+const ELBOW = 13;
+
+/** How far apart in z two blocks stop being read as one shape. */
+const ELBOW_Z = 70;
+
+/**
+ * Distance from this footprint to the nearest one already standing near it.
+ *
+ * Only the tail of the list is walked: blocks are emitted roughly in z order,
+ * so anything old enough to be far up the list is far behind in z as well, and
+ * the window this cares about is one slice either side.
+ */
+const elbowAt = (out: Obstacle[], x: number, z: number, radius: number) => {
+    let nearest = Infinity;
+    for (let i = out.length - 1, seen = 0; i >= 0 && seen < 24; i--, seen++) {
+        const o = out[i];
+        if (Math.abs(o.position.z - z) > ELBOW_Z) continue;
+        const gap = Math.abs(o.position.x - x) - o.radius - radius;
+        if (gap < nearest) nearest = gap;
+    }
+    return nearest;
+};
+
+/**
+ * A spot for `shape` clear of the lane, with room around it, and biased toward
+ * the emptiest x.
+ *
+ * Three questions in that order of priority, because they answer to different
+ * scales. Clearance is the contract — nothing may narrow the corridor. Elbow
+ * room is what the stretch looks like: it decides whether this block is its own
+ * obstacle or an extension of its neighbour. The tally is the section's
+ * bookkeeping, and it only gets to choose among spots that already pass the
+ * other two, which is why it can flatten the field's distribution without
+ * flattening its shapes.
+ */
 const spread = (
     tally: ReturnType<typeof coverage>,
     shape: Shape,
     z: number,
     laneX: number,
+    out: Obstacle[],
 ): number | null => {
     const clear = clearFor(shape, z);
+    const radius = OBSTACLE_BASE_RADIUS * shape.width;
     let best: number | null = null;
+    // Kept in case nothing has room: the least bad crowding beats no block.
+    let roomiest: number | null = null;
+    let mostRoom = -Infinity;
 
-    for (let candidate = 0; candidate < 3; candidate++) {
+    for (let candidate = 0; candidate < 7; candidate++) {
         let x = 0;
         let legal = false;
         for (let attempt = 0; attempt < 8 && !legal; attempt++) {
             x = randomInRange2(-HALF_WIDTH, HALF_WIDTH);
             legal = Math.abs(x - laneX) > clear;
         }
-        if (legal && (best === null || tally.seen(x) < tally.seen(best))) {
+        if (!legal) continue;
+
+        const room = elbowAt(out, x, z, radius);
+        if (room > mostRoom) {
+            mostRoom = room;
+            roomiest = x;
+        }
+        if (room >= ELBOW && (best === null || tally.seen(x) < tally.seen(best))) {
             best = x;
         }
     }
-    if (best !== null) tally.mark(best, OBSTACLE_BASE_RADIUS * shape.width);
-    return best;
+
+    const chosen = best ?? roomiest;
+    if (chosen !== null) tally.mark(chosen, radius);
+    return chosen;
 };
 
 /* -------------------------------------------------------------- clusters -- */
@@ -517,15 +587,25 @@ const spread = (
  * Pure noise gives an even field: interesting to fly, but every fifty units
  * looks like every other fifty units. A run wants events. Two of them, both
  * placed by the same rules as everything else — outside the lane, tallied for
- * coverage — and both a few tens of units long, so one is something you fly
- * through rather than a rule you live under for half a minute:
+ * coverage, given elbow room — and both a few tens of units long, so one is
+ * something you fly through rather than a rule you live under for half a
+ * minute:
  *
- *  - a knot: a tight cluster of one kind of block, the thing you swing wide of
- *  - a comb: a short run of narrow spires at even spacing, the thing you pick
- *            a slot in
+ *  - a flock: several blocks of one family filling a stretch of track, the
+ *             thing you pick your way through
+ *  - a comb:  a short run of narrow spires at even spacing, the thing you pick
+ *             a slot in
  *
  * A comb is the gate wall the old generator built, except it stands to one
  * side, it is made of blocks you see through, and it is over in eighty units.
+ *
+ * The flock was a knot: the same blocks packed into thirteen units of x and
+ * twenty-six of z, deliberately touching so the group read as one object to
+ * swing wide of. That is exactly the shape a player calls "all bunched up",
+ * and swinging wide of it is not a decision — the group leaves one side open
+ * and the route picks it. Spread over eighty units of track and placed one at
+ * a time by the same rule as everything else, the same blocks make a stretch
+ * that has to be picked through, and every gap in it is a choice of side.
  */
 /**
  * Blocks that hug the edge of the lane, where the route is railed.
@@ -538,9 +618,19 @@ const spread = (
  * narrow to fly as it is on paper, and the player is being asked to stay
  * inside something rather than to avoid things in general.
  *
- * Railed in stretches rather than everywhere, and often on one side only: a
+ * Railed in stretches rather than everywhere, and usually on one side only: a
  * corridor walled on both sides for a whole sector is the canyon that used to
  * be a formation, and it plays the same way for as long as it lasts.
+ *
+ * And a much smaller share of the route than it was. On half the block budget
+ * this was the field: a line of blocks welded along the corridor with open
+ * ground either side of it, which is a wall on one hand and nothing on the
+ * other however evenly the remaining blocks were scattered. It also answers
+ * the wrong question — a shoulder tells the player where they must not go,
+ * and what makes a field worth flying is being shown two ways past something
+ * and having to pick one. At a quarter of the budget it still marks the
+ * corridor where the route is at its most idle, and the rest of the blocks are
+ * out in the field being things to go around.
  */
 const shoulders = (
     tally: ReturnType<typeof coverage>,
@@ -551,7 +641,7 @@ const shoulders = (
     out: Obstacle[],
 ) => {
     const sides =
-        rail > 0.72
+        rail > 0.84
             ? [-1, 1]
             : [hash2(Math.round(Math.abs(z)), 31) < 0.5 ? -1 : 1];
     for (const side of sides) {
@@ -563,26 +653,26 @@ const shoulders = (
     }
 };
 
-const knot = (
+const flock = (
     tally: ReturnType<typeof coverage>,
     z: number,
-    laneX: number,
     lowness: number,
     out: Obstacle[],
 ) => {
     const tall = tallnessRoll(lowness);
-    const centre = spread(tally, blockShape(tall), z, laneX);
-    if (centre === null) return;
-
     const count = 3 + Math.floor(Math.random() * 3);
+
     for (let i = 0; i < count; i++) {
-        // Same family of block, so the knot reads as one object.
-        const shape = blockShape(THREE.MathUtils.clamp(tall + randomInRange2(-0.12, 0.12), 0, 1));
-        const x = centre + randomInRange2(-13, 13);
-        if (Math.abs(x) > HALF_WIDTH) continue;
-        if (Math.abs(x - laneX) < clearFor(shape, z)) continue;
-        tally.mark(x, OBSTACLE_BASE_RADIUS * shape.width);
-        out.push(place(shape, x, z + randomInRange2(-26, 26)));
+        // One family of block, so the stretch reads as a place rather than as
+        // more scatter — the resemblance is what makes it an event, and it
+        // costs nothing in room.
+        const shape = blockShape(
+            THREE.MathUtils.clamp(tall + randomInRange2(-0.12, 0.12), 0, 1),
+        );
+        const at = z + randomInRange2(-40, 40);
+        const x = spread(tally, shape, at, laneAt(at), out);
+        if (x === null) continue;
+        out.push(place(shape, x, at));
     }
 };
 
@@ -707,12 +797,16 @@ const seal = (out: Obstacle[], lane: { z: number; x: number }[]) => {
  * How a slice's blocks are divided between the three things that place them,
  * and what each costs when it fires.
  *
- * A shoulder is the most valuable block on the route and a scattered one the
- * least, so the split is not even — but it is not winner-takes-all either. Cut
- * the block rate without splitting it and the shoulders eat the whole budget
- * on their own by the late sectors, leaving a corridor railed on both sides
- * with an empty field either side of that, which reads as a level that failed
- * to load rather than a hard one.
+ * A shoulder used to take half of it, on the argument that a block at the
+ * corridor's edge buys more difficulty than a scattered one. It does, and that
+ * turned out to be the wrong thing to buy: half the route's blocks standing in
+ * a line beside the lane is a field with a wall down one side of it and open
+ * ground everywhere else, which is both the thing a player complains about and
+ * the reason they never have to choose a way past anything. Difficulty that
+ * comes at the cost of the field having any shape is difficulty bought too
+ * dear. So the scatter takes most of the budget now, and the shoulders keep
+ * enough of it to mark the corridor through the stretches where the lane has
+ * stopped moving and there would otherwise be nothing to do.
  *
  * Shares are targets, not caps. Neither a shoulder nor a comb can be handed a
  * count — one has to sit at the lane's edge, the other has to span ground — so
@@ -720,7 +814,7 @@ const seal = (out: Obstacle[], lane: { z: number; x: number }[]) => {
  * what a slice was allowed and what it actually spent is carried to the next
  * one either way.
  */
-const SHOULDER = { share: 0.5, cost: 1.3, cap: 0.95 };
+const SHOULDER = { share: 0.26, cost: 1.3, cap: 0.55 };
 const EVENT = { share: 0.2, cost: 4.5, cap: 0.3 };
 
 const shareOf = ({ share, cost, cap }: typeof SHOULDER, budget: number) =>
@@ -799,19 +893,19 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
             layered(z, 340 * periodScale(), 29) +
             0.4 * (1 - laneSweepOver(z, 400)) +
             railBias();
-        if (rail > 0.42 && Math.random() < shareOf(SHOULDER, budget)) {
+        if (rail > 0.58 && Math.random() < shareOf(SHOULDER, budget)) {
             shoulders(tally, z, laneX, lowness, rail, out);
         }
 
         // Events, rare enough to stay events. Hashed off the slice's own z, so
-        // a given stretch of track always has its knot in the same place even
+        // a given stretch of track always has its flock in the same place even
         // though the blocks around it are redrawn every run.
         const event = hash2(Math.round(Math.abs(z) / SLICE_DEPTH), 23);
         const events = shareOf(EVENT, budget);
-        if (event < events * 0.625) knot(tally, z, laneX, lowness, out);
+        if (event < events * 0.625) flock(tally, z, lowness, out);
         else if (event < events) comb(tally, z, laneX, out);
 
-        // A knot is five blocks in a slice that could afford one and a half,
+        // A flock is five blocks in a slice that could afford one and a half,
         // and paying for it out of this slice alone would leave the overspend
         // invisible. It is carried instead, and the scatter runs quiet until
         // it is paid off — which is what makes an event an event: the stretch
@@ -828,9 +922,13 @@ export const generateSectionObstacles = (section: number): Obstacle[] => {
 
         for (let i = 0; i < count; i++) {
             const shape = blockShape(tallnessRoll(lowness));
-            const x = spread(tally, shape, z, laneX);
+            // The z first, so the room this block is asked to leave is
+            // measured where it will actually stand rather than at the middle
+            // of the slice it belongs to.
+            const at = randomInRange2(sliceStartZ, sliceEndZ);
+            const x = spread(tally, shape, at, laneAt(at), out);
             if (x === null) continue;
-            out.push(place(shape, x, randomInRange2(sliceStartZ, sliceEndZ)));
+            out.push(place(shape, x, at));
         }
 
         debt = THREE.MathUtils.clamp(
