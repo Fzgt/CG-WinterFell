@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PostProcessing } from 'three/webgpu';
 import { pass } from 'three/tsl';
@@ -35,6 +35,9 @@ const PostFX = ({
     const scene = useThree(state => state.scene);
     const camera = useThree(state => state.camera);
 
+    // Bumping this rebuilds the pipeline. See the watchdog below.
+    const [generation, setGeneration] = useState(0);
+
     const post = useMemo(() => {
         const scenePass = pass(scene, camera);
         const composed = scenePass.add(
@@ -44,7 +47,8 @@ const PostFX = ({
         const postProcessing = new PostProcessing(gl as never);
         postProcessing.outputNode = composed;
         return postProcessing;
-    }, [gl, scene, camera, strength, radius, threshold]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gl, scene, camera, strength, radius, threshold, generation]);
 
     useEffect(
         () => () => {
@@ -53,8 +57,48 @@ const PostFX = ({
         [post],
     );
 
+    /**
+     * Rendering happens here, so rendering can also stop here.
+     *
+     * Taking a priority above zero means react-three-fiber no longer calls
+     * gl.render: whatever this composes is the only thing that reaches the
+     * screen. If it throws, or quietly stops presenting, every other
+     * per-frame callback carries on — the simulation keeps running, input is
+     * still read, the craft still hits things — while the picture stays on
+     * the last frame that made it out. That is the failure this game was
+     * showing, and it is invisible: no error, no context loss, a steady
+     * frame rate.
+     *
+     * So: catch throws and fall back to plain rendering, and if the renderer
+     * reports no draw calls for a second while frames are still running,
+     * rebuild the pipeline rather than sit on a dead one.
+     */
+    const blind = useRef(0);
+    const failed = useRef(false);
+
     useFrame(() => {
-        post.render();
+        try {
+            post.render();
+            failed.current = false;
+        } catch (error) {
+            if (!failed.current) {
+                failed.current = true;
+                console.error('[postfx] render threw; falling back', error);
+            }
+            gl.render(scene, camera);
+            return;
+        }
+
+        const info = (gl as unknown as { info?: { render?: { drawCalls?: number } } })
+            .info;
+        const drawn = info?.render?.drawCalls ?? 1;
+        blind.current = drawn > 0 ? 0 : blind.current + 1;
+        if (blind.current === 60) {
+            console.error(
+                '[postfx] 60 frames with nothing drawn — rebuilding the pipeline',
+            );
+            setGeneration(g => g + 1);
+        }
     }, 1);
 
     return null;
