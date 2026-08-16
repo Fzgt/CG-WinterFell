@@ -2049,8 +2049,43 @@ const SceneryTile = ({ index }: { index: number }) => {
 
     return (
         <group>
+            {/*
+                Keyed by geometry, not by position in the list.
+
+                Keyed by index, React reuses the same THREE.Mesh across a tile
+                change and only swaps its `geometry` — and that is enough to
+                make the tile above release the wrong buffers. three registers
+                one 'dispose' listener per geometry, and the listener closes
+                over the *render object*, not over the geometry:
+
+                    const onDispose = () => {
+                        const geometryAttributes = renderObject.getAttributes();
+                        for ( const a of geometryAttributes ) this.attributes.delete( a );
+                    };
+
+                By the time the outgoing geometry is disposed, that render
+                object has already been pointed at the incoming one, so
+                `getAttributes()` hands back the *new* tile's attributes and
+                the release destroys buffers that are about to be drawn from.
+                Nothing puts them back either: the re-upload only runs when the
+                material observer reports a change, and a static merged mesh
+                under an unchanged cached material never does. The result is a
+                mesh drawing with unbound vertex slots for as long as it lives
+                — every frame, two of them, one per tile — each failed draw
+                invalidating the whole command buffer so the entire pass is
+                dropped rather than one object.
+
+                Keying on the geometry means a live mesh never changes
+                geometry: the outgoing meshes leave the scene and the incoming
+                ones arrive with render objects of their own, so a release only
+                ever frees what it owns.
+            */}
             {build.pieces.map((piece, i) => (
-                <mesh key={i} geometry={piece.geometry} material={piece.material} />
+                <mesh
+                    key={`${piece.geometry.uuid}-${i}`}
+                    geometry={piece.geometry}
+                    material={piece.material}
+                />
             ))}
             {build.actors.map((group, i) => (
                 <ActorLayer key={`actor-${i}`} group={group} />
