@@ -175,6 +175,19 @@ const buildCrestFromImage = (img: HTMLImageElement) => {
     const go = out.getContext('2d')!;
     go.imageSmoothingEnabled = true;
     go.imageSmoothingQuality = 'high';
+    // Thicken the strokes: the crest's ribbons are thin next to the solid
+    // glyph boxes, and at sign scale they read as wire rather than light.
+    // Drawing the mark once per offset around a small ring dilates it.
+    const grow = out.width * 0.016;
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        go.drawImage(
+            a,
+            minX, minY, markW, markH,
+            Math.cos(angle) * grow, Math.sin(angle) * grow,
+            out.width, out.height,
+        );
+    }
     go.drawImage(
         a,
         minX, minY, markW, markH,
@@ -1959,14 +1972,16 @@ const CrestEmblem = () => {
         <mesh position={[trackCurve(zB) - 22, y + 132, zB + 35.5]}>
             {/* The mark's real proportions, about 1.8x the letters' cap
                 height — the lockup's own ratio. */}
-            <planeGeometry args={[34 * crestAspect, 34]} />
-            {/* Same treatment as the letters: an opaque emissive surface
-                with a hard alpha edge. Additive blending let the bloom
-                pass eat the thin strokes, so the mark read as haze next to
-                the solid glyph boxes. */}
+            <planeGeometry args={[46 * crestAspect, 46]} />
+            {/* Additive, which is what actually renders here — an opaque
+                alpha-tested material vanished on this path. Thin strokes
+                are answered with size rather than blend mode. */}
             <meshBasicMaterial
                 map={tex}
-                alphaTest={0.4}
+                color={[1.25, 1.3, 1.45]}
+                transparent
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
                 toneMapped={false}
                 side={THREE.DoubleSide}
             />

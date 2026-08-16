@@ -50,7 +50,12 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     // it. Smoothing here is what gives the turn some weight; a fixed fraction
     // just leaves the player stranded off to one side.
     const cameraX = useRef(new MotionController(0, 0.09));
-    const zPosition = useRef(new MotionController(-20, 0.15));
+    // DEV ONLY: ?z=35300 starts the run that far along, for reviewing the
+    // late scenes without driving there. Strip with the other dev tools.
+    const startZ = -Math.abs(
+        Number(new URLSearchParams(location.search).get('z') ?? 0) || 20,
+    );
+    const zPosition = useRef(new MotionController(startZ, 0.15));
     const rotationZ = useRef(new MotionController(0, 0.2));
 
     const spacePressed = useRef(false);
