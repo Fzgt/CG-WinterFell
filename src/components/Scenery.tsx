@@ -241,18 +241,70 @@ const scaleBoxUVs = (
 
 /* ------------------------------------------------------------ materials -- */
 
+/**
+ * Materials are shared across every tile that wants the same look.
+ *
+ * They used to be built fresh per piece per tile, and tiles rebuild every
+ * 1000 units — twice a second at the later speeds. Each new material makes
+ * the renderer compile a pipeline for it, which is the stall that showed up
+ * in the console as requestAnimationFrame handlers taking hundreds of
+ * milliseconds. The set of distinct looks is small and finite, so cache it.
+ */
+const materialCache = new Map<string, THREE.Material>();
+
 const basic = (
     color: string,
     opts: Partial<THREE.MeshBasicMaterialParameters> = {},
-) => new THREE.MeshBasicMaterial({ color, toneMapped: false, ...opts });
+) => {
+    const key = `b|${color}|${JSON.stringify(opts)}`;
+    let material = materialCache.get(key);
+    if (!material) {
+        material = new THREE.MeshBasicMaterial({
+            color,
+            toneMapped: false,
+            ...opts,
+        });
+        materialCache.set(key, material);
+    }
+    return material;
+};
 
-const dark = (color = '#12142a') =>
-    new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.95,
-        metalness: 0.05,
-        flatShading: true,
-    });
+const dark = (color = '#12142a') => {
+    const key = `d|${color}`;
+    let material = materialCache.get(key);
+    if (!material) {
+        material = new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.95,
+            metalness: 0.05,
+            flatShading: true,
+        });
+        materialCache.set(key, material);
+    }
+    return material;
+};
+
+/** Painted (non-glowing) signage: tone-mapped, so it stays out of bloom. */
+const paintedSign = () => {
+    const key = 'painted-sign';
+    let material = materialCache.get(key);
+    if (!material) {
+        material = new THREE.MeshBasicMaterial({ color: '#c3cee2' });
+        materialCache.set(key, material);
+    }
+    return material;
+};
+
+/** The window-textured tower material, shared the same way. */
+const towerMaterial = () => {
+    const key = 'towers';
+    let material = materialCache.get(key);
+    if (!material) {
+        material = new THREE.MeshBasicMaterial({ map: getWindowTexture() });
+        materialCache.set(key, material);
+    }
+    return material;
+};
 
 /* -------------------------------------------------------------- actors -- */
 
@@ -386,7 +438,7 @@ const ActorLayer = ({ group }: { group: ActorGroup }) => {
 const RotorLayer = ({ specs }: { specs: Rotor[] }) => {
     const ref = useRef<THREE.InstancedMesh>(null);
     const dummy = useMemo(() => new THREE.Object3D(), []);
-    const geometry = useMemo(() => {
+    const geometry = shared('rotor', () => {
         const hub: THREE.BufferGeometry = new THREE.SphereGeometry(2.4, 6, 5);
         const parts: THREE.BufferGeometry[] = [hub];
         for (let i = 0; i < 3; i++) {
@@ -396,8 +448,8 @@ const RotorLayer = ({ specs }: { specs: Rotor[] }) => {
             parts.push(blade);
         }
         return mergeGeometries(parts);
-    }, []);
-    const material = useMemo(() => dark('#2a3350'), []);
+    });
+    const material = dark('#2a3350');
 
     useFrame(({ clock }) => {
         const mesh = ref.current;
@@ -425,15 +477,12 @@ const RotorLayer = ({ specs }: { specs: Rotor[] }) => {
 const BeamLayer = ({ specs, color }: { specs: Beam[]; color: string }) => {
     const ref = useRef<THREE.InstancedMesh>(null);
     const dummy = useMemo(() => new THREE.Object3D(), []);
-    const geometry = useMemo(() => {
+    const geometry = shared('beam', () => {
         const g = box(130, 2, 2);
         g.translate(65, 0, 0); // pivot at the lamp
         return g;
-    }, []);
-    const material = useMemo(
-        () => basic(color, { transparent: true, opacity: 0.45 }),
-        [color],
-    );
+    });
+    const material = basic(color, { transparent: true, opacity: 0.45 });
 
     useFrame(({ clock }) => {
         const mesh = ref.current;
@@ -504,6 +553,21 @@ const sea = (build: TileBuild, z0: number, z1: number, color = '#071d34') => {
 };
 
 /* ------------------------------------------------------ actor factories -- */
+
+/**
+ * Actor geometries are shared too: these were rebuilt (and merged) for every
+ * tile that used them, which is pure allocation churn on the same frame the
+ * tile appears.
+ */
+const geometryCache = new Map<string, THREE.BufferGeometry>();
+const shared = (key: string, build: () => THREE.BufferGeometry) => {
+    let geometry = geometryCache.get(key);
+    if (!geometry) {
+        geometry = build();
+        geometryCache.set(key, geometry);
+    }
+    return geometry;
+};
 
 const fishGeometry = () => {
     const body = new THREE.ConeGeometry(1, 4.2, 4);
@@ -728,7 +792,7 @@ const city: Builder = (z0, z1) => {
             tower(x, z, rand(30, 70), rand(120, 300), rand(30, 70));
         }
     }
-    emit(build, parts, new THREE.MeshBasicMaterial({ map: getWindowTexture() }));
+    emit(build, parts, towerMaterial());
     emit(build, beacons, basic('#ff3b4d'));
     return build;
 };
@@ -961,10 +1025,10 @@ const tunnel: Builder = (z0, z1, spec) => {
     emit(build, octo, dark('#251b3a'));
     emit(build, octoGlow, basic(spec.b));
     build.actors.push(
-        { kind: 'fish', specs: fish, parts: [{ geometry: fishGeometry(), material: basic('#9fd8ff', { transparent: true, opacity: 0.9 }) }] },
-        { kind: 'turtle', specs: turtles, parts: [{ geometry: turtleGeometry(), material: basic('#6fd6a8', { transparent: true, opacity: 0.9 }) }] },
-        { kind: 'jelly', specs: jellies, parts: [{ geometry: jellyGeometry(), material: basic(spec.a, { transparent: true, opacity: 0.5 }) }] },
-        { kind: 'whale', specs: whales, parts: [{ geometry: whaleGeometry(), material: dark('#1d2a4a') }] },
+        { kind: 'fish', specs: fish, parts: [{ geometry: shared('fish', fishGeometry), material: basic('#9fd8ff', { transparent: true, opacity: 0.9 }) }] },
+        { kind: 'turtle', specs: turtles, parts: [{ geometry: shared('turtle', turtleGeometry), material: basic('#6fd6a8', { transparent: true, opacity: 0.9 }) }] },
+        { kind: 'jelly', specs: jellies, parts: [{ geometry: shared('jelly', jellyGeometry), material: basic(spec.a, { transparent: true, opacity: 0.5 }) }] },
+        { kind: 'whale', specs: whales, parts: [{ geometry: shared('whale', whaleGeometry), material: dark('#1d2a4a') }] },
     );
     return build;
 };
@@ -1360,8 +1424,8 @@ const ruins: Builder = (z0, z1, spec) => {
         kind: 'walker',
         specs: walkers,
         parts: [
-            { geometry: walkerGeometry(), material: dark('#2a2f42') },
-            { geometry: walkerEyeGeometry(), material: basic(spec.a) },
+            { geometry: shared('walker', walkerGeometry), material: dark('#2a2f42') },
+            { geometry: shared('walkerEye', walkerEyeGeometry), material: basic(spec.a) },
         ],
     });
     return build;
@@ -1431,8 +1495,8 @@ const monoliths: Builder = (z0, z1, spec) => {
         kind: 'spinner',
         specs: spinners,
         parts: [
-            { geometry: spinnerGeometry(), material: dark('#241d3a') },
-            { geometry: spinnerRingGeometry(), material: basic(spec.a) },
+            { geometry: shared('spinner', spinnerGeometry), material: dark('#241d3a') },
+            { geometry: shared('spinnerRing', spinnerRingGeometry), material: basic(spec.a) },
         ],
     });
     return build;
@@ -1612,8 +1676,8 @@ const floating: Builder = (z0, z1, spec) => {
         kind: 'airship',
         specs: ships,
         parts: [
-            { geometry: airshipGeometry(), material: dark('#2a2438') },
-            { geometry: airshipGlowGeometry(), material: basic(spec.b) },
+            { geometry: shared('airship', airshipGeometry), material: dark('#2a2438') },
+            { geometry: shared('airshipGlow', airshipGlowGeometry), material: basic(spec.b) },
         ],
     });
     return build;
@@ -1814,11 +1878,7 @@ const finale: Builder = (z0, z1, spec) => {
             glyph(wallText, 'U', 6 + trackCurve(zB), wy, zB + 35, u);
             glyph(wallText, 'T', 26 + trackCurve(zB), wy, zB + 35, u);
             glyph(wallText, 'S', 46 + trackCurve(zB), wy, zB + 35, u);
-            emit(
-                build,
-                wallText,
-                new THREE.MeshBasicMaterial({ color: '#c3cee2' }),
-            );
+            emit(build, wallText, paintedSign());
         }
 
         // ── The tower: wandering glass storeys with hairline light plates
@@ -1930,7 +1990,7 @@ const BUILDERS: Record<SceneSpec['kind'], Builder> = {
     finale,
 };
 
-const buildTile = (index: number): TileBuild => {
+export const buildTile = (index: number): TileBuild => {
     const z0 = -index * planeSize;
     const z1 = -(index + 1) * planeSize;
     const spec = sceneAt((z0 + z1) / 2);
@@ -1950,6 +2010,17 @@ const buildTile = (index: number): TileBuild => {
 
 const SceneryTile = ({ index }: { index: number }) => {
     const build = useMemo(() => buildTile(index), [index]);
+
+    // A tile's merged geometry is unique to its stretch of world, so it has
+    // to go when the tile does — otherwise a long run leaves every kilometre
+    // it ever drew resident on the GPU. Materials and actor geometry are
+    // shared and stay.
+    useEffect(
+        () => () => {
+            for (const piece of build.pieces) piece.geometry.dispose();
+        },
+        [build],
+    );
 
     return (
         <group>
