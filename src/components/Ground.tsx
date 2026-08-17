@@ -51,14 +51,15 @@ const RAIL_HALF_WIDTH = FIELD_WIDTH / 2;
 const RAIL_SEGMENT = 25;
 
 const RailTile = ({
-    tileRef,
+    slot,
     railMaterial,
     rungMaterial,
 }: {
-    tileRef: React.RefObject<THREE.Group>;
+    slot: number;
     railMaterial: THREE.Material;
     rungMaterial: THREE.Material;
 }) => {
+    const tileRef = useRef<THREE.Group>(null);
     const railCount = Math.floor((RAIL_HALF_WIDTH * 2) / RAIL_SPACING) + 1;
     const segsPerRail = Math.ceil(planeSize / RAIL_SEGMENT);
     const rungCount = Math.floor(planeSize / RUNG_SPACING) + 1;
@@ -76,15 +77,35 @@ const RailTile = ({
         [],
     );
 
-    // Re-baked whenever the tile snaps to a new lattice position: the curve
-    // is a function of world z, and a recycled tile lands on a new stretch
-    // of it. Between snaps the matrices are static.
+    // Snapped and re-baked in the same callback: the curve is a function of
+    // world z, and a recycled tile lands on a new stretch of it. Between
+    // snaps the matrices are static.
+    //
+    // The snap used to live in the parent, and a parent's useFrame is
+    // registered *after* its children's — r3f subscribes from a layout effect,
+    // and React runs those child-first. So on the frame a tile jumped, this
+    // callback had already run and returned early against the old position:
+    // the tile was drawn a kilometre up the track wearing the offsets of the
+    // stretch it just left, up to 100 units out sideways and 64 vertically.
+    // One frame, once per kilometre — and it is exactly the frame the scenery
+    // swap then holds on screen while it rebuilds, so the whole grid heaves
+    // into view for as long as that takes.
     useFrame(() => {
         const rails = railsRef.current;
         const rungs = rungsRef.current;
         const group = tileRef.current;
         if (!rails || !rungs || !group) return;
-        const tileZ = group.position.z;
+
+        // Snap to a lattice derived from the player's position rather than
+        // leapfrogging the tiles past each other: the leapfrog read one tile's
+        // position, moved it, then placed the other from that same stale
+        // value, so the pair drifted apart over a long run and left gaps.
+        // ceil, not floor — travel is toward -Z, so the tile the player stands
+        // on starts at the boundary behind them.
+        const playerZ = useStore.getState().playerPosition[2];
+        const tileZ =
+            Math.ceil(playerZ / planeSize) * planeSize - planeSize * slot;
+        group.position.z = tileZ;
         if (rails.userData.bakedAt === tileZ) return;
 
         const dummy = new THREE.Object3D();
@@ -156,8 +177,6 @@ const RailTile = ({
 
 const Ground = () => {
     const level = useStore(state => state.level);
-    const ground1Ref = useRef<THREE.Group>(null);
-    const ground2Ref = useRef<THREE.Group>(null);
 
     /**
      * The materials are owned here and recoloured in place, the same way the
@@ -191,32 +210,16 @@ const Ground = () => {
         rungMaterial.color.set(neon);
     }, [level, railMaterial, rungMaterial]);
 
-    // Read, don't subscribe: this only moves two groups by ref, so a
-    // per-frame re-render of the rail tiles bought nothing.
-    useFrame(() => {
-        const playerZ = useStore.getState().playerPosition[2];
-        if (!ground1Ref.current || !ground2Ref.current) return;
-
-        // Snap both tiles to a lattice derived from the player's position
-        // rather than leapfrogging them past each other: the leapfrog read one
-        // tile's position, moved it, then placed the other from that same stale
-        // value, so the pair drifted apart over a long run and left gaps.
-        // ceil, not floor — travel is toward -Z, so the tile the player stands
-        // on starts at the boundary behind them.
-        const base = Math.ceil(playerZ / planeSize) * planeSize;
-        ground1Ref.current.position.z = base - planeSize / 2;
-        ground2Ref.current.position.z = base - planeSize * 1.5;
-    });
-
+    // Each tile places itself, so nothing here runs per frame at all.
     return (
         <>
             <RailTile
-                tileRef={ground1Ref}
+                slot={0.5}
                 railMaterial={railMaterial}
                 rungMaterial={rungMaterial}
             />
             <RailTile
-                tileRef={ground2Ref}
+                slot={1.5}
                 railMaterial={railMaterial}
                 rungMaterial={rungMaterial}
             />
