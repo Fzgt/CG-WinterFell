@@ -18,7 +18,17 @@ const Warmup = () => {
         const renderer = gl as unknown as {
             compileAsync?: (s: unknown, c: unknown) => Promise<unknown>;
         };
-        void renderer.compileAsync?.(scene, camera);
+        // Wait two frames before compiling. This effect runs inside the same
+        // commit that mounts the rest of the scene, and a child added later in
+        // that commit is not in the graph yet — compiling here would walk a
+        // half-built scene and miss exactly the materials that cost the most
+        // to compile on the first frame that draws them.
+        let frame = requestAnimationFrame(() => {
+            frame = requestAnimationFrame(() => {
+                void renderer.compileAsync?.(scene, camera);
+            });
+        });
+        return () => cancelAnimationFrame(frame);
     }, [gl, scene, camera]);
 
     return null;

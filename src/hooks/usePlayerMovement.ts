@@ -33,6 +33,11 @@ export interface PlayerRefs {
 const STEER_LEAN = craftChoice === 'kart' ? Math.PI / 22 : Math.PI / 7;
 
 export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: PlayerRefs) => {
+    // The craft is mounted while the menu is still up, parked in the opening
+    // pose, so that the shot behind the menu is the shot the run opens on and
+    // the craft's shaders are compiled before the player is handed control.
+    // Until this flips, the frame below runs but moves nothing.
+    const started = useStore(state => state.gameStarted);
     const gameOver = useStore(state => state.gameOver);
     const gamePaused = useStore(state => state.gamePaused);
     const togglePause = useStore(state => state.togglePause);
@@ -73,6 +78,9 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
     const spacePressed = useRef(false);
 
     useEffect(() => {
+        // Space is pause, and there is nothing to pause on the menu.
+        if (!started) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === ' ' && !spacePressed.current) {
                 spacePressed.current = true;
@@ -93,7 +101,7 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [togglePause]);
+    }, [togglePause, started]);
 
     useFrame((_, rawDelta) => {
         if (gameOver || gamePaused) return;
@@ -107,8 +115,14 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         // during a hitch instead.
         const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
 
-        const lateralStep = LATERAL_SPEED * delta;
-        const forwardSpeed = playerSpeed * delta * 60;
+        // Parked until the run starts. Zeroing the step rather than returning
+        // early is deliberate: everything below still runs, so the craft and
+        // the camera are placed in the opening pose on the menu's own frames
+        // instead of being placed for the first time on the frame the player
+        // is handed control.
+        const step = started ? delta : 0;
+        const lateralStep = LATERAL_SPEED * step;
+        const forwardSpeed = playerSpeed * step * 60;
 
         // The craft banks into the track's own bends on top of the lean
         // from steering input; positive slope curves the road toward -x,
@@ -117,10 +131,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
             trackCurveSlope(zPosition.current.getValue()),
         );
         const bank = -bendYaw * 0.8;
-        if (left) {
+        if (started && left) {
             rotationZ.current.setTarget(-STEER_LEAN + bank);
             laneX.current = Math.max(laneX.current - lateralStep, leftBound);
-        } else if (right) {
+        } else if (started && right) {
             rotationZ.current.setTarget(STEER_LEAN + bank);
             laneX.current = Math.min(laneX.current + lateralStep, rightBound);
         } else {
@@ -151,7 +165,10 @@ export const usePlayerMovement = ({ physicsRef, playerGroupRef, cameraRef }: Pla
         playerGroupRef.current.rotation.x = pitch;
         playerGroupRef.current.position.set(newX + bendX, 1.5 + bendY, newZ);
 
-        setPlayerPosition([newX, 2, newZ]);
+        // Only once the run is live: the store's default already holds the
+        // start position, and writing a fresh array every menu frame would
+        // wake every subscriber for a value that has not changed.
+        if (started) setPlayerPosition([newX, 2, newZ]);
 
         if (cameraRef.current) {
             // High and well back, aimed down the trail rather than level with

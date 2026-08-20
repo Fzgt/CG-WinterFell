@@ -251,7 +251,15 @@ const Game = ({ onStart }: GameProps) => {
                 <Physics>
                     <Ground />
                     <Scenery />
-                    {onStart && <Player />}
+                    {/* Mounted from the first frame, parked until the run
+                        starts (see usePlayerMovement). Two things depend on
+                        it being here early: the camera behind the menu is the
+                        run's camera rather than r3f's default at the origin,
+                        and the craft's materials are part of what Warmup
+                        compiles — 45 render pipelines used to be built on the
+                        frame the player was handed control, which held the
+                        last menu frame on screen for ~170ms. */}
+                    <Player />
                     {onStart && <LevelDirector />}
                     <ObstacleField />
                 </Physics>
